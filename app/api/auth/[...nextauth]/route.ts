@@ -50,21 +50,25 @@ export const authOptions: NextAuthOptions = {
         // 2. Strict Session Check (The Guard)
         // Every time the session is accessed, we check if it matches the DB.
         // If not, it means a NEW session was created elsewhere (Kickout).
-        const result = await query<{ current_session_id: string }>(
-          `SELECT current_session_id FROM users WHERE id = $1`,
-          [token.accountId]
-        );
+        try {
+          const result = await query<{ current_session_id: string }>(
+            `SELECT current_session_id FROM users WHERE id = $1`,
+            [token.accountId]
+          );
 
-        if (result.rows.length > 0) {
-          const dbSessionId = result.rows[0].current_session_id;
-          // If DB says "Session B" but I am "Session A", I am invalid.
-          if (dbSessionId && dbSessionId !== token.sessionId) {
-            // Force Sign Out by returning null session (or handling in client)
-            // NextAuth doesn't easily let us return 'null' here to kill session cookie deeply,
-            // but returning an empty user or specific error flag works for client-side handling.
-            // We'll set an error flag.
-            return { ...session, error: "ForceLogout" };
+          if (result.rows.length > 0) {
+            const dbSessionId = result.rows[0].current_session_id;
+            // If DB says "Session B" but I am "Session A", I am invalid.
+            if (dbSessionId && dbSessionId !== token.sessionId) {
+              // Force Sign Out by returning null session (or handling in client)
+              // NextAuth doesn't easily let us return 'null' here to kill session cookie deeply,
+              // but returning an empty user or specific error flag works for client-side handling.
+              // We'll set an error flag.
+              return { ...session, error: "ForceLogout" };
+            }
           }
+        } catch (err) {
+          console.error("Session validation failed:", err);
         }
       }
       return session;

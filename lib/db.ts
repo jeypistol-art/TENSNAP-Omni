@@ -3,6 +3,9 @@ import type { QueryResultRow } from "pg";
 
 let pool = new Pool({
   connectionString: process.env.DATABASE_URL,
+  connectionTimeoutMillis: 5000,
+  query_timeout: 10000,
+  idleTimeoutMillis: 30000,
 });
 
 function resetPool() {
@@ -13,6 +16,9 @@ function resetPool() {
   }
   pool = new Pool({
     connectionString: process.env.DATABASE_URL,
+    connectionTimeoutMillis: 5000,
+    query_timeout: 10000,
+    idleTimeoutMillis: 30000,
   });
 }
 
