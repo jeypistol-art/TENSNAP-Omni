@@ -1,6 +1,6 @@
 "use client";
 
-import { Line } from 'react-chartjs-2';
+import { useEffect, useRef } from 'react';
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -15,6 +15,9 @@ import {
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 export default function StudentTrendChart({ history }: { history: any[] }) {
+    const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    const chartRef = useRef<ChartJS<"line"> | null>(null);
+
     // データを時系列（古い順）に並べ替え
     const sortedData = [...history].reverse();
 
@@ -33,6 +36,7 @@ export default function StudentTrendChart({ history }: { history: any[] }) {
 
     const options = {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: {
             legend: { display: false },
             tooltip: {
@@ -49,10 +53,34 @@ export default function StudentTrendChart({ history }: { history: any[] }) {
         }
     };
 
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        if (chartRef.current) {
+            chartRef.current.destroy();
+        }
+
+        chartRef.current = new ChartJS(canvas, {
+            type: "line",
+            data,
+            options,
+        });
+
+        return () => {
+            if (chartRef.current) {
+                chartRef.current.destroy();
+                chartRef.current = null;
+            }
+        };
+    }, [history]);
+
     return (
         <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
             <h3 className="text-sm font-bold text-gray-500 mb-4 uppercase tracking-wider">成長トレンド</h3>
-            <Line data={data} options={options} />
+            <div className="h-64">
+                <canvas ref={canvasRef} />
+            </div>
         </div>
     );
 }

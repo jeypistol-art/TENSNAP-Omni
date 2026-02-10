@@ -1,7 +1,6 @@
 "use client";
 
-import React, { forwardRef } from 'react';
-import { Radar } from 'react-chartjs-2';
+import React, { forwardRef, useEffect, useRef } from 'react';
 import {
     Chart as ChartJS,
     RadialLinearScale,
@@ -26,6 +25,8 @@ type PeriodicalReportProps = {
 };
 
 const PeriodicalReport = forwardRef<HTMLDivElement, PeriodicalReportProps>(({ data }, ref) => {
+    const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    const chartRef = useRef<ChartJS<"radar"> | null>(null);
 
     const chartData = {
         labels: ['得点理解度', '思考プロセス', '学習の安定感'],
@@ -48,6 +49,8 @@ const PeriodicalReport = forwardRef<HTMLDivElement, PeriodicalReportProps>(({ da
     };
 
     const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
         scales: {
             r: {
                 angleLines: {
@@ -63,6 +66,28 @@ const PeriodicalReport = forwardRef<HTMLDivElement, PeriodicalReportProps>(({ da
             }
         }
     };
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        if (chartRef.current) {
+            chartRef.current.destroy();
+        }
+
+        chartRef.current = new ChartJS(canvas, {
+            type: "radar",
+            data: chartData,
+            options: chartOptions,
+        });
+
+        return () => {
+            if (chartRef.current) {
+                chartRef.current.destroy();
+                chartRef.current = null;
+            }
+        };
+    }, [data]);
 
     return (
         <div ref={ref} className="w-[210mm] min-h-[297mm] p-[20mm] bg-white text-gray-800 font-sans mx-auto">
@@ -97,7 +122,7 @@ const PeriodicalReport = forwardRef<HTMLDivElement, PeriodicalReportProps>(({ da
                         <span className="text-xl">📈</span> 成長の軌跡 (Growth Triangle)
                     </h3>
                     <div className="h-64 flex justify-center">
-                        <Radar data={chartData} options={chartOptions} />
+                        <canvas ref={canvasRef} />
                     </div>
                 </div>
                 <div className="flex-1 flex flex-col justify-center gap-4">
