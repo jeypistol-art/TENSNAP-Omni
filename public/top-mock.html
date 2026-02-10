@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>score-snap | トップ</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --surface: #ffffff;
+      --text: #1e2a36;
+      --muted: #5e6b78;
+      --line: #e3e8ef;
+      --primary: #2f5f8a;
+      --accent: #2a7fa8;
+      --accent-hover: #266f93;
+      --radius: 10px;
+      --shadow: 0 6px 18px rgba(30, 42, 54, 0.06);
+      --maxw: 880px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Hiragino Sans", "Noto Sans JP", "Yu Gothic", Meiryo, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.6;
+    }
+
+    /* Header */
+    .header {
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(6px);
+    }
+    .header-inner {
+      max-width: var(--maxw);
+      margin: 0 auto;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 14px;
+      color: var(--muted);
+    }
+    .brand {
+      font-weight: 600;
+      color: var(--primary);
+      letter-spacing: 0.02em;
+    }
+    .logout {
+      text-decoration: none;
+      color: var(--muted);
+    }
+
+    /* Main layout */
+    .wrap {
+      max-width: var(--maxw);
+      margin: 0 auto;
+      padding: 24px 20px 36px;
+    }
+
+    .headline {
+      font-size: 18px;
+      color: var(--muted);
+      margin: 8px 0 22px;
+      font-weight: 500;
+    }
+    #firstTimeNote {
+      font-size: 13px;
+      color: var(--muted);
+      margin: -8px 0 18px;
+    }
+
+    /* Card */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px 22px;
+      margin-bottom: 26px;
+    }
+    .card-label {
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .score {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .score-value {
+      font-size: 40px;
+      font-weight: 600;
+      color: var(--primary);
+    }
+    .score-note {
+      font-size: 15px;
+      color: var(--muted);
+    }
+    .interpretation {
+      margin: 6px 0 10px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .guide {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--text);
+    }
+    .guide li {
+      margin: 4px 0;
+    }
+
+    /* Action */
+    .action {
+      display: grid;
+      gap: 10px;
+      align-items: start;
+    }
+    .action-note {
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .cta {
+      display: inline-block;
+      width: 100%;
+      border: 0;
+      border-radius: 12px;
+      padding: 16px 18px;
+      background: linear-gradient(180deg, #2f86b1 0%, var(--accent) 100%);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      box-shadow: 0 8px 18px rgba(42, 127, 168, 0.18);
+    }
+    .cta:hover { background: linear-gradient(180deg, #2a7fa8 0%, var(--accent-hover) 100%); }
+    .cta:focus-visible {
+      outline: 3px solid rgba(47, 95, 138, 0.25);
+      outline-offset: 2px;
+    }
+
+    /* Layout constraints */
+    .frame {
+      min-height: calc(100vh - 48px);
+      display: flex;
+      align-items: center;
+    }
+
+    @media (min-width: 720px) {
+      .headline { font-size: 20px; }
+      .card { padding: 24px 26px; }
+      .score-value { font-size: 46px; }
+      .action { grid-template-columns: 1fr auto; align-items: center; }
+      .cta { width: auto; min-width: 260px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header: minimal navigation -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="brand">score-snap</div>
+      <a class="logout" href="#">ログアウト</a>
+    </div>
+  </header>
+
+  <!-- Main: first-view only -->
+  <main class="frame">
+    <div class="wrap">
+      <!-- Headline copy -->
+      <p class="headline">今の状態から、今日やることを整理します</p>
+      <div id="firstTimeNote">まずは学習状況をスキャンしてください</div>
+
+      <!-- Status card -->
+      <section class="card" aria-labelledby="status-label">
+        <div class="card-label" id="status-label">現在の状態</div>
+        <div class="score">
+          <div class="score-value" id="statusScore">72</div>
+          <div class="score-note" id="statusLabel">/ 安定</div>
+        </div>
+        <p class="interpretation" id="statusInterpretation">
+          今は安定した学習状態の傾向です。通常の学習を進めやすい状態です。
+        </p>
+        <ul class="guide" id="statusGuide">
+          <li>通常の学習を進めやすい</li>
+          <li>学習量を調整しやすい</li>
+        </ul>
+      </section>
+
+      <!-- Main action -->
+      <section class="action" aria-label="スキャン">
+        <div class="action-note" id="actionNote">スキャンすると、今の状態が更新されます</div>
+        <button class="cta" id="scanButton" type="button">まずはスキャンしてください</button>
+      </section>
+    </div>
+  </main>
+  <script src="./top.js" defer></script>
+</body>
+</html>
