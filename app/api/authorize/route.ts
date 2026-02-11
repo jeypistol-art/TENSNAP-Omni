@@ -6,11 +6,13 @@ import {
 
 // NOTE: In-memory store for development only. Replace with persistent store in production.
 const store = new InMemoryBillingStore();
+const billingAuthEnabled = process.env.BILLING_AUTH_ENABLED === "true";
 
 // POST /api/authorize
 export async function POST(request: Request) {
-  // Development bypass: always allow during local work.
-  if (process.env.NODE_ENV === "development") {
+  // Default allow unless billing auth is explicitly enabled.
+  // Current in-memory store is non-persistent and will deny users on refresh/redeploy.
+  if (!billingAuthEnabled) {
     return NextResponse.json({ authorized: true });
   }
 
