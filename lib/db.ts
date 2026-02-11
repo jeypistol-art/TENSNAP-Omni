@@ -1,40 +1,42 @@
-import { Pool } from "pg";
-import type { QueryResultRow } from "pg";
+import { neon } from "@neondatabase/serverless";
 
-let pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  connectionTimeoutMillis: 5000,
-  query_timeout: 10000,
-  idleTimeoutMillis: 30000,
-});
+export type QueryResultRow = Record<string, unknown>;
 
-function resetPool() {
-  try {
-    pool.end().catch(() => undefined);
-  } catch {
-    // ignore
-  }
-  pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    connectionTimeoutMillis: 5000,
-    query_timeout: 10000,
-    idleTimeoutMillis: 30000,
-  });
+export type QueryResult<T = QueryResultRow> = {
+  rows: T[];
+  rowCount: number;
+};
+
+const databaseUrl = process.env.DATABASE_URL ?? "";
+if (!databaseUrl) {
+  throw new Error("DATABASE_URL is not set");
 }
 
-export async function query<T extends QueryResultRow = QueryResultRow>(
+let sql = neon(databaseUrl);
+
+function resetClient() {
+  sql = neon(databaseUrl);
+}
+
+export async function query<T = QueryResultRow>(
   text: string,
   params: unknown[] = []
-) {
+) : Promise<QueryResult<T>> {
   try {
-    const result = await pool.query<T>(text, params);
-    return result;
+    const rows = await sql(text, params as any[]);
+    return {
+      rows: (rows as T[]) ?? [],
+      rowCount: (rows as T[])?.length ?? 0,
+    };
   } catch (err: any) {
     const code = err?.code || "";
     if (code === "ECONNRESET") {
-      resetPool();
-      const retry = await pool.query<T>(text, params);
-      return retry;
+      resetClient();
+      const retry = await sql(text, params as any[]);
+      return {
+        rows: (retry as T[]) ?? [],
+        rowCount: (retry as T[])?.length ?? 0,
+      };
     }
     throw err;
   }
