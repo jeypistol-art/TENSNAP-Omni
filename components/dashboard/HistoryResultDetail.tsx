@@ -56,7 +56,11 @@ const HistoryResultDetail = forwardRef<HTMLDivElement, HistoryResultDetailProps>
             ? [item.unit_name]
             : [];
     const weaknessAreas: Weakness[] = Array.isArray(details?.weakness_areas) ? details.weakness_areas : (item.weaknesses || []);
-    const testDate = new Date(item.test_date || item.created_at).toISOString().split("T")[0];
+    const sourceDate = item.test_date || item.created_at;
+    const parsedDate = sourceDate ? new Date(sourceDate) : null;
+    const testDate = parsedDate && !Number.isNaN(parsedDate.getTime())
+        ? parsedDate.toISOString().split("T")[0]
+        : "日付不明";
 
     return (
         <div ref={ref} className="w-full max-w-4xl bg-white rounded-lg shadow-lg p-6">

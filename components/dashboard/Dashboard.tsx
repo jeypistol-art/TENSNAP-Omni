@@ -331,15 +331,30 @@ export default function Dashboard() {
         try {
             // Transition to "analyzing" immediately to show skeleton
             setStatus("analyzing");
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 180000);
 
-            const res = await fetch("/api/upload", {
-                method: "POST",
-                body: formData,
-            });
+            let res: Response;
+            try {
+                res = await fetch("/api/upload", {
+                    method: "POST",
+                    body: formData,
+                    signal: controller.signal,
+                });
+            } finally {
+                clearTimeout(timeoutId);
+            }
 
             if (!res.ok) {
-                const errorData = await res.json();
-                throw new Error(errorData.error || "Upload failed");
+                let message = "Upload failed";
+                try {
+                    const errorData = await res.json();
+                    message = errorData.error || errorData.details || message;
+                } catch {
+                    const text = await res.text();
+                    if (text) message = text.slice(0, 300);
+                }
+                throw new Error(message);
             }
 
             const data = await res.json();
@@ -354,7 +369,11 @@ export default function Dashboard() {
             setProgress(100);
         } catch (error: any) {
             console.error(error);
-            setErrorMsg(error.message);
+            const message =
+                error?.name === "AbortError"
+                    ? "分析がタイムアウトしました。画像枚数を減らして再実行してください。"
+                    : (error?.message || "分析に失敗しました。");
+            setErrorMsg(message);
             setStatus("error");
         }
     };
@@ -765,6 +784,13 @@ export default function Dashboard() {
 
             {(status === "uploading" || status === "analyzing") && (
                 <AnalysisStatus status={status} />
+            )}
+
+            {status === "error" && (
+                <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                    <p className="font-bold mb-1">分析中にエラーが発生しました</p>
+                    <p>{errorMsg || "時間をおいて再実行してください。"}</p>
+                </div>
             )}
 
             {status === "completed" && result && (

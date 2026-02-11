@@ -74,6 +74,20 @@ export default function StudentHistory({ studentId, studentName }: StudentHistor
     const [previewMode, setPreviewMode] = useState<"view" | "action">("view");
     const subjectOptions = ["数学", "英語", "国語", "理科", "社会"];
 
+    const formatDateForInput = (value?: string) => {
+        if (!value) return "";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return "";
+        return date.toISOString().split("T")[0];
+    };
+
+    const formatDateForDisplay = (value?: string) => {
+        if (!value) return "日付不明";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return "日付不明";
+        return date.toLocaleDateString();
+    };
+
     const openPreviewSingle = (item: HistoryItem, mode: "view" | "action") => {
         setSelectedHistoryItem(item);
         setPreviewType("single");
@@ -104,7 +118,7 @@ export default function StudentHistory({ studentId, studentName }: StudentHistor
     };
 
     const startHistoryEdit = (item: HistoryItem) => {
-        const dateVal = new Date(item.test_date || item.created_at).toISOString().split("T")[0];
+        const dateVal = formatDateForInput(item.test_date || item.created_at);
         setHistoryError("");
         setEditingHistoryId(item.id);
         setHistoryDraft({
@@ -187,7 +201,8 @@ export default function StudentHistory({ studentId, studentName }: StudentHistor
 
     // Filter History Display
     const filteredHistory = history.filter(item => {
-        const itemDate = new Date(item.test_date || item.created_at).toISOString().split('T')[0];
+        const itemDate = formatDateForInput(item.test_date || item.created_at);
+        if (!itemDate) return false;
         if (startDate && itemDate < startDate) return false;
         if (endDate && itemDate > endDate) return false;
         if (subjectFilter !== "all" && item.subject !== subjectFilter) return false;
@@ -321,7 +336,7 @@ export default function StudentHistory({ studentId, studentName }: StudentHistor
                                     {item.subject || '教科未設定'}
                                 </span>
                                 <span className="text-gray-500 text-xs font-mono">
-                                    {new Date(item.test_date || item.created_at).toLocaleDateString()}
+                                    {formatDateForDisplay(item.test_date || item.created_at)}
                                 </span>
                             </div>
                             <div className="flex items-center gap-1">

@@ -170,6 +170,8 @@ export async function analyzeImage(
             response_format: { type: "json_object" },
             temperature: 0.2,
             top_p: 0.1,
+        }, {
+            timeout: 120000,
         });
 
         const content = response.choices[0].message.content;
