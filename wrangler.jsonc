@@ -11,6 +11,12 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  "r2_buckets": [
+    {
+      "binding": "TENSNAP_OMNI_ASSETS",
+      "bucket_name": "tensnap-omni-assets"
+    }
+  ],
   "observability": {
     "enabled": true
   }

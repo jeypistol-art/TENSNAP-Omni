@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { getTenantId } from "@/lib/tenant";
 import { query } from "@/lib/db";
 import { analyzeImage } from "@/lib/ocr_service";
+import { getR2AssetsBucket, R2_ASSETS_BUCKET_NAME, uploadPreparedFilesToR2 } from "@/lib/r2_assets";
 
 export async function POST(request: Request) {
     try {
@@ -29,21 +30,47 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "No answer sheet uploaded" }, { status: 400 });
         }
 
-        // Helper to convert File[] to { buffer, mimeType }[]
+        // Helper to convert File[] to { buffer, mimeType, originalName }[]
         const processFiles = async (files: File[]) => {
             return Promise.all(files.map(async (f) => ({
                 buffer: Buffer.from(await f.arrayBuffer()),
-                mimeType: f.type
+                mimeType: f.type,
+                originalName: f.name
             })));
         };
 
         const answerSheets = await processFiles(fileEntries);
         const problemSheets = await processFiles(problemSheetEntries);
 
-        // "Shortest Path" MVP: 
-        // We still save a fake path in DB because we aren't setting up S3 yet.
-        // We just use the first file's name for now as the representative record.
-        const fakeFilePath = `/uploads/${tenantId}/${fileEntries[0].name}-multi-${Date.now()}`;
+        const traceId = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        let storedAnswerKeys: string[] = [];
+        let storedProblemKeys: string[] = [];
+        let representativePath = `/uploads/${tenantId}/${fileEntries[0].name}-multi-${Date.now()}`;
+
+        const r2Bucket = await getR2AssetsBucket();
+        if (r2Bucket) {
+            storedAnswerKeys = await uploadPreparedFilesToR2({
+                bucket: r2Bucket,
+                tenantId,
+                userId: session.user.id,
+                traceId,
+                category: "answer",
+                files: answerSheets,
+            });
+            storedProblemKeys = await uploadPreparedFilesToR2({
+                bucket: r2Bucket,
+                tenantId,
+                userId: session.user.id,
+                traceId,
+                category: "problem",
+                files: problemSheets,
+            });
+            if (storedAnswerKeys.length > 0) {
+                representativePath = `r2://${R2_ASSETS_BUCKET_NAME}/${storedAnswerKeys[0]}`;
+            }
+        } else {
+            console.warn("R2 bucket binding not found; falling back to non-persistent upload path.");
+        }
 
         const studentId = formData.get("studentId") as string | null; // Optional: Linked Student ID
 
@@ -51,7 +78,7 @@ export async function POST(request: Request) {
         // Insert into uploads table
         const uploadResult = await query<{ id: string }>(
             `INSERT INTO uploads (user_id, student_id, file_path, status) VALUES ($1, $2, $3, $4) RETURNING id`,
-            [session.user.id, studentId || null, fakeFilePath, 'processing']
+            [session.user.id, studentId || null, representativePath, 'processing']
         );
         const uploadId = uploadResult.rows[0].id;
 
@@ -97,6 +124,16 @@ export async function POST(request: Request) {
         const derivedUnitName = formUnitName || (topics.length > 0 ? topics[0] : "General");
         const testDate = (formData.get("testDate") as string) || new Date().toISOString().split('T')[0];
 
+        const analysisDetailsForStorage = {
+            ...analysis,
+            r2_assets: {
+                bucket: R2_ASSETS_BUCKET_NAME,
+                trace_id: traceId,
+                answer_sheet_keys: storedAnswerKeys,
+                problem_sheet_keys: storedProblemKeys,
+            },
+        };
+
         await query(
             `INSERT INTO analyses (
                 upload_id, 
@@ -127,9 +164,9 @@ export async function POST(request: Request) {
                 // Map "Covered Topics" to "Formula" column (as text, List)
                 topics.join(", "),
                 // Map Weakness Areas to "Range" (Visual Debugging)
-                weaknessAreas.map((w: any) => `${w.level === 'Primary' ? '🔴' : '🟡'}${w.topic}`).join(", "),
+                weaknessAreas.map((w) => `${w.level === 'Primary' ? '🔴' : '🟡'}${w.topic}`).join(", "),
                 // Store full semantic details in JSONB (Future Proofing)
-                JSON.stringify(analysis)
+                JSON.stringify(analysisDetailsForStorage)
             ]
         );
         // Note: Raw query above presumed void if no RETURNING. 
@@ -155,7 +192,12 @@ export async function POST(request: Request) {
             },
             uploadId,
             analysisId,
-            studentId
+            studentId,
+            assets: {
+                bucket: R2_ASSETS_BUCKET_NAME,
+                answerSheetCount: storedAnswerKeys.length,
+                problemSheetCount: storedProblemKeys.length,
+            }
         });
     } catch (error) {
         console.error("Upload/Analysis error:", error);
