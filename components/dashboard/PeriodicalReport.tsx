@@ -1,17 +1,8 @@
 "use client";
 
 import React, { forwardRef, useEffect, useRef } from 'react';
-import {
-    Chart as ChartJS,
-    RadialLinearScale,
-    PointElement,
-    LineElement,
-    Filler,
-    Tooltip,
-    Legend
-} from 'chart.js';
-
-ChartJS.register(RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend);
+import Chart from 'chart.js/auto';
+import type { Chart as ChartJS } from 'chart.js';
 
 type PeriodicalReportProps = {
     data: {
@@ -71,11 +62,16 @@ const PeriodicalReport = forwardRef<HTMLDivElement, PeriodicalReportProps>(({ da
         const canvas = canvasRef.current;
         if (!canvas) return;
 
+        const existing = Chart.getChart(canvas);
+        if (existing) {
+            existing.destroy();
+        }
+
         if (chartRef.current) {
             chartRef.current.destroy();
         }
 
-        chartRef.current = new ChartJS(canvas, {
+        chartRef.current = new Chart(canvas, {
             type: "radar",
             data: chartData,
             options: chartOptions,

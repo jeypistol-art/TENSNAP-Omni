@@ -1,20 +1,18 @@
 "use client";
 
 import { useEffect, useRef } from 'react';
-import {
-    Chart as ChartJS,
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    Title,
-    Tooltip,
-    Legend,
-} from 'chart.js';
+import Chart from 'chart.js/auto';
+import type { Chart as ChartJS, TooltipItem } from 'chart.js';
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
+type TrendPoint = {
+    test_date?: string;
+    created_at?: string;
+    comprehension_score?: number | string;
+    unit_name?: string;
+    insight_summary?: string;
+};
 
-export default function StudentTrendChart({ history }: { history: any[] }) {
+export default function StudentTrendChart({ history }: { history: TrendPoint[] }) {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const chartRef = useRef<ChartJS<"line"> | null>(null);
 
@@ -26,7 +24,7 @@ export default function StudentTrendChart({ history }: { history: any[] }) {
 
     const data = {
         labels: sortedData.map(h => {
-            const raw = h.test_date || h.created_at;
+            const raw = h.test_date || h.created_at || "";
             const d = new Date(raw);
             return Number.isNaN(d.getTime()) ? "日付不明" : d.toLocaleDateString("ja-JP");
         }),
@@ -51,7 +49,7 @@ export default function StudentTrendChart({ history }: { history: any[] }) {
             legend: { display: false },
             tooltip: {
                 callbacks: {
-                    afterLabel: (context: any) => {
+                    afterLabel: (context: TooltipItem<"line">) => {
                         const item = sortedData[context.dataIndex];
                         return `単元: ${item.unit_name || '(不明)'} | インサイト: ${item.insight_summary || 'なし'}`;
                     }
@@ -67,12 +65,17 @@ export default function StudentTrendChart({ history }: { history: any[] }) {
         const canvas = canvasRef.current;
         if (!canvas) return;
 
+        const existing = Chart.getChart(canvas);
+        if (existing) {
+            existing.destroy();
+        }
+
         if (chartRef.current) {
             chartRef.current.destroy();
         }
 
         try {
-            chartRef.current = new ChartJS(canvas, {
+            chartRef.current = new Chart(canvas, {
                 type: "line",
                 data,
                 options,
