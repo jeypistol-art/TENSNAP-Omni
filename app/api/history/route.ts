@@ -3,6 +3,24 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { query } from "@/lib/db";
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+type Weakness = { topic: string; level: string };
+type ParsedDetails = { insight_conclusion?: string; weakness_areas?: Weakness[] };
+
+function safeParseJson<T>(value: unknown, fallback: T): T {
+    if (value == null) return fallback;
+    if (typeof value === "string") {
+        try {
+            return JSON.parse(value) as T;
+        } catch {
+            return fallback;
+        }
+    }
+    if (typeof value === "object") return value as T;
+    return fallback;
+}
+
 export async function GET(request: Request) {
     try {
         // 1. セッションと権限の確認
@@ -17,6 +35,9 @@ export async function GET(request: Request) {
 
         if (!studentId) {
             return NextResponse.json({ error: "Student ID is required" }, { status: 400 });
+        }
+        if (!UUID_RE.test(studentId)) {
+            return NextResponse.json({ error: "Invalid student ID format" }, { status: 400 });
         }
 
         // 3. 履歴の取得（テナント分離を徹底）
@@ -40,13 +61,33 @@ export async function GET(request: Request) {
             [studentId, session.user.id]
         );
 
+        const history = result.rows.map((row) => {
+            const rowObj = row as Record<string, unknown>;
+            const details = safeParseJson<ParsedDetails>(rowObj.details, {});
+            const weaknessesFromDetails = Array.isArray(details?.weakness_areas) ? details.weakness_areas : [];
+            const weaknessesRaw = safeParseJson<unknown>(rowObj.weaknesses, weaknessesFromDetails);
+            const weaknesses = Array.isArray(weaknessesRaw) ? weaknessesRaw : weaknessesFromDetails;
+            return {
+                ...rowObj,
+                details,
+                weaknesses,
+                insight_summary:
+                    typeof rowObj.insight_summary === "string" && rowObj.insight_summary.trim() !== ""
+                        ? rowObj.insight_summary
+                        : (typeof details?.insight_conclusion === "string" ? details.insight_conclusion : ""),
+            };
+        });
+
         return NextResponse.json({
             success: true,
-            history: result.rows
+            history
         });
 
     } catch (error) {
-        console.error("Fetch History Error:", error);
+        console.error("Fetch History Error:", {
+            message: error instanceof Error ? error.message : String(error),
+            studentId: new URL(request.url).searchParams.get("studentId"),
+        });
         return NextResponse.json(
             { error: "Failed to retrieve history" },
             { status: 500 }

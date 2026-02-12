@@ -167,7 +167,14 @@ export default function StudentHistory({ studentId, studentName }: StudentHistor
         setIsGeneratingReport(true);
         try {
             const res = await fetch(`/api/history/aggregate?studentId=${studentId}&startDate=${startDate}&endDate=${endDate}`);
-            if (!res.ok) throw new Error("集計データの取得に失敗しました");
+            if (!res.ok) {
+                let message = "集計データの取得に失敗しました";
+                try {
+                    const body = await res.json();
+                    message = body?.error || message;
+                } catch { }
+                throw new Error(message);
+            }
 
             const data = await res.json();
             if (!data.aggregated) {
@@ -217,12 +224,19 @@ export default function StudentHistory({ studentId, studentName }: StudentHistor
             setError("");
             try {
                 const res = await fetch(`/api/history?studentId=${studentId}`);
-                if (!res.ok) throw new Error("履歴の取得に失敗しました");
+                if (!res.ok) {
+                    let message = "履歴の取得に失敗しました";
+                    try {
+                        const body = await res.json();
+                        message = body?.error || message;
+                    } catch { }
+                    throw new Error(message);
+                }
                 const data = await res.json();
                 setHistory(data.history || []);
             } catch (err) {
                 console.error(err);
-                setError("履歴データを読み込めませんでした");
+                setError(err instanceof Error ? err.message : "履歴データを読み込めませんでした");
             } finally {
                 setLoading(false);
             }

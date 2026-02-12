@@ -4,7 +4,38 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { query } from "@/lib/db";
 import { getOpenAIClient, runOpenAIWithRetry, serializeOpenAIError } from "@/lib/openai_client";
 
-const openai = getOpenAIClient();
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+type Weakness = { topic?: string; level?: string };
+type Details = {
+    comprehension_details?: {
+        accuracy?: number;
+        process?: number;
+        consistency?: number;
+    };
+    comprehension_score?: number;
+    weakness_areas?: Weakness[];
+    test_date?: string;
+    unit_name?: string;
+    insight_conclusion?: string;
+};
+type AnalysisRecord = {
+    unit_name: string | null;
+    details: Details | string | null;
+};
+
+function safeParseJson<T>(value: unknown, fallback: T): T {
+    if (value == null) return fallback;
+    if (typeof value === "string") {
+        try {
+            return JSON.parse(value) as T;
+        } catch {
+            return fallback;
+        }
+    }
+    if (typeof value === "object") return value as T;
+    return fallback;
+}
 
 export async function GET(request: Request) {
     try {
@@ -21,10 +52,13 @@ export async function GET(request: Request) {
         if (!studentId) {
             return NextResponse.json({ error: "Student ID is required" }, { status: 400 });
         }
+        if (!UUID_RE.test(studentId)) {
+            return NextResponse.json({ error: "Invalid student ID format" }, { status: 400 });
+        }
 
         // Build Query Conditions
         let dateCondition = "";
-        const params: any[] = [studentId, session.user.id];
+        const params: unknown[] = [studentId, session.user.id];
         let paramIndex = 3;
 
         if (startDate) {
@@ -40,7 +74,7 @@ export async function GET(request: Request) {
 
         // Fetch Data
         // Order by test_date ASC to determine "Start" vs "Current"
-        const result = await query(
+        const result = await query<AnalysisRecord>(
             `SELECT 
                 unit_name,
                 details 
@@ -50,7 +84,10 @@ export async function GET(request: Request) {
             params
         );
 
-        const records = result.rows;
+        const records = result.rows.map((r) => ({
+            ...r,
+            details: safeParseJson<Details>(r.details, {}),
+        }));
 
         if (records.length === 0) {
             return NextResponse.json({
@@ -62,7 +99,7 @@ export async function GET(request: Request) {
         // --- Aggregation Logic ---
 
         // 1. Helper to extract stats
-        const getStats = (record: any) => {
+        const getStats = (record: { details: Details }) => {
             const d = record.details?.comprehension_details || {};
             return {
                 accuracy: d.accuracy || 0,
@@ -81,7 +118,7 @@ export async function GET(request: Request) {
 
         type Stats = { accuracy: number; process: number; consistency: number; score: number };
 
-        const sums = records.reduce<Stats>((acc, r: any) => {
+        const sums = records.reduce<Stats>((acc, r) => {
             const s = getStats(r);
             return {
                 accuracy: acc.accuracy + s.accuracy,
@@ -107,10 +144,11 @@ export async function GET(request: Request) {
 
         // 3. Aggregate Weaknesses
         const weaknessCounts: Record<string, { count: number; units: Set<string> }> = {};
-        records.forEach((r: any) => {
-            const weaknesses = r.details?.weakness_areas || [];
-            weaknesses.forEach((w: any) => {
-                const topic = w.topic;
+        records.forEach((r) => {
+            const weaknesses = Array.isArray(r.details?.weakness_areas) ? r.details.weakness_areas : [];
+            weaknesses.forEach((w) => {
+                const topic = typeof w?.topic === "string" ? w.topic : "";
+                if (!topic) return;
                 if (!weaknessCounts[topic]) {
                     weaknessCounts[topic] = { count: 0, units: new Set() };
                 }
@@ -142,7 +180,7 @@ Data:
 - 期間: ${startDate || "全期間"} 〜 ${endDate || "現在"}
 - 分析回数: ${total}回
 - リスト(古い順): 
-${records.map((r: any, i: number) => {
+${records.map((r, i: number) => {
             const d = r.details;
             return `${i + 1}. ${d.test_date || "日付不明"}: ${d.unit_name} (理解度 ${d.comprehension_score}%) - ${d.insight_conclusion}`;
         }).join("\n")}
@@ -160,15 +198,21 @@ Output Requirement:
 - 100文字以内で簡潔に。
 `;
 
-        const completion = await runOpenAIWithRetry(() =>
-            openai.chat.completions.create({
-                model: "gpt-4o-mini",
-                messages: [{ role: "system", content: prompt }],
-                max_tokens: 150,
-            })
-        );
-
-        const aiSummary = completion.choices[0].message.content?.trim();
+        let aiSummary = "";
+        try {
+            const openai = getOpenAIClient();
+            const completion = await runOpenAIWithRetry(() =>
+                openai.chat.completions.create({
+                    model: "gpt-4o-mini",
+                    messages: [{ role: "system", content: prompt }],
+                    max_tokens: 150,
+                })
+            );
+            aiSummary = completion.choices[0].message.content?.trim() || "";
+        } catch (error) {
+            console.error("Aggregation Summary OpenAI Error:", serializeOpenAIError(error));
+            aiSummary = `期間内に${total}回の分析を実施し、得点理解度${startStats.accuracy}%→${currentStats.accuracy}%へ推移。次は「${sortedWeaknesses[0]?.topic || "基礎の定着"}」を重点強化しましょう。`;
+        }
 
         return NextResponse.json({
             aggregated: {
@@ -182,7 +226,10 @@ Output Requirement:
         });
 
     } catch (error) {
-        console.error("Aggregation Error:", serializeOpenAIError(error));
+        console.error("Aggregation Error:", {
+            requestUrl: request.url,
+            error: serializeOpenAIError(error),
+        });
         return NextResponse.json({ error: "Failed to aggregate data" }, { status: 500 });
     }
 }
