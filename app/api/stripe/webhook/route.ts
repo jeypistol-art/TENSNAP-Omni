@@ -4,9 +4,57 @@ import { stripe } from "@/lib/stripe";
 import { query } from "@/lib/db";
 import Stripe from "stripe";
 
-// For local testing without CLI, we might not have a webhook secret.
-// In production, this IS REQUIRED.
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+const nextAuthUrl = process.env.NEXTAUTH_URL || "";
+const isProductionRuntime =
+    process.env.NODE_ENV === "production" &&
+    !nextAuthUrl.includes("localhost") &&
+    !nextAuthUrl.includes("127.0.0.1");
+
+const mapSubscriptionStatus = (status: Stripe.Subscription.Status) => {
+    switch (status) {
+        case "active":
+            return "active";
+        case "trialing":
+            return "trialing";
+        case "past_due":
+            return "past_due";
+        case "canceled":
+            return "canceled";
+        case "unpaid":
+            return "unpaid";
+        case "incomplete":
+        case "incomplete_expired":
+        case "paused":
+            return "past_due";
+        default:
+            return "past_due";
+    }
+};
+
+async function updateOrganizationByCustomer(customerId: string, status: string) {
+    await query(
+        `UPDATE organizations
+         SET subscription_status = $1,
+             stripe_customer_id = $2,
+             trial_ends_at = CASE WHEN $1 = 'active' THEN NULL ELSE trial_ends_at END,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE stripe_customer_id = $2`,
+        [status, customerId]
+    );
+}
+
+async function updateOrganizationByOrgId(orgId: string, customerId: string, status: string) {
+    await query(
+        `UPDATE organizations
+         SET subscription_status = $1,
+             stripe_customer_id = $2,
+             trial_ends_at = CASE WHEN $1 = 'active' THEN NULL ELSE trial_ends_at END,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $3`,
+        [status, customerId, orgId]
+    );
+}
 
 export async function POST(request: Request) {
     const body = await request.text();
@@ -18,37 +66,73 @@ export async function POST(request: Request) {
         if (endpointSecret && sig) {
             event = stripe.webhooks.constructEvent(body, sig, endpointSecret);
         } else {
-            // WARNING: Insecure fallback for testing only if secret is missing
-            // In production, always verify signatures
+            if (isProductionRuntime) {
+                console.error("Webhook signature verification failed: missing secret or signature in production");
+                return NextResponse.json(
+                    { error: "Webhook signature verification required in production" },
+                    { status: 400 }
+                );
+            }
+
+            // Dev-only fallback
             console.warn("⚠️  Webhook signature verification skipped (Missing Secret)");
             event = JSON.parse(body) as Stripe.Event;
         }
-    } catch (err: any) {
-        console.error(`Webhook Error: ${err.message}`);
-        return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 });
+    } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error(`Webhook Error: ${message}`);
+        return NextResponse.json({ error: `Webhook Error: ${message}` }, { status: 400 });
     }
 
-    // Handle the event
-    if (event.type === "checkout.session.completed") {
-        const session = event.data.object as Stripe.Checkout.Session;
+    try {
+        switch (event.type) {
+            case "checkout.session.completed": {
+                const session = event.data.object as Stripe.Checkout.Session;
+                const orgId = session.metadata?.organization_id;
+                const customerId = typeof session.customer === "string" ? session.customer : "";
+                const subscriptionId = typeof session.subscription === "string" ? session.subscription : "";
 
-        const orgId = session.metadata?.organization_id;
-        const customerId = session.customer as string;
+                if (!orgId || !customerId) {
+                    console.warn("checkout.session.completed missing org/customer", {
+                        orgId: orgId || null,
+                        customerId: customerId || null,
+                    });
+                    break;
+                }
 
-        if (orgId) {
-            console.log(`✅  Payment success for Org: ${orgId}`);
+                let nextStatus = "active";
+                if (subscriptionId) {
+                    const sub = await stripe.subscriptions.retrieve(subscriptionId);
+                    nextStatus = mapSubscriptionStatus(sub.status);
+                }
 
-            // Activate Organization
-            await query(
-                `UPDATE organizations 
-                 SET subscription_status = 'active', 
-                     stripe_customer_id = $1,
-                     trial_ends_at = NULL, -- End trial? Or keep it? Usually upon payment we switch to paid.
-                     updated_at = CURRENT_TIMESTAMP
-                 WHERE id = $2`,
-                [customerId, orgId]
-            );
+                await updateOrganizationByOrgId(orgId, customerId, nextStatus);
+                console.log(`✅ checkout.session.completed applied: org=${orgId} customer=${customerId} status=${nextStatus}`);
+                break;
+            }
+            case "customer.subscription.updated":
+            case "customer.subscription.deleted": {
+                const subscription = event.data.object as Stripe.Subscription;
+                const customerId = typeof subscription.customer === "string" ? subscription.customer : "";
+                if (!customerId) {
+                    console.warn(`${event.type} missing customer id`);
+                    break;
+                }
+                const nextStatus = mapSubscriptionStatus(subscription.status);
+                await updateOrganizationByCustomer(customerId, nextStatus);
+                console.log(`✅ ${event.type} applied: customer=${customerId} status=${nextStatus}`);
+                break;
+            }
+            default: {
+                console.log(`ℹ️ Unhandled Stripe event type: ${event.type}`);
+                break;
+            }
         }
+    } catch (err: unknown) {
+        // Return 500 so Stripe retries delivery.
+        const message = err instanceof Error ? err.message : String(err);
+        console.error("Webhook processing error:", { eventType: event.type, message });
+        return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 });
     }
 
     return NextResponse.json({ received: true });
