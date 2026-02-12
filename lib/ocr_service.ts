@@ -1,8 +1,7 @@
-import OpenAI from "openai";
+import type OpenAI from "openai";
+import { getOpenAIClient, runOpenAIWithRetry, serializeOpenAIError } from "@/lib/openai_client";
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
+const openai = getOpenAIClient();
 
 // JSON Schema v4: Professional Analysis
 export type AnalysisResult = {
@@ -161,18 +160,20 @@ export async function analyzeImage(
             }
         }
 
-        const response = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [
-                { role: "system", content: SYSTEM_PROMPT },
-                { role: "user", content: userContent }
-            ],
-            response_format: { type: "json_object" },
-            temperature: 0.2,
-            top_p: 0.1,
-        }, {
-            timeout: 120000,
-        });
+        const response = await runOpenAIWithRetry(() =>
+            openai.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages: [
+                    { role: "system", content: SYSTEM_PROMPT },
+                    { role: "user", content: userContent }
+                ],
+                response_format: { type: "json_object" },
+                temperature: 0.2,
+                top_p: 0.1,
+            }, {
+                timeout: 120000,
+            })
+        );
 
         const content = response.choices[0].message.content;
         if (!content) throw new Error("No content received");
@@ -446,7 +447,7 @@ export async function analyzeImage(
 
         return parsed;
     } catch (error) {
-        console.error("OpenAI Analysis Error:", error);
+        console.error("OpenAI Analysis Error:", serializeOpenAIError(error));
         throw error;
     }
 }

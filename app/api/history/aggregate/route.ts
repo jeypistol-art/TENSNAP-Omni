@@ -2,11 +2,9 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { query } from "@/lib/db";
-import OpenAI from "openai";
+import { getOpenAIClient, runOpenAIWithRetry, serializeOpenAIError } from "@/lib/openai_client";
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
+const openai = getOpenAIClient();
 
 export async function GET(request: Request) {
     try {
@@ -162,11 +160,13 @@ Output Requirement:
 - 100文字以内で簡潔に。
 `;
 
-        const completion = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [{ role: "system", content: prompt }],
-            max_tokens: 150,
-        });
+        const completion = await runOpenAIWithRetry(() =>
+            openai.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages: [{ role: "system", content: prompt }],
+                max_tokens: 150,
+            })
+        );
 
         const aiSummary = completion.choices[0].message.content?.trim();
 
@@ -182,7 +182,7 @@ Output Requirement:
         });
 
     } catch (error) {
-        console.error("Aggregation Error:", error);
+        console.error("Aggregation Error:", serializeOpenAIError(error));
         return NextResponse.json({ error: "Failed to aggregate data" }, { status: 500 });
     }
 }
