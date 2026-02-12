@@ -5,6 +5,7 @@ import { useState, useCallback, useEffect } from "react";
 import MultiUploadArea from "./MultiUploadArea";
 import AnalysisStatus from "./AnalysisStatus";
 import StudentHistory from "./StudentHistory";
+import HistoryErrorBoundary from "./HistoryErrorBoundary";
 import { useRouter } from "next/navigation";
 import StudentSelector from "./StudentSelector";
 import AddStudentModal from "./AddStudentModal";
@@ -591,10 +592,12 @@ export default function Dashboard() {
 
                 {showHistory && selectedStudentId && (
                     <div className="mt-2 rounded-xl overflow-hidden border border-blue-100 shadow-inner bg-gray-50 animate-in slide-in-from-top-2">
-                        <StudentHistory
-                            studentId={selectedStudentId}
-                            studentName={students.find(s => s.id === selectedStudentId)?.name || "生徒"}
-                        />
+                        <HistoryErrorBoundary>
+                            <StudentHistory
+                                studentId={selectedStudentId}
+                                studentName={students.find(s => s.id === selectedStudentId)?.name || "生徒"}
+                            />
+                        </HistoryErrorBoundary>
                     </div>
                 )}
             </div>

@@ -1,12 +1,17 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import StudentTrendChart from "./StudentTrendChart";
+import dynamic from "next/dynamic";
 import PeriodicalReport from "./PeriodicalReport"; // [NEW] Import
 import ReportPreviewModal from "./ReportPreviewModal"; // [NEW] Import
 import HistoryResultDetail from "./HistoryResultDetail";
 import type { AnalysisDetails } from "./HistoryResultDetail";
 import { useReactToPrint } from "react-to-print";
+
+const StudentTrendChart = dynamic(() => import("./StudentTrendChart"), {
+    ssr: false,
+    loading: () => <div className="text-xs text-gray-400 mb-4">トレンドを読み込み中...</div>,
+});
 
 /* Removed PDFDownloadLink prototype */
 

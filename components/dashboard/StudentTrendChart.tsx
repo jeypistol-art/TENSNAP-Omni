@@ -19,14 +19,24 @@ export default function StudentTrendChart({ history }: { history: any[] }) {
     const chartRef = useRef<ChartJS<"line"> | null>(null);
 
     // データを時系列（古い順）に並べ替え
-    const sortedData = [...history].reverse();
+    const safeHistory = Array.isArray(history)
+        ? history.filter((h) => h && typeof h === "object")
+        : [];
+    const sortedData = [...safeHistory].reverse();
 
     const data = {
-        labels: sortedData.map(h => new Date(h.test_date || h.created_at).toLocaleDateString('ja-JP')),
+        labels: sortedData.map(h => {
+            const raw = h.test_date || h.created_at;
+            const d = new Date(raw);
+            return Number.isNaN(d.getTime()) ? "日付不明" : d.toLocaleDateString("ja-JP");
+        }),
         datasets: [
             {
                 label: '学習理解度 (%)',
-                data: sortedData.map(h => h.comprehension_score),
+                data: sortedData.map(h => {
+                    const n = Number(h.comprehension_score);
+                    return Number.isFinite(n) ? n : 0;
+                }),
                 borderColor: 'rgb(37, 99, 235)', // Score Snap Blue
                 backgroundColor: 'rgba(37, 99, 235, 0.5)',
                 tension: 0.3, // 滑らかな曲線に
@@ -61,11 +71,15 @@ export default function StudentTrendChart({ history }: { history: any[] }) {
             chartRef.current.destroy();
         }
 
-        chartRef.current = new ChartJS(canvas, {
-            type: "line",
-            data,
-            options,
-        });
+        try {
+            chartRef.current = new ChartJS(canvas, {
+                type: "line",
+                data,
+                options,
+            });
+        } catch (error) {
+            console.error("StudentTrendChart render error:", error);
+        }
 
         return () => {
             if (chartRef.current) {
