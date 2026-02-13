@@ -18,25 +18,7 @@ async function resolvePriceId(options: {
     label: string;
 }) {
     if (options.explicitPriceId) {
-        try {
-            const price = await stripe.prices.retrieve(options.explicitPriceId);
-            if (!price || price.deleted) {
-                throw new Error(`${options.label} explicit price is deleted`);
-            }
-            if (price.type !== options.type) {
-                throw new Error(
-                    `${options.label} explicit price type mismatch: expected ${options.type}, got ${price.type}`
-                );
-            }
-            return price.id;
-        } catch (err) {
-            if (!isPriceMissingError(err)) {
-                throw err;
-            }
-            console.warn(
-                `[stripe] ${options.label} explicit price not found: ${options.explicitPriceId}. Fallback to product lookup.`
-            );
-        }
+        return options.explicitPriceId;
     }
 
     if (!options.productId) {
@@ -162,10 +144,26 @@ export async function POST() {
         try {
             checkoutSession = await stripe.checkout.sessions.create(checkoutParams);
         } catch (err) {
-            // Coupon often differs between test/live; retry without coupon instead of 500.
             if (isEarlyBird && checkoutParams.discounts && isCouponMissingError(err)) {
                 delete checkoutParams.discounts;
                 checkoutParams.allow_promotion_codes = true;
+                checkoutSession = await stripe.checkout.sessions.create(checkoutParams);
+            } else if (isPriceMissingError(err)) {
+                // Explicit STRIPE_*_PRICE_ID may point to another mode/account; fallback to product lookup.
+                const fallbackMonthlyPriceId = await resolvePriceId({
+                    productId: process.env.STRIPE_MONTHLY_PRODUCT_ID || DEFAULT_PRODUCT_IDS.monthly,
+                    type: "recurring",
+                    label: "Monthly",
+                });
+                const fallbackSetupPriceId = await resolvePriceId({
+                    productId: process.env.STRIPE_SETUP_PRODUCT_ID || DEFAULT_PRODUCT_IDS.setup,
+                    type: "one_time",
+                    label: "Setup",
+                });
+                checkoutParams.line_items = [
+                    { price: fallbackSetupPriceId, quantity: 1 },
+                    { price: fallbackMonthlyPriceId, quantity: 1 },
+                ];
                 checkoutSession = await stripe.checkout.sessions.create(checkoutParams);
             } else {
                 throw err;
