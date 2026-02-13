@@ -183,9 +183,10 @@ export async function POST() {
 
         // 6. Apply Early Bird Discount (Initial Fee 50% OFF)
         if (isEarlyBird) {
-            checkoutParams.discounts = earlyBirdPromotionCode
-                ? [{ promotion_code: earlyBirdPromotionCode }]
-                : [{ coupon: earlyBirdCoupon }];
+            // Prefer coupon to avoid showing promotion code text in hosted Checkout.
+            checkoutParams.discounts = earlyBirdCoupon
+                ? [{ coupon: earlyBirdCoupon }]
+                : (earlyBirdPromotionCode ? [{ promotion_code: earlyBirdPromotionCode }] : undefined);
         } else {
             checkoutParams.allow_promotion_codes = true;
         }

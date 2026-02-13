@@ -370,7 +370,7 @@ export async function GET() {
                 monthly: monthlyPriceCheck,
             },
             discount: {
-                mode: promotionCodeId ? "promotion_code" : "coupon",
+                mode: couponId ? "coupon" : "promotion_code",
                 couponId,
                 promotionCodeId: promotionCodeId || null,
                 coupon: couponSummary,
