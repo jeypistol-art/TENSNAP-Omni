@@ -10,10 +10,35 @@ type Device = {
     created_at: string | null;
 };
 
+type StripeHealthIssue = {
+    code: string;
+    level: "error" | "warning";
+    message: string;
+};
+
+type StripeHealth = {
+    success: boolean;
+    checkedAt: string;
+    earlyBird: {
+        isEarlyBird: boolean;
+        isWithinCreatedWindow: boolean;
+        isWithinTrialWindow: boolean;
+    };
+    discount: {
+        mode: "coupon" | "promotion_code";
+        couponId: string;
+        promotionCodeId: string | null;
+    };
+    issues: StripeHealthIssue[];
+};
+
 export default function SettingsPage() {
     const [devices, setDevices] = useState<Device[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [stripeLoading, setStripeLoading] = useState(false);
+    const [stripeError, setStripeError] = useState("");
+    const [stripeHealth, setStripeHealth] = useState<StripeHealth | null>(null);
 
     const fetchDevices = async () => {
         setLoading(true);
@@ -34,6 +59,22 @@ export default function SettingsPage() {
     useEffect(() => {
         fetchDevices();
     }, []);
+
+    const fetchStripeHealth = async () => {
+        setStripeLoading(true);
+        setStripeError("");
+        try {
+            const res = await fetch("/api/stripe/health");
+            const data = await res.json();
+            if (!res.ok) throw new Error(data?.error || "Failed to run stripe health check");
+            setStripeHealth(data);
+        } catch (e) {
+            console.error(e);
+            setStripeError("Stripe診断に失敗しました");
+        } finally {
+            setStripeLoading(false);
+        }
+    };
 
     const handleDelete = async (deviceId: string) => {
         if (!confirm("この端末を削除しますか？")) return;
@@ -80,6 +121,56 @@ export default function SettingsPage() {
                         </div>
                     ))}
                 </div>
+            </div>
+
+            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm mt-6">
+                <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-sm font-bold text-gray-600">Stripe 接続診断</h2>
+                    <button
+                        onClick={fetchStripeHealth}
+                        className="text-xs font-bold text-white bg-gray-800 hover:bg-gray-900 px-3 py-2 rounded-md"
+                        disabled={stripeLoading}
+                    >
+                        {stripeLoading ? "診断中..." : "診断を実行"}
+                    </button>
+                </div>
+                {stripeError && <p className="text-sm text-red-500 mb-3">{stripeError}</p>}
+                {stripeHealth && (
+                    <div className="space-y-3">
+                        <div className="text-sm">
+                            <span className={`font-bold ${stripeHealth.success ? "text-green-600" : "text-red-600"}`}>
+                                {stripeHealth.success ? "正常" : "要対応"}
+                            </span>
+                            <span className="text-gray-500 ml-2">
+                                最終診断: {new Date(stripeHealth.checkedAt).toLocaleString()}
+                            </span>
+                        </div>
+                        <div className="text-xs text-gray-600 space-y-1">
+                            <p>早割判定: {stripeHealth.earlyBird.isEarlyBird ? "有効" : "無効"}</p>
+                            <p>割引モード: {stripeHealth.discount.mode === "promotion_code" ? "promotion code" : "coupon"}</p>
+                            <p>Coupon ID: {stripeHealth.discount.couponId}</p>
+                            {stripeHealth.discount.promotionCodeId && <p>Promotion Code ID: {stripeHealth.discount.promotionCodeId}</p>}
+                        </div>
+                        {stripeHealth.issues.length > 0 ? (
+                            <div className="space-y-2">
+                                {stripeHealth.issues.map((issue) => (
+                                    <div
+                                        key={`${issue.code}-${issue.message}`}
+                                        className={`text-xs border rounded-md px-3 py-2 ${issue.level === "error"
+                                            ? "bg-red-50 border-red-200 text-red-700"
+                                            : "bg-yellow-50 border-yellow-200 text-yellow-700"
+                                            }`}
+                                    >
+                                        <span className="font-bold mr-2">{issue.code}</span>
+                                        <span>{issue.message}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-xs text-green-600 font-semibold">問題は検出されませんでした。</p>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );
