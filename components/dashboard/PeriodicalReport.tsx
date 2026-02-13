@@ -87,7 +87,7 @@ const PeriodicalReport = forwardRef<HTMLDivElement, PeriodicalReportProps>(({ da
     }, [data]);
 
     return (
-        <div ref={ref} className="w-[210mm] min-h-[297mm] p-[20mm] bg-white text-gray-800 font-sans mx-auto">
+        <div ref={ref} className="w-full max-w-[210mm] print:w-[210mm] min-h-[297mm] p-4 sm:p-[20mm] print:p-[20mm] bg-white text-gray-800 font-sans mx-auto">
             {/* Header */}
             <header className="flex justify-between items-end border-b-2 border-gray-200 pb-4 mb-8">
                 <div>
@@ -116,7 +116,7 @@ const PeriodicalReport = forwardRef<HTMLDivElement, PeriodicalReportProps>(({ da
             </section>
 
             {/* Growth Radar Chart */}
-            <section className="mb-10 flex gap-8">
+            <section className="mb-10 flex flex-col sm:flex-row gap-4 sm:gap-8">
                 <div className="flex-1">
                     <h3 className="text-lg font-bold text-blue-800 mb-4 flex items-center gap-2">
                         <span className="text-xl">📈</span> 成長の軌跡 (Growth Triangle)
