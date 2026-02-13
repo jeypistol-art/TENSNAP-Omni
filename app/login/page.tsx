@@ -1,92 +1,43 @@
-"use client";
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+import LoginForm from "@/components/LoginForm";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
-import { FormEvent, useState } from "react";
-import { signIn } from "next-auth/react";
+function hasForceLogoutError(session: unknown): boolean {
+  if (!session || typeof session !== "object") return false;
+  const maybe = session as { error?: unknown };
+  return maybe.error === "ForceLogout";
+}
 
-export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [loadingGoogle, setLoadingGoogle] = useState(false);
-  const [loadingEmail, setLoadingEmail] = useState(false);
-  const [message, setMessage] = useState("");
-
-  const handleGoogle = async () => {
-    setLoadingGoogle(true);
-    await signIn("google", { callbackUrl: "/dashboard" });
-  };
-
-  const handleEmail = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!email.trim()) {
-      setMessage("メールアドレスを入力してください。");
-      return;
-    }
-
-    setLoadingEmail(true);
-    setMessage("");
-    try {
-      const result = await signIn("email", {
-        email: email.trim(),
-        callbackUrl: "/dashboard",
-        redirect: false,
-      });
-
-      if (result?.ok) {
-        setMessage("ログイン用リンクを送信しました。メールをご確認ください。");
-      } else {
-        setMessage("メール送信に失敗しました。時間をおいて再試行してください。");
-      }
-    } catch {
-      setMessage("ログイン処理中にエラーが発生しました。");
-    } finally {
-      setLoadingEmail(false);
-    }
-  };
+export default async function LoginPage() {
+  const session = await getServerSession(authOptions);
+  if (session && !hasForceLogoutError(session)) {
+    redirect("/dashboard");
+  }
 
   return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-md bg-white border border-gray-200 rounded-2xl shadow-sm p-6 sm:p-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">ログイン</h1>
-        <p className="text-sm text-gray-500 mb-6">
-          Google またはメールリンクで安全にログインできます。
-        </p>
-
-        <button
-          onClick={handleGoogle}
-          disabled={loadingGoogle}
-          className="w-full mb-4 py-3 rounded-xl bg-blue-700 hover:bg-blue-800 text-white font-bold disabled:opacity-60"
-        >
-          {loadingGoogle ? "遷移中..." : "Google でログイン"}
-        </button>
-
-        <div className="relative my-5">
-          <div className="border-t border-gray-200" />
-          <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-white px-2 text-xs text-gray-400">
-            または
-          </span>
+    <main className="min-h-screen bg-[#f2f4f8] flex items-center justify-center px-4 py-10">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-gray-100 p-8 sm:p-10">
+        <div className="mb-7">
+          <div className="w-64 mx-auto mb-4">
+            <img
+              src="/images/logo.png"
+              alt="TENsNAP・Omni"
+              className="w-full h-auto object-contain"
+            />
+          </div>
+          <p className="text-[32px] text-gray-400 text-center leading-none mb-1">.</p>
+          <p className="text-center text-2xl text-gray-500 font-semibold leading-snug">
+            OCR-powered automatic grading.<br />
+            Stop manual entry. Start analyzing.
+          </p>
         </div>
 
-        <form onSubmit={handleEmail} className="space-y-3">
-          <label className="block text-sm font-semibold text-gray-700">
-            メールアドレス
-          </label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
-            autoComplete="email"
-          />
-          <button
-            type="submit"
-            disabled={loadingEmail}
-            className="w-full py-3 rounded-xl bg-gray-900 hover:bg-black text-white font-bold disabled:opacity-60"
-          >
-            {loadingEmail ? "送信中..." : "メールリンクを送信"}
-          </button>
-        </form>
+        <LoginForm />
 
-        {message && <p className="mt-4 text-sm text-gray-600">{message}</p>}
+        <p className="mt-10 text-center text-[11px] tracking-wide font-bold text-gray-300">
+          POWERED BY TENSNAP・OMNI
+        </p>
       </div>
     </main>
   );

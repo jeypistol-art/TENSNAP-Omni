@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import StudentSelector from "./StudentSelector";
 import AddStudentModal from "./AddStudentModal";
 import TrialExpiredGate from "./TrialExpiredGate";
-import { useSession, signIn, signOut } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 
 export default function Dashboard() {
     const { data: session, status: authStatus } = useSession();
@@ -18,9 +18,10 @@ export default function Dashboard() {
 
     // 1. Session Kickout Check
     useEffect(() => {
-        if (session && (session as any).error === "ForceLogout") {
-            alert("セキュリティ保護のため、別端末からのログインを検知してログアウトしました。");
-            signIn(); // Force re-login
+        const sessionError = (session as { error?: string } | null)?.error;
+        if (sessionError === "ForceLogout") {
+            alert("セキュリティ保護のため、別端末からのログインを検知しました。再ログインしてください。");
+            signOut({ callbackUrl: "/login" });
         }
     }, [session]);
 

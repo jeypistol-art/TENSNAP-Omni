@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   ArrowRight,
   CheckCircle,
-  Shield,
   Zap,
   Layout,
   FileText,
@@ -15,10 +14,16 @@ import {
   Users
 } from "lucide-react";
 
+function hasForceLogoutError(session: unknown): boolean {
+  if (!session || typeof session !== "object") return false;
+  const maybe = session as { error?: unknown };
+  return maybe.error === "ForceLogout";
+}
+
 export default async function Home() {
   const session = await getServerSession(authOptions);
 
-  if (session) {
+  if (session && !hasForceLogoutError(session)) {
     redirect("/dashboard");
   }
 
