@@ -142,8 +142,8 @@ export async function POST() {
 
         // 5. Construct Checkout Params
         const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-        const successUrl = process.env.STRIPE_SUCCESS_URL || `${baseUrl}/?payment=success`;
-        const cancelUrl = process.env.STRIPE_CANCEL_URL || `${baseUrl}/?payment=cancelled`;
+        const successUrl = process.env.STRIPE_SUCCESS_URL || `${baseUrl}/dashboard?payment=success`;
+        const cancelUrl = process.env.STRIPE_CANCEL_URL || `${baseUrl}/dashboard?payment=cancelled`;
         const earlyBirdCoupon = process.env.STRIPE_EARLY_BIRD_COUPON_ID || "EARLY_BIRD_50";
         const earlyBirdPromotionCode = process.env.STRIPE_EARLY_BIRD_PROMOTION_CODE_ID;
         console.log("Checkout early-bird evaluation", {

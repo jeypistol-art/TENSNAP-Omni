@@ -15,7 +15,7 @@ export default function LoginPage() {
       }}
     >
       <h1>Login</h1>
-      <button onClick={() => signIn("google", { callbackUrl: "/" })}>
+      <button onClick={() => signIn("google", { callbackUrl: "/dashboard" })}>
         Sign in with Google
       </button>
     </main>

@@ -30,7 +30,7 @@ export default function Dashboard() {
         if (query.get("payment") === "success") {
             alert("本契約ありがとうございます！\n制限が解除されました。");
             // Clear URL
-            window.history.replaceState({}, "", "/");
+            window.history.replaceState({}, "", "/dashboard");
         }
     }, []);
 

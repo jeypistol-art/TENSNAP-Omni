@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function PaymentCancelledPage() {
-    redirect("/?payment=cancelled");
+    redirect("/dashboard?payment=cancelled");
 }
-
