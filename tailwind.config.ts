@@ -11,6 +11,8 @@ const config: Config = {
             colors: {
                 background: "var(--background)",
                 foreground: "var(--foreground)",
+                mizuho: "#002B6F", // Deep Blue like Mizuho
+                accent: "rgba(59, 130, 246, 0.5)", // #3b82f680
             },
         },
     },

@@ -76,6 +76,22 @@ export default function Dashboard() {
     const [fieldError, setFieldError] = useState("");
     const subjectOptions = ["数学", "英語", "国語", "理科", "社会"];
 
+    const isDevicePolicyErrorCode = (code?: string | null) =>
+        code === "DeviceLimitExceeded" || code === "TrialAbuseDetected";
+
+    const fetchBlockedDeviceList = useCallback(async () => {
+        try {
+            const listRes = await fetch("/api/org/device/list");
+            if (!listRes.ok) return;
+            const listData = await listRes.json();
+            if (Array.isArray(listData?.devices)) {
+                setBlockedDevices(listData.devices);
+            }
+        } catch (e) {
+            console.error("Failed to fetch blocked device list", e);
+        }
+    }, []);
+
     useEffect(() => {
         if (isDeviceVerified && (subscriptionStatus === 'past_due' || subscriptionStatus === 'canceled' || subscriptionStatus === 'unpaid')) {
             router.push('/expired');
@@ -128,24 +144,30 @@ export default function Dashboard() {
                 const text = await res.text();
                 try {
                     const data = JSON.parse(text);
-                    if (!data.success) {
+                    if (!data.success && isDevicePolicyErrorCode(data.error)) {
                         setDeviceError(true);
                         setDeviceErrorCode(data.error || "Unknown");
                         setBlockedDevices(data.devices || []);
+                        if (data.error === "DeviceLimitExceeded" && (!Array.isArray(data.devices) || data.devices.length === 0)) {
+                            await fetchBlockedDeviceList();
+                        }
                         return;
                     }
                 } catch (e) {
                     console.error("Device check returned non-JSON error:", res.status, text.substring(0, 500));
-                    setIsDeviceVerified(true);
                 }
+                setIsDeviceVerified(true);
                 return;
             }
 
             const data = await res.json();
-            if (data && data.success === false) {
+            if (data && data.success === false && isDevicePolicyErrorCode(data.error)) {
                 setDeviceError(true);
                 setDeviceErrorCode(data.error || "Unknown");
                 setBlockedDevices(data.devices || []);
+                if (data.error === "DeviceLimitExceeded" && (!Array.isArray(data.devices) || data.devices.length === 0)) {
+                    await fetchBlockedDeviceList();
+                }
                 return;
             }
             setDeviceError(false);
@@ -166,7 +188,7 @@ export default function Dashboard() {
             console.error("Device check failed", e);
             setIsDeviceVerified(true);
         }
-    }, [authStatus]);
+    }, [authStatus, fetchBlockedDeviceList]);
 
     useEffect(() => {
         runDeviceCheck();
@@ -421,28 +443,40 @@ export default function Dashboard() {
                         セキュリティ保護のため、1つの組織で使用できる端末は最大2台までに制限されています。<br />
                         別の端末でログインするか、管理者に不要な端末の削除を依頼してください。
                     </p>
-                    {deviceErrorCode === "DeviceLimitExceeded" && blockedDevices.length > 0 && (
+                    {deviceErrorCode === "DeviceLimitExceeded" && (
                         <div className="text-left mb-4">
                             <p className="text-xs text-gray-500 font-bold mb-2">登録済みデバイス（解除してこの端末を登録）</p>
-                            <div className="space-y-2">
-                                {blockedDevices.map((d: any) => (
-                                    <div key={d.id} className="flex items-center justify-between gap-3 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-                                        <div className="min-w-0">
-                                            <p className="text-xs font-semibold text-gray-700 truncate">{d.name || "Unknown Device"}</p>
-                                            <p className="text-[10px] text-gray-400">
-                                                最終アクティブ: {d.last_active_at ? new Date(d.last_active_at).toLocaleString() : "不明"}
-                                            </p>
+                            {blockedDevices.length > 0 ? (
+                                <div className="space-y-2">
+                                    {blockedDevices.map((d: any) => (
+                                        <div key={d.id} className="flex items-center justify-between gap-3 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                                            <div className="min-w-0">
+                                                <p className="text-xs font-semibold text-gray-700 truncate">{d.name || "Unknown Device"}</p>
+                                                <p className="text-[10px] text-gray-400">
+                                                    最終アクティブ: {d.last_active_at ? new Date(d.last_active_at).toLocaleString() : "不明"}
+                                                </p>
+                                            </div>
+                                            <button
+                                                onClick={() => handleReplaceDevice(d.id)}
+                                                className="text-xs font-bold text-white bg-gray-700 hover:bg-gray-800 px-3 py-1.5 rounded-md"
+                                                disabled={isReplacingDevice}
+                                            >
+                                                この端末に入替
+                                            </button>
                                         </div>
-                                        <button
-                                            onClick={() => handleReplaceDevice(d.id)}
-                                            className="text-xs font-bold text-white bg-gray-700 hover:bg-gray-800 px-3 py-1.5 rounded-md"
-                                            disabled={isReplacingDevice}
-                                        >
-                                            この端末に入替
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-3">
+                                    <p className="text-xs text-gray-500 mb-2">登録済みデバイスを取得中、または取得に失敗しました。</p>
+                                    <button
+                                        onClick={fetchBlockedDeviceList}
+                                        className="text-xs font-bold text-white bg-gray-700 hover:bg-gray-800 px-3 py-1.5 rounded-md"
+                                    >
+                                        デバイス一覧を再取得
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     )}
                     <div className="flex flex-col gap-4 mt-4">
