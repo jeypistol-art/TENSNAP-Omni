@@ -42,13 +42,26 @@ async function main() {
             process.exit(1);
         }
 
-        // 2. Update Org Created At
+        // 2. Update Org Created At and Trial End
         const newDate = new Date();
         newDate.setDate(newDate.getDate() - daysAgo);
+        const trialEnd = new Date(newDate);
+        trialEnd.setDate(trialEnd.getDate() + 14);
 
-        await client.query(`UPDATE organizations SET created_at = $1 WHERE id = $2`, [newDate, orgId]);
+        await client.query(
+            `UPDATE organizations
+             SET created_at = $1,
+                 trial_ends_at = $2,
+                 subscription_status = 'trialing',
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = $3`,
+            [newDate, trialEnd, orgId]
+        );
 
-        console.log(`✅ Updated Organization (${orgId}) created_at to: ${newDate.toISOString()} (${daysAgo} days ago)`);
+        console.log(`✅ Updated Organization (${orgId})`);
+        console.log(`   - created_at: ${newDate.toISOString()} (${daysAgo} days ago)`);
+        console.log(`   - trial_ends_at: ${trialEnd.toISOString()} (~${14 - daysAgo} days left)`);
+        console.log(`   - subscription_status: trialing`);
 
     } catch (e) {
         console.error(e);
