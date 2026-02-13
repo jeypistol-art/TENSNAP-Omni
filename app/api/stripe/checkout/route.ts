@@ -94,8 +94,13 @@ export async function POST() {
         const orgId = await getTenantId(session.user.id, session.user.email);
 
         // 2. Fetch Organization Details (for Created At check)
-        const orgRes = await query<{ created_at: Date, stripe_customer_id: string }>(
-            `SELECT created_at, stripe_customer_id FROM organizations WHERE id = $1`,
+        const orgRes = await query<{
+            created_at: Date | string;
+            trial_ends_at: Date | string | null;
+            subscription_status: string | null;
+            stripe_customer_id: string;
+        }>(
+            `SELECT created_at, trial_ends_at, subscription_status, stripe_customer_id FROM organizations WHERE id = $1`,
             [orgId]
         );
         const org = orgRes.rows[0];
@@ -105,7 +110,15 @@ export async function POST() {
 
         // 3. Early Bird Check (7 Days)
         const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-        const isEarlyBird = (new Date().getTime() - new Date(org.created_at).getTime()) < ONE_WEEK_MS;
+        const nowMs = Date.now();
+        const createdAtMs = new Date(org.created_at).getTime();
+        const trialEndsAtMs = org.trial_ends_at ? new Date(org.trial_ends_at).getTime() : NaN;
+        const isTrialing = org.subscription_status === "trialing" || org.subscription_status === "trial";
+        const isWithinCreatedWindow =
+            Number.isFinite(createdAtMs) && (nowMs - createdAtMs) >= 0 && (nowMs - createdAtMs) < ONE_WEEK_MS;
+        const isWithinTrialWindow =
+            isTrialing && Number.isFinite(trialEndsAtMs) && (trialEndsAtMs - nowMs) > ONE_WEEK_MS;
+        const isEarlyBird = isWithinCreatedWindow || isWithinTrialWindow;
 
         // 4. Resolve Prices
         // Prefer explicit price IDs in env for live/test separation.
@@ -128,6 +141,17 @@ export async function POST() {
         const cancelUrl = process.env.STRIPE_CANCEL_URL || `${baseUrl}/?payment=cancelled`;
         const earlyBirdCoupon = process.env.STRIPE_EARLY_BIRD_COUPON_ID || "EARLY_BIRD_50";
         const earlyBirdPromotionCode = process.env.STRIPE_EARLY_BIRD_PROMOTION_CODE_ID;
+        console.log("Checkout early-bird evaluation", {
+            orgId,
+            created_at: String(org.created_at),
+            trial_ends_at: org.trial_ends_at ? String(org.trial_ends_at) : null,
+            subscription_status: org.subscription_status || null,
+            isWithinCreatedWindow,
+            isWithinTrialWindow,
+            isEarlyBird,
+            earlyBirdCoupon,
+            earlyBirdPromotionCode: earlyBirdPromotionCode || null,
+        });
 
         const checkoutParams: Stripe.Checkout.SessionCreateParams = {
             mode: "subscription",
