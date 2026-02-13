@@ -495,6 +495,10 @@ export default function Dashboard() {
         }
     };
 
+    const trialDaysLeft = trialEndsAt
+        ? Math.max(0, Math.ceil((Date.parse(trialEndsAt) - Date.now()) / (1000 * 60 * 60 * 24)))
+        : null;
+
     const TrialBanner = () => {
         if (subscriptionStatus === 'active') return null; // HIDE IF ACTIVE
 
@@ -502,7 +506,7 @@ export default function Dashboard() {
             <div className="bg-gradient-to-r from-indigo-900 to-purple-900 text-white px-4 py-3 shadow-md mb-6 -mx-4 sm:mx-0 sm:rounded-xl flex flex-col sm:flex-row justify-between items-center gap-3">
                 <div className="flex items-center gap-3">
                     <span className="bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-0.5 rounded shadow-sm">TRIAL</span>
-                    <span className="text-sm font-medium">無料トライアル中：残り <span className="font-bold text-yellow-300 text-lg">14</span> 日</span>
+                    <span className="text-sm font-medium">無料トライアル中：残り <span className="font-bold text-yellow-300 text-lg">{trialDaysLeft ?? 14}</span> 日</span>
                 </div>
                 <button
                     onClick={handleSubscribe}

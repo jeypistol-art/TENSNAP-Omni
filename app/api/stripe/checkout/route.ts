@@ -77,6 +77,11 @@ function isPriceMissingError(err: unknown) {
     );
 }
 
+function isStripeInvalidRequestError(err: unknown) {
+    const stripeErr = err as { type?: string };
+    return stripeErr?.type === "StripeInvalidRequestError";
+}
+
 function getErrorMessage(error: unknown) {
     if (error instanceof Error) return error.message;
     if (typeof error === "string") return error;
@@ -189,24 +194,7 @@ export async function POST() {
         try {
             checkoutSession = await stripe.checkout.sessions.create(checkoutParams);
         } catch (err) {
-            if (
-                isEarlyBird &&
-                checkoutParams.discounts &&
-                (isCouponMissingError(err) || isPromotionCodeMissingError(err) || isCouponNotApplicableError(err))
-            ) {
-                console.error(
-                    "Early-bird discount could not be applied. Retrying checkout without discount.",
-                    {
-                        orgId,
-                        earlyBirdCoupon,
-                        earlyBirdPromotionCode,
-                        error: getErrorMessage(err),
-                    }
-                );
-                delete checkoutParams.discounts;
-                checkoutParams.allow_promotion_codes = true;
-                checkoutSession = await stripe.checkout.sessions.create(checkoutParams);
-            } else if (isPriceMissingError(err)) {
+            if (isPriceMissingError(err)) {
                 // Explicit STRIPE_*_PRICE_ID may point to another mode/account; fallback to product lookup.
                 const fallbackMonthlyPriceId = await resolvePriceId({
                     productId: process.env.STRIPE_MONTHLY_PRODUCT_ID || DEFAULT_PRODUCT_IDS.monthly,
@@ -222,6 +210,28 @@ export async function POST() {
                     { price: fallbackSetupPriceId, quantity: 1 },
                     { price: fallbackMonthlyPriceId, quantity: 1 },
                 ];
+                checkoutSession = await stripe.checkout.sessions.create(checkoutParams);
+            } else if (
+                isEarlyBird &&
+                checkoutParams.discounts &&
+                (
+                    isCouponMissingError(err) ||
+                    isPromotionCodeMissingError(err) ||
+                    isCouponNotApplicableError(err) ||
+                    isStripeInvalidRequestError(err)
+                )
+            ) {
+                console.error(
+                    "Early-bird discount could not be applied. Retrying checkout without discount.",
+                    {
+                        orgId,
+                        earlyBirdCoupon,
+                        earlyBirdPromotionCode,
+                        error: getErrorMessage(err),
+                    }
+                );
+                delete checkoutParams.discounts;
+                checkoutParams.allow_promotion_codes = true;
                 checkoutSession = await stripe.checkout.sessions.create(checkoutParams);
             } else {
                 throw err;
