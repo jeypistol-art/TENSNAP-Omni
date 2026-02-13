@@ -31,6 +31,7 @@ type HistoryItem = {
 
 type PeriodicalData = {
     studentName: string;
+    targetSchool?: string;
     periodStr: string;
     startStats: { accuracy: number; process: number; consistency: number };
     currentStats: { accuracy: number; process: number; consistency: number };
@@ -41,9 +42,10 @@ type PeriodicalData = {
 type StudentHistoryProps = {
     studentId: string;
     studentName: string;
+    targetSchool?: string;
 };
 
-export default function StudentHistory({ studentId, studentName }: StudentHistoryProps) {
+export default function StudentHistory({ studentId, studentName, targetSchool }: StudentHistoryProps) {
     const [history, setHistory] = useState<HistoryItem[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -189,6 +191,7 @@ export default function StudentHistory({ studentId, studentName }: StudentHistor
 
             setPeriodicalData({
                 studentName: studentName || "生徒",
+                targetSchool: targetSchool || "",
                 periodStr: `${new Date(startDate).toLocaleDateString()} 〜 ${new Date(endDate).toLocaleDateString()}`,
                 ...data.aggregated
             });

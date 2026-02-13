@@ -601,6 +601,7 @@ export default function Dashboard() {
                             <StudentHistory
                                 studentId={selectedStudentId}
                                 studentName={students.find(s => s.id === selectedStudentId)?.name || "生徒"}
+                                targetSchool={students.find(s => s.id === selectedStudentId)?.target_school || ""}
                             />
                         </HistoryErrorBoundary>
                     </div>

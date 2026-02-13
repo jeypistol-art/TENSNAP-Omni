@@ -7,6 +7,7 @@ import type { Chart as ChartJS } from 'chart.js';
 type PeriodicalReportProps = {
     data: {
         studentName: string;
+        targetSchool?: string;
         periodStr: string;
         startStats: { accuracy: number; process: number; consistency: number };
         currentStats: { accuracy: number; process: number; consistency: number };
@@ -108,6 +109,9 @@ const PeriodicalReport = forwardRef<HTMLDivElement, PeriodicalReportProps>(({ da
             {/* Student Info */}
             <section className="bg-gradient-to-r from-blue-50 to-white rounded-lg p-6 mb-8 border-l-4 border-blue-600 shadow-sm">
                 <h2 className="text-2xl font-bold text-gray-800">{data.studentName} <span className="text-base font-normal text-gray-500 ml-1">様</span></h2>
+                {data.targetSchool && (
+                    <p className="text-sm text-gray-700 font-semibold mt-2">志望校：{data.targetSchool}</p>
+                )}
                 <p className="text-sm text-blue-600 font-bold mt-2">✨ 特別成長分析レポート</p>
             </section>
 
