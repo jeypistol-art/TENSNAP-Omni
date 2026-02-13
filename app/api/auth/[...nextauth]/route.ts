@@ -29,23 +29,35 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user, trigger }) {
+      if (user?.id) {
+        token.accountId = user.id;
+      } else if (!token.accountId && token.sub) {
+        token.accountId = token.sub;
+      }
+
       // 1. On Sign In: Generate & Save Session ID (Kickout others)
       if (trigger === "signIn" && user) {
+        const accountId = user.id || (token.accountId as string) || token.sub;
+        if (!accountId) {
+          console.error("SignIn callback missing account id");
+          return token;
+        }
         const sessionId = randomUUID();
         // Update DB with this new Session ID
         // We also ensure user exists or update it if needed (though Google Provider ensures auth success)
         await query(
           `UPDATE users SET current_session_id = $1 WHERE id = $2`,
-          [sessionId, user.id]
+          [sessionId, accountId]
         );
         token.sessionId = sessionId;
-        token.accountId = user.id;
+        token.accountId = accountId;
       }
       return token;
     },
     async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.accountId as string;
+      const accountId = (token.accountId as string) || token.sub;
+      if (session.user && accountId) {
+        session.user.id = accountId;
 
         // 2. Strict Session Check (The Guard)
         // Every time the session is accessed, we check if it matches the DB.
@@ -53,7 +65,7 @@ export const authOptions: NextAuthOptions = {
         try {
           const result = await query<{ current_session_id: string }>(
             `SELECT current_session_id FROM users WHERE id = $1`,
-            [token.accountId]
+            [accountId]
           );
 
           if (result.rows.length > 0) {
@@ -70,6 +82,9 @@ export const authOptions: NextAuthOptions = {
         } catch (err) {
           console.error("Session validation failed:", err);
         }
+      } else if (session.user) {
+        console.error("Session callback missing account id");
+        return { ...session, error: "ForceLogout" };
       }
       return session;
     },
