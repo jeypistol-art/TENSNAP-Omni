@@ -2,15 +2,23 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { authorize } from "@/lib/authorize";
 
 export function useAuthorization(accountId?: string | null) {
   const router = useRouter();
   const inFlight = useRef(false);
+  const signingOut = useRef(false);
 
-  const handleUnauthorized = useCallback(() => {
+  const handleUnauthorized = useCallback(async () => {
+    if (signingOut.current) return;
+    signingOut.current = true;
     clearClientSession();
-    router.replace("/login");
+    try {
+      await signOut({ callbackUrl: "/login" });
+    } catch {
+      router.replace("/login");
+    }
   }, [router]);
 
   const authorizeNow = useCallback(async () => {
@@ -21,7 +29,7 @@ export function useAuthorization(accountId?: string | null) {
     try {
       const result = await authorize(accountId);
       if (!result.authorized) {
-        handleUnauthorized();
+        await handleUnauthorized();
       }
     } finally {
       inFlight.current = false;
