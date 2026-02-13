@@ -486,7 +486,8 @@ export default function Dashboard() {
             if (data.url) {
                 window.location.href = data.url;
             } else {
-                alert("決済・契約システムの接続に失敗しました。");
+                const message = data?.error ? `決済・契約が完了できませんでした: ${data.error}` : "決済・契約システムの接続に失敗しました。";
+                alert(message);
             }
         } catch (e) {
             console.error("Checkout error", e);

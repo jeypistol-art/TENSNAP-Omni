@@ -8,7 +8,8 @@ export default function ExpiredPage() {
             if (data.url) {
                 window.location.href = data.url;
             } else {
-                alert("決済システムの接続に失敗しました。");
+                const message = data?.error ? `決済・契約が完了できませんでした: ${data.error}` : "決済システムの接続に失敗しました。";
+                alert(message);
             }
         } catch (e) {
             alert("エラーが発生しました。");

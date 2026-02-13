@@ -4,21 +4,59 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { stripe } from "@/lib/stripe";
 import { query } from "@/lib/db";
 import { getTenantId } from "@/lib/tenant";
+import Stripe from "stripe";
 
-const PRODUCT_IDS = {
-    SETUP_FEE: "prod_Tv7PUAuavY1I1s", // 50,000 JPY
-    MONTHLY: "prod_Tv7RHfcj9WrCP5",   // 9,800 JPY
+const DEFAULT_PRODUCT_IDS = {
+    setup: "prod_Tv7PUAuavY1I1s",
+    monthly: "prod_Tv7RHfcj9WrCP5",
 };
 
-async function getPriceIdForProduct(productId: string) {
-    const prices = await stripe.prices.list({ product: productId, active: true, limit: 1 });
-    if (prices.data.length === 0) {
-        throw new Error(`No price found for product ${productId}`);
+async function resolvePriceId(options: {
+    explicitPriceId?: string;
+    productId?: string;
+    type: "one_time" | "recurring";
+    label: string;
+}) {
+    if (options.explicitPriceId) {
+        return options.explicitPriceId;
     }
+
+    if (!options.productId) {
+        throw new Error(`${options.label} product id is not configured`);
+    }
+
+    const prices = await stripe.prices.list({
+        product: options.productId,
+        active: true,
+        limit: 1,
+        type: options.type,
+    });
+
+    if (prices.data.length === 0) {
+        throw new Error(
+            `${options.label} price not found for product ${options.productId} in current Stripe mode`
+        );
+    }
+
     return prices.data[0].id;
 }
 
-export async function POST(request: Request) {
+function isCouponMissingError(err: unknown) {
+    const stripeErr = err as { type?: string; code?: string; message?: string };
+    const message = String(stripeErr?.message || "");
+    return (
+        stripeErr?.type === "StripeInvalidRequestError" &&
+        (stripeErr?.code === "resource_missing" || message.includes("No such coupon"))
+    );
+}
+
+function getErrorMessage(error: unknown) {
+    if (error instanceof Error) return error.message;
+    if (typeof error === "string") return error;
+    return "Unknown error";
+}
+
+export async function POST() {
     try {
         const session = await getServerSession(authOptions);
         if (!session || !session.user) {
@@ -34,55 +72,38 @@ export async function POST(request: Request) {
             [orgId]
         );
         const org = orgRes.rows[0];
+        if (!org) {
+            return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+        }
 
         // 3. Early Bird Check (7 Days)
         const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
         const isEarlyBird = (new Date().getTime() - new Date(org.created_at).getTime()) < ONE_WEEK_MS;
 
         // 4. Resolve Prices
-        // HARDCODED IDs to prevent resolution errors (User provided these)
-        // Monthly: prod_Tv7RHfcj9WrCP5
-        // Setup: prod_Tv7PUAuavY1I1s
-
-        let monthlyPriceId = "";
-        let setupPriceId = "";
-
-        try {
-            // Try to find price for Monthly (Recurring)
-            // ENFORCE recurring: true to ensure we satisfy subscription mode requirements
-            const mPrices = await stripe.prices.list({
-                product: "prod_Tv7RHfcj9WrCP5",
-                active: true,
-                limit: 1,
-                type: 'recurring'
-            });
-            if (mPrices.data.length > 0) monthlyPriceId = mPrices.data[0].id;
-
-            // Try to find price for Setup (One-time)
-            const sPrices = await stripe.prices.list({
-                product: "prod_Tv7PUAuavY1I1s",
-                active: true,
-                limit: 1,
-                type: 'one_time'
-            });
-            if (sPrices.data.length > 0) setupPriceId = sPrices.data[0].id;
-
-            console.log("Resolved Prices:", { monthly: monthlyPriceId, setup: setupPriceId });
-        } catch (e) {
-            console.error("Price resolution failed:", e);
-        }
-
-        if (!monthlyPriceId) throw new Error("Monthly Price ID not found for prod_Tv7RHfcj9WrCP5");
-        if (!setupPriceId) throw new Error("Setup Price ID not found for prod_Tv7PUAuavY1I1s");
+        // Prefer explicit price IDs in env for live/test separation.
+        const monthlyPriceId = await resolvePriceId({
+            explicitPriceId: process.env.STRIPE_MONTHLY_PRICE_ID,
+            productId: process.env.STRIPE_MONTHLY_PRODUCT_ID || DEFAULT_PRODUCT_IDS.monthly,
+            type: "recurring",
+            label: "Monthly",
+        });
+        const setupPriceId = await resolvePriceId({
+            explicitPriceId: process.env.STRIPE_SETUP_PRICE_ID,
+            productId: process.env.STRIPE_SETUP_PRODUCT_ID || DEFAULT_PRODUCT_IDS.setup,
+            type: "one_time",
+            label: "Setup",
+        });
 
         // 5. Construct Checkout Params
-        // Redirect to root because Dashboard is at /
-        const successUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/?payment=success`;
-        const cancelUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/?payment=cancelled`;
+        const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+        const successUrl = process.env.STRIPE_SUCCESS_URL || `${baseUrl}/?payment=success`;
+        const cancelUrl = process.env.STRIPE_CANCEL_URL || `${baseUrl}/?payment=cancelled`;
+        const earlyBirdCoupon = process.env.STRIPE_EARLY_BIRD_COUPON_ID || "EARLY_BIRD_50";
 
-        const checkoutParams: any = {
-            mode: 'subscription',
-            payment_method_types: ['card'],
+        const checkoutParams: Stripe.Checkout.SessionCreateParams = {
+            mode: "subscription",
+            payment_method_types: ["card"],
             line_items: [
                 { price: setupPriceId, quantity: 1 },
                 { price: monthlyPriceId, quantity: 1 },
@@ -91,11 +112,10 @@ export async function POST(request: Request) {
             cancel_url: cancelUrl,
             metadata: {
                 organization_id: orgId,
-                user_id: session.user.id
+                user_id: session.user.id,
             },
             customer_email: session.user.email || undefined,
             client_reference_id: orgId,
-            // allow_promotion_codes: true, // ERROR: Cannot mix with discounts
         };
 
         // Reuse Customer if exists
@@ -106,20 +126,29 @@ export async function POST(request: Request) {
 
         // 6. Apply Early Bird Discount (Initial Fee 50% OFF)
         if (isEarlyBird) {
-            // Use static coupon defined in Stripe Dashboard
-            // ID: EARLY_BIRD_50
-            checkoutParams.discounts = [{ coupon: 'EARLY_BIRD_50' }];
+            checkoutParams.discounts = [{ coupon: earlyBirdCoupon }];
         } else {
-            // Only allow codes if no discount is manually applied
             checkoutParams.allow_promotion_codes = true;
         }
 
-        const checkoutSession = await stripe.checkout.sessions.create(checkoutParams);
+        let checkoutSession: Stripe.Checkout.Session;
+        try {
+            checkoutSession = await stripe.checkout.sessions.create(checkoutParams);
+        } catch (err) {
+            // Coupon often differs between test/live; retry without coupon instead of 500.
+            if (isEarlyBird && checkoutParams.discounts && isCouponMissingError(err)) {
+                delete checkoutParams.discounts;
+                checkoutParams.allow_promotion_codes = true;
+                checkoutSession = await stripe.checkout.sessions.create(checkoutParams);
+            } else {
+                throw err;
+            }
+        }
 
         return NextResponse.json({ url: checkoutSession.url });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Stripe Checkout Error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }
