@@ -642,13 +642,13 @@ export default function Dashboard() {
                                             <option value="社会">社会</option>
                                         </select>
                                     </div>
-                                    <div>
+                                    <div className="min-w-0 overflow-hidden">
                                         <label className="block text-xs font-medium text-gray-700 mb-1">実施日</label>
                                         <input
                                             type="date"
                                             value={testDate}
                                             onChange={(e) => setTestDate(e.target.value)}
-                                            className="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 outline-none [color-scheme:light]"
+                                            className="block w-full max-w-full min-w-0 box-border px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 outline-none [color-scheme:light]"
                                         />
                                     </div>
                                     <div>
@@ -756,9 +756,10 @@ export default function Dashboard() {
                                             disabled={answerSheetFiles.length === 0}
                                             className={`
                                                 w-full py-3.5 px-4 rounded-xl font-bold text-white shadow-md transition-all
+                                                bg-[#3b82f680]
                                                 ${answerSheetFiles.length > 0
-                                                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
-                                                    : "bg-gray-300 cursor-not-allowed"
+                                                    ? "hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+                                                    : "cursor-not-allowed"
                                                 }
                                             `}
                                         >
