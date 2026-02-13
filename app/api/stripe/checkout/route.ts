@@ -50,6 +50,15 @@ function isCouponMissingError(err: unknown) {
     );
 }
 
+function isPromotionCodeMissingError(err: unknown) {
+    const stripeErr = err as { type?: string; code?: string; message?: string };
+    const message = String(stripeErr?.message || "");
+    return (
+        stripeErr?.type === "StripeInvalidRequestError" &&
+        (stripeErr?.code === "resource_missing" || message.includes("No such promotion code"))
+    );
+}
+
 function isPriceMissingError(err: unknown) {
     const stripeErr = err as { type?: string; code?: string; message?: string };
     const message = String(stripeErr?.message || "");
@@ -109,6 +118,7 @@ export async function POST() {
         const successUrl = process.env.STRIPE_SUCCESS_URL || `${baseUrl}/?payment=success`;
         const cancelUrl = process.env.STRIPE_CANCEL_URL || `${baseUrl}/?payment=cancelled`;
         const earlyBirdCoupon = process.env.STRIPE_EARLY_BIRD_COUPON_ID || "EARLY_BIRD_50";
+        const earlyBirdPromotionCode = process.env.STRIPE_EARLY_BIRD_PROMOTION_CODE_ID;
 
         const checkoutParams: Stripe.Checkout.SessionCreateParams = {
             mode: "subscription",
@@ -135,7 +145,9 @@ export async function POST() {
 
         // 6. Apply Early Bird Discount (Initial Fee 50% OFF)
         if (isEarlyBird) {
-            checkoutParams.discounts = [{ coupon: earlyBirdCoupon }];
+            checkoutParams.discounts = earlyBirdPromotionCode
+                ? [{ promotion_code: earlyBirdPromotionCode }]
+                : [{ coupon: earlyBirdCoupon }];
         } else {
             checkoutParams.allow_promotion_codes = true;
         }
@@ -144,10 +156,14 @@ export async function POST() {
         try {
             checkoutSession = await stripe.checkout.sessions.create(checkoutParams);
         } catch (err) {
-            if (isEarlyBird && checkoutParams.discounts && isCouponMissingError(err)) {
-                delete checkoutParams.discounts;
-                checkoutParams.allow_promotion_codes = true;
-                checkoutSession = await stripe.checkout.sessions.create(checkoutParams);
+            if (
+                isEarlyBird &&
+                checkoutParams.discounts &&
+                (isCouponMissingError(err) || isPromotionCodeMissingError(err))
+            ) {
+                throw new Error(
+                    "Early-bird discount is configured but coupon/promotion code was not found in this Stripe environment. Set STRIPE_EARLY_BIRD_COUPON_ID or STRIPE_EARLY_BIRD_PROMOTION_CODE_ID."
+                );
             } else if (isPriceMissingError(err)) {
                 // Explicit STRIPE_*_PRICE_ID may point to another mode/account; fallback to product lookup.
                 const fallbackMonthlyPriceId = await resolvePriceId({
