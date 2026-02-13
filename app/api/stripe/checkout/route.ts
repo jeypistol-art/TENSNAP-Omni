@@ -18,7 +18,25 @@ async function resolvePriceId(options: {
     label: string;
 }) {
     if (options.explicitPriceId) {
-        return options.explicitPriceId;
+        try {
+            const price = await stripe.prices.retrieve(options.explicitPriceId);
+            if (!price || price.deleted) {
+                throw new Error(`${options.label} explicit price is deleted`);
+            }
+            if (price.type !== options.type) {
+                throw new Error(
+                    `${options.label} explicit price type mismatch: expected ${options.type}, got ${price.type}`
+                );
+            }
+            return price.id;
+        } catch (err) {
+            if (!isPriceMissingError(err)) {
+                throw err;
+            }
+            console.warn(
+                `[stripe] ${options.label} explicit price not found: ${options.explicitPriceId}. Fallback to product lookup.`
+            );
+        }
     }
 
     if (!options.productId) {
@@ -47,6 +65,15 @@ function isCouponMissingError(err: unknown) {
     return (
         stripeErr?.type === "StripeInvalidRequestError" &&
         (stripeErr?.code === "resource_missing" || message.includes("No such coupon"))
+    );
+}
+
+function isPriceMissingError(err: unknown) {
+    const stripeErr = err as { type?: string; code?: string; message?: string };
+    const message = String(stripeErr?.message || "");
+    return (
+        stripeErr?.type === "StripeInvalidRequestError" &&
+        (stripeErr?.code === "resource_missing" || message.includes("No such price"))
     );
 }
 
