@@ -303,9 +303,9 @@ export default async function Home() {
             <Link href="/legal/privacy" className="hover:text-foreground transition-colors">
               プライバシーポリシー
             </Link>
-            <a href="mailto:support@10snap.win" className="hover:text-foreground transition-colors">
+            <Link href="/legal/privacy#contact" className="hover:text-foreground transition-colors">
               お問い合わせ
-            </a>
+            </Link>
           </div>
         </div>
       </footer>

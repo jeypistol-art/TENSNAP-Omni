@@ -1,6 +1,16 @@
 export default function PrivacyPage() {
     return (
-        <div className="max-w-3xl mx-auto py-8">
+        <div className="max-w-3xl mx-auto py-8 relative">
+            <div className="absolute top-8 right-0">
+                <a href="#contact" className="text-sm text-mizuho hover:underline font-bold dark:text-blue-400">
+                    ▼ お問い合わせはこちら
+                </a>
+            </div>
+            <div className="fixed bottom-6 right-6 z-50 md:hidden">
+                <a href="#contact" className="bg-mizuho text-white p-4 rounded-full shadow-lg block">
+                    <span className="text-xs font-bold">お問い合わせ</span>
+                </a>
+            </div>
             <h1 className="text-2xl font-bold mb-8">プライバシーポリシー</h1>
 
             <p className="leading-relaxed mb-6">
@@ -107,12 +117,30 @@ export default function PrivacyPage() {
             <p className="leading-relaxed mb-4">本ポリシーに関するお問い合わせは，下記の窓口までお願いいたします。</p>
             <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg">
                 <p className="leading-relaxed">
-                    <span className="font-bold">住所：</span>[住所]<br />
-                    <span className="font-bold">社名：</span>TENsNAP・Omni<br />
-                    <span className="font-bold">担当部署：</span>[担当部署]<br />
-                    <span className="font-bold">Eメールアドレス：</span>[Eメールアドレス]
+                    <span className="font-bold">住所：</span>〒340-0115　埼玉県幸手市中3-13-14<br />
+                    <span className="font-bold">屋号：</span>ｋデザイン事務所<br />
+                    <span className="font-bold">代表：</span>小池　潤一<br />
+                    <span className="font-bold">公式サイト：</span><a href="https://morimori-labo.monster" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">モリモリLAB</a>
                 </p>
             </div>
-        </div>
+
+            <div id="contact" className="mt-12">
+                <h2 className="text-xl font-bold mb-4 border-b border-gray-200 pb-2">お問い合わせフォーム</h2>
+                <div className="w-full relative overflow-hidden rounded-lg border border-gray-200 bg-white" style={{ minHeight: "800px" }}>
+                    <iframe
+                        src="https://docs.google.com/forms/d/e/1FAIpQLSeYAfanw069KMQxf0OFg4_uXy3WvKnNMJ2nIqtwLxLwXVKtuQ/viewform?embedded=true"
+                        width="100%"
+                        height="800"
+                        frameBorder="0"
+                        marginHeight={0}
+                        marginWidth={0}
+                        title="お問い合わせフォーム"
+                        className="w-full h-full"
+                    >
+                        読み込んでいます…
+                    </iframe>
+                </div>
+            </div>
+        </div >
     );
 }
