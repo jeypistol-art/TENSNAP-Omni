@@ -268,6 +268,142 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* Usage Flow */}
+      <section className="py-24 bg-muted/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-extrabold text-foreground sm:text-4xl mb-4">
+              ご利用の流れ
+            </h2>
+            <p className="text-xl text-muted-foreground">
+              まずは無料トライアルから。面倒な契約手続きは不要です。
+            </p>
+          </div>
+
+          <div className="max-w-4xl mx-auto relative">
+            {/* Vertical Line */}
+            <div className="absolute left-4 md:left-1/2 top-0 bottom-0 w-0.5 bg-border transform md:-translate-x-1/2"></div>
+
+            <div className="space-y-12 relative">
+              {/* Step 1 */}
+              <div className="md:flex items-center justify-between group">
+                <div className="md:w-[45%] mb-4 md:mb-0 md:text-right order-1">
+                  <h3 className="text-xl font-bold bg-white dark:bg-card border-2 border-mizuho dark:border-blue-500 text-mizuho dark:text-blue-400 inline-block px-4 py-1 rounded-full mb-2">STEP 01</h3>
+                  <h4 className="text-lg font-bold">2週間の無料トライアル</h4>
+                  <p className="text-muted-foreground mt-2">
+                    まずは全ての機能を無料でお試しください。<br />
+                    クレジットカードも個人情報も登録不要。<br />
+                    煩わしい営業連絡も一切ありません。
+                  </p>
+                </div>
+                <div className="absolute left-4 md:left-1/2 w-4 h-4 bg-mizuho dark:bg-blue-500 rounded-full border-4 border-white dark:border-gray-900 md:-translate-x-1/2 transform -translate-x-1/2 mt-1.5 md:mt-0 z-10"></div>
+                <div className="md:w-[45%] pl-12 md:pl-0 order-2"></div>
+              </div>
+
+              {/* Step 2 */}
+              <div className="md:flex items-center justify-between group">
+                <div className="md:w-[45%] mb-4 md:mb-0 order-1 md:order-2">
+                  <div className="pl-12 md:pl-0">
+                    <h3 className="text-xl font-bold bg-white dark:bg-card border-2 border-indigo-500 text-indigo-500 inline-block px-4 py-1 rounded-full mb-2">STEP 02</h3>
+                    <h4 className="text-lg font-bold">トライアル期間中</h4>
+                    <p className="text-muted-foreground mt-2">
+                      機能に満足いただければ、期間中でもいつでも本契約へ移行可能です。<br />
+                      <span className="font-bold text-red-500">7日以内の本契約で初期費用が50%OFF</span>になる特典もご用意しています。
+                    </p>
+                  </div>
+                </div>
+                <div className="absolute left-4 md:left-1/2 w-4 h-4 bg-indigo-500 rounded-full border-4 border-white dark:border-gray-900 md:-translate-x-1/2 transform -translate-x-1/2 mt-1.5 md:mt-0 z-10"></div>
+                <div className="md:w-[45%] order-2 md:order-1"></div>
+              </div>
+
+              {/* Step 3 */}
+              <div className="md:flex items-center justify-between group">
+                <div className="md:w-[45%] mb-4 md:mb-0 md:text-right order-1">
+                  <h3 className="text-xl font-bold bg-white dark:bg-card border-2 border-gray-400 text-gray-500 inline-block px-4 py-1 rounded-full mb-2">STEP 03</h3>
+                  <h4 className="text-lg font-bold">トライアル満了後</h4>
+                  <p className="text-muted-foreground mt-2">
+                    期間が終了すると自動的に利用停止となります。<br />
+                    勝手に課金されることはありません。<br />
+                    本契約を行うことで、データを引き継いで利用を再開できます。
+                  </p>
+                </div>
+                <div className="absolute left-4 md:left-1/2 w-4 h-4 bg-gray-400 rounded-full border-4 border-white dark:border-gray-900 md:-translate-x-1/2 transform -translate-x-1/2 mt-1.5 md:mt-0 z-10"></div>
+                <div className="md:w-[45%] pl-12 md:pl-0 order-2"></div>
+              </div>
+
+              {/* Step 4 */}
+              <div className="md:flex items-center justify-between group">
+                <div className="md:w-[45%] mb-4 md:mb-0 order-1 md:order-2">
+                  <div className="pl-12 md:pl-0">
+                    <h3 className="text-xl font-bold bg-white dark:bg-card border-2 border-green-500 text-green-500 inline-block px-4 py-1 rounded-full mb-2">Settings</h3>
+                    <h4 className="text-lg font-bold">解約も簡単</h4>
+                    <p className="text-muted-foreground mt-2">
+                      解約は「設定」画面からいつでもクリック一つで完了します。<br />
+                      引き止めや電話手続きは不要です。<br />
+                      いつでも気兼ねなく開始・停止が可能です。
+                    </p>
+                  </div>
+                </div>
+                <div className="absolute left-4 md:left-1/2 w-4 h-4 bg-green-500 rounded-full border-4 border-white dark:border-gray-900 md:-translate-x-1/2 transform -translate-x-1/2 mt-1.5 md:mt-0 z-10"></div>
+                <div className="md:w-[45%] order-2 md:order-1"></div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section className="py-24 bg-background">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl font-extrabold text-foreground sm:text-4xl mb-6">
+            料金プラン
+          </h2>
+          <p className="text-xl text-muted-foreground mb-12">
+            シンプルで透明性の高い料金体系。<br />
+            生徒数が増えても料金は変わりません。
+          </p>
+
+          <div className="bg-white dark:bg-card rounded-2xl shadow-xl border border-mizuho/20 dark:border-blue-500/30 p-8 md:p-12 relative overflow-hidden">
+            <div className="absolute top-0 right-0 bg-red-500 text-white text-xs font-bold px-8 py-2 transform rotate-45 translate-x-8 translate-y-4 shadow-md">
+              Early Bird Offer
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-8 items-center divide-y md:divide-y-0 md:divide-x divide-gray-200 dark:divide-gray-700">
+              <div className="pb-8 md:pb-0 md:pr-8">
+                <h3 className="text-lg font-semibold text-muted-foreground uppercase tracking-wide mb-2">初期費用</h3>
+                <div className="flex flex-col items-center justify-center">
+                  <span className="text-gray-400 line-through text-lg">¥50,000</span>
+                  <div className="flex items-end gap-2">
+                    <span className="text-4xl font-bold text-foreground">¥25,000</span>
+                    <span className="text-sm text-muted-foreground mb-1">（税込）</span>
+                  </div>
+                  <p className="text-red-500 text-sm font-bold mt-2 bg-red-50 dark:bg-red-900/20 px-3 py-1 rounded-full">
+                    登録後7日以内の契約で50%OFF
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-2">通常価格: ¥50,000</p>
+                </div>
+              </div>
+              <div className="pt-8 md:pt-0 md:pl-8">
+                <h3 className="text-lg font-semibold text-muted-foreground uppercase tracking-wide mb-2">月額利用料</h3>
+                <div className="flex items-end justify-center gap-2">
+                  <span className="text-5xl font-extrabold text-mizuho dark:text-blue-400">¥9,800</span>
+                  <span className="text-sm text-muted-foreground mb-2">（税込）/ 月</span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-4">
+                  1アカウントにつき2デバイスまで<br />
+                  生徒数無制限
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-8 pt-8 border-t border-gray-100 dark:border-gray-800 text-sm text-muted-foreground">
+              <p>※お支払いはクレジットカードのみとなります。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Footer */}
       <section className="py-20 bg-muted/50 border-t border-border">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
