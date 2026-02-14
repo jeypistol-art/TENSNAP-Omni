@@ -135,7 +135,7 @@ export default function PrivacyPage() {
                         marginHeight={0}
                         marginWidth={0}
                         title="お問い合わせフォーム"
-                        className="w-full"
+                        style={{ width: "100%", height: "1327px" }}
                     >
                         読み込んでいます…
                     </iframe>
