@@ -572,7 +572,7 @@ export default function Dashboard() {
                 {/* Top Right Controls */}
                 <div className="absolute top-0 right-0 p-4 flex gap-3">
                     <a
-                        href="https://example.com/manual" // Replace with actual manual URL
+                        href="/legal/manual"
                         target="_blank"
                         rel="noreferrer"
                         className="text-xs text-gray-500 hover:text-blue-600 font-medium transition-colors flex items-center gap-1"
@@ -904,10 +904,10 @@ export default function Dashboard() {
                                         </p>
                                     )}
                                 {result.provisional === true && (
-                                        <p className="text-[11px] text-gray-500">
-                                            ※ 得点情報が未取得のため、理解度は暫定評価です
-                                        </p>
-                                    )}
+                                    <p className="text-[11px] text-gray-500">
+                                        ※ 得点情報が未取得のため、理解度は暫定評価です
+                                    </p>
+                                )}
                             </div>
                         )}
                         <div className="mt-4 mx-auto max-w-md text-[11px] text-gray-400 border-t border-gray-100 pt-3 text-left">
