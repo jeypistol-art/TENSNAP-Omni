@@ -126,11 +126,11 @@ export default function PrivacyPage() {
 
             <div id="contact" className="mt-12">
                 <h2 className="text-xl font-bold mb-4 border-b border-gray-200 pb-2">お問い合わせフォーム</h2>
-                <div className="w-full relative overflow-hidden rounded-lg border border-gray-200 bg-white" style={{ minHeight: "800px" }}>
+                <div className="w-full relative overflow-hidden rounded-lg border border-gray-200 bg-white" style={{ minHeight: "2000px" }}>
                     <iframe
                         src="https://docs.google.com/forms/d/e/1FAIpQLSeYAfanw069KMQxf0OFg4_uXy3WvKnNMJ2nIqtwLxLwXVKtuQ/viewform?embedded=true"
                         width="100%"
-                        height="800"
+                        height="2000"
                         frameBorder="0"
                         marginHeight={0}
                         marginWidth={0}
