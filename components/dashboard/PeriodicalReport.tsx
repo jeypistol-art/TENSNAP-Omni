@@ -9,6 +9,7 @@ type PeriodicalReportProps = {
         studentName: string;
         targetSchool?: string;
         periodStr: string;
+        subjectLabel: string;
         startStats: { accuracy: number; process: number; consistency: number };
         currentStats: { accuracy: number; process: number; consistency: number };
         weaknesses: { topic: string; count: number; units?: string[] }[];
@@ -103,6 +104,7 @@ const PeriodicalReport = forwardRef<HTMLDivElement, PeriodicalReportProps>(({ da
                 <div className="text-right">
                     <p className="text-sm text-gray-600 font-medium">対象期間</p>
                     <p className="text-md font-bold text-blue-900">{data.periodStr}</p>
+                    <p className="text-xs text-gray-600 font-semibold mt-1">対象教科: {data.subjectLabel}</p>
                 </div>
             </header>
 

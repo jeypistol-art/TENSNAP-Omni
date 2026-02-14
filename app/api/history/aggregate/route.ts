@@ -48,6 +48,7 @@ export async function GET(request: Request) {
         const studentId = searchParams.get("studentId");
         const startDate = searchParams.get("startDate");
         const endDate = searchParams.get("endDate");
+        const subject = searchParams.get("subject");
 
         if (!studentId) {
             return NextResponse.json({ error: "Student ID is required" }, { status: 400 });
@@ -69,6 +70,11 @@ export async function GET(request: Request) {
         if (endDate) {
             dateCondition += ` AND test_date <= $${paramIndex}`;
             params.push(endDate);
+            paramIndex++;
+        }
+        if (subject && subject !== "all") {
+            dateCondition += ` AND subject = $${paramIndex}`;
+            params.push(subject);
             paramIndex++;
         }
 
@@ -178,6 +184,7 @@ Task: 指定期間の学習データを基に、生徒の成長を称賛し、�
 
 Data:
 - 期間: ${startDate || "全期間"} 〜 ${endDate || "現在"}
+- 教科: ${subject && subject !== "all" ? subject : "全教科"}
 - 分析回数: ${total}回
 - リスト(古い順): 
 ${records.map((r, i: number) => {

@@ -33,6 +33,7 @@ type PeriodicalData = {
     studentName: string;
     targetSchool?: string;
     periodStr: string;
+    subjectLabel: string;
     startStats: { accuracy: number; process: number; consistency: number };
     currentStats: { accuracy: number; process: number; consistency: number };
     weaknesses: { topic: string; count: number; units?: string[] }[];
@@ -173,7 +174,15 @@ export default function StudentHistory({ studentId, studentName, targetSchool }:
         if (!startDate || !endDate) return;
         setIsGeneratingReport(true);
         try {
-            const res = await fetch(`/api/history/aggregate?studentId=${studentId}&startDate=${startDate}&endDate=${endDate}`);
+            const qs = new URLSearchParams({
+                studentId,
+                startDate,
+                endDate,
+            });
+            if (subjectFilter && subjectFilter !== "all") {
+                qs.set("subject", subjectFilter);
+            }
+            const res = await fetch(`/api/history/aggregate?${qs.toString()}`);
             if (!res.ok) {
                 let message = "集計データの取得に失敗しました";
                 try {
@@ -193,6 +202,7 @@ export default function StudentHistory({ studentId, studentName, targetSchool }:
                 studentName: studentName || "生徒",
                 targetSchool: targetSchool || "",
                 periodStr: `${new Date(startDate).toLocaleDateString()} 〜 ${new Date(endDate).toLocaleDateString()}`,
+                subjectLabel: subjectFilter === "all" ? "全教科" : subjectFilter,
                 ...data.aggregated
             });
 
