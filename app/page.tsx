@@ -20,6 +20,13 @@ function hasForceLogoutError(session: unknown): boolean {
   return maybe.error === "ForceLogout";
 }
 
+export const metadata = {
+  alternates: {
+    canonical: 'https://10snap.win',
+  },
+  keywords: ['TENsNAP', '教育AI', '塾運営効率化', '答案分析', '成績管理', '指導改善'],
+};
+
 export default async function Home() {
   const session = await getServerSession(authOptions);
 

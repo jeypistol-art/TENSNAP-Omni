@@ -1,3 +1,11 @@
+export const metadata = {
+    title: 'プライバシーポリシー',
+    robots: {
+        index: false,
+        follow: true,
+    },
+};
+
 export default function PrivacyPage() {
     return (
         <div className="max-w-3xl mx-auto py-8 relative">

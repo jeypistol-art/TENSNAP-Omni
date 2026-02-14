@@ -1,3 +1,11 @@
+export const metadata = {
+    title: '利用規約',
+    robots: {
+        index: false,
+        follow: true,
+    },
+};
+
 export default function TermsPage() {
     return (
         <div className="max-w-3xl mx-auto py-8">

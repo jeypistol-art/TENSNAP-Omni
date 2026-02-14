@@ -1,5 +1,15 @@
 import Link from "next/link";
 
+
+
+export const metadata = {
+    title: '導入・運用マニュアル',
+    robots: {
+        index: false,
+        follow: true,
+    },
+};
+
 export default function ManualPage() {
     return (
         <div className="max-w-4xl mx-auto py-8">
