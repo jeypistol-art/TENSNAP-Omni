@@ -22,25 +22,20 @@ export default function ManualPage() {
                     <h2 className="text-2xl font-bold mb-6 border-b-2 border-mizuho dark:border-blue-500 pb-2 inline-block">1. 準備：生徒を登録する</h2>
                     <p className="mb-4 text-lg">最短30秒で、AIのパーソナル・カルテが準備されます。</p>
 
-                    <div className="grid md:grid-cols-2 gap-8 items-start">
-                        <div className="space-y-4">
-                            <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
-                                <li>
-                                    <strong className="text-foreground">「＋新規登録」</strong>をクリックし、氏名を記入（必須）。
-                                </li>
-                                <li>
-                                    <strong className="text-foreground">ふりがな</strong>: 入力すると五十音検索が有効になり、現場での抽出が爆速になります。
-                                </li>
-                            </ul>
-                            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800">
-                                <p className="text-sm font-bold text-mizuho dark:text-blue-300 mb-1">💡 AIへのヒント（備考欄）</p>
-                                <p className="text-sm text-muted-foreground">
-                                    「数学が苦手」など一言添えるだけで、分析の「着眼点」がプロ仕様に研ぎ澄まされます。
-                                </p>
-                            </div>
-                        </div>
-                        <div className="rounded-xl overflow-hidden border border-gray-200 shadow-md">
-                            <img src="/images/manual/01seito_touroku.png" alt="生徒登録画面" className="w-full h-auto" />
+                    <div className="space-y-4">
+                        <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
+                            <li>
+                                <strong className="text-foreground">「＋新規登録」</strong>をクリックし、氏名を記入（必須）。
+                            </li>
+                            <li>
+                                <strong className="text-foreground">ふりがな</strong>: 入力すると五十音検索が有効になり、現場での抽出が爆速になります。
+                            </li>
+                        </ul>
+                        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800">
+                            <p className="text-sm font-bold text-mizuho dark:text-blue-300 mb-1">💡 AIへのヒント（備考欄）</p>
+                            <p className="text-sm text-muted-foreground">
+                                「数学が苦手」など一言添えるだけで、分析の「着眼点」がプロ仕様に研ぎ澄まされます。
+                            </p>
                         </div>
                     </div>
                 </section>
