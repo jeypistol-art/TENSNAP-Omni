@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     siteName: 'TENsNAP・Omni',
     images: [
       {
-        url: '/og-image.png',
+        url: '/images/og-image.png',
         width: 1200,
         height: 630,
         alt: 'TENsNAP・Omni - AI教育分析支援',
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'TENsNAP・Omni',
     description: 'AIが答案を解析し、指導を支える。',
-    images: ['/og-image.png'],
+    images: ['/images/og-image.png'],
   },
 };
 
