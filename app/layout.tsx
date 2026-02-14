@@ -18,6 +18,9 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://10snap.win'),
+  verification: {
+    google: "oXmtpk3k_N2IrgZAbLOTf02FxsWrBx-akIFotvawfAg",
+  },
   title: {
     default: 'TENsNAP・Omni | 学習理解度を可視化・指導を改善する分析支援システム',
     template: '%s | TENsNAP・Omni'
