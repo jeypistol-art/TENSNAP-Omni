@@ -1,0 +1,50 @@
+name: Data Retention Cleanup
+
+on:
+  schedule:
+    # 03:15 JST (UTC 18:15)
+    - cron: "15 18 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Run cleanup in dry-run mode"
+        required: false
+        default: "false"
+
+permissions: {}
+
+concurrency:
+  group: data-retention-cleanup
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Validate secrets
+        run: |
+          test -n "${{ secrets.APP_BASE_URL }}" || (echo "APP_BASE_URL is missing" && exit 1)
+          test -n "${{ secrets.DATA_RETENTION_CRON_SECRET }}" || (echo "DATA_RETENTION_CRON_SECRET is missing" && exit 1)
+
+      - name: Invoke retention cleanup API
+        env:
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+          DATA_RETENTION_CRON_SECRET: ${{ secrets.DATA_RETENTION_CRON_SECRET }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: |
+          RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST "${APP_BASE_URL}/api/internal/retention/cleanup" \
+            -H "content-type: application/json" \
+            -H "x-retention-secret: ${DATA_RETENTION_CRON_SECRET}" \
+            --data "{\"dryRun\": ${DRY_RUN}}")
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+
+          echo "HTTP: $HTTP_CODE"
+          echo "$BODY"
+
+          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+            echo "Cleanup API call failed"
+            exit 1
+          fi

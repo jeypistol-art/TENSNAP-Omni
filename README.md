@@ -20,6 +20,31 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Data Retention Cleanup
+
+This project includes an internal cleanup endpoint for automatic data purge:
+
+- `POST /api/internal/retention/cleanup`
+- Header: `x-retention-secret: <DATA_RETENTION_CRON_SECRET>`
+
+Retention rules:
+
+- Trial orgs: purge when `trial_ends_at + DATA_RETENTION_TRIAL_GRACE_DAYS` is exceeded
+- Canceled orgs: purge when `updated_at + DATA_RETENTION_CANCELED_GRACE_DAYS` is exceeded
+
+Environment variables:
+
+- `DATA_RETENTION_CRON_SECRET`
+- `DATA_RETENTION_TRIAL_GRACE_DAYS` (default: `14`)
+- `DATA_RETENTION_CANCELED_GRACE_DAYS` (default: `30`)
+- `DATA_RETENTION_BATCH_SIZE` (default: `50`)
+
+GitHub Actions workflow is included at `.github/workflows/data-retention-cleanup.yml`.
+Set repository secrets:
+
+- `APP_BASE_URL` (example: `https://your-domain.com`)
+- `DATA_RETENTION_CRON_SECRET`
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
