@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "score-snap",
+  "name": "tensnap01omni2026",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-02-10",
   "compatibility_flags": [
