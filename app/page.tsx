@@ -406,6 +406,11 @@ export default async function Home() {
 
             <div className="mt-8 pt-8 border-t border-gray-100 dark:border-gray-800 text-sm text-muted-foreground">
               <p>※お支払いはクレジットカードのみとなります。</p>
+              <div className="mt-4 space-y-1 text-xs">
+                <p>※無料トライアル終了後、本契約がなければ14日後にデータは消去されます</p>
+                <p>※サブスクリプション解約後、14日間でデータは消去されます</p>
+                <p>※データ消去前に、サブスクリプションを再購入した場合は、データを継続できます</p>
+              </div>
             </div>
           </div>
         </div>

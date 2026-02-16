@@ -20,6 +20,7 @@ export default function TermsPage() {
                 <li>本規約は，ユーザーと当社との間の本サービスの利用に関わる一切の関係に適用されるものとします。</li>
                 <li>当社は本サービスに関し，本規約のほか，ご利用にあたってのルール等，各種の定め（以下，「個別規定」といいます。）をすることがあります。これら個別規定はその名称のいかんに関わらず，本規約の一部を構成するものとします。</li>
                 <li>本規約の規定が前項の個別規定の規定と矛盾する場合には，個別規定において特段の定めなき限り，個別規定の規定が優先されるものとします。</li>
+                <li>当システムは日本国内でのみご利用いただけます。</li>
             </ol>
 
             <h2 className="text-xl font-bold mt-8 mb-4 border-b border-gray-200 pb-2">第2条（利用登録）</h2>
@@ -48,7 +49,14 @@ export default function TermsPage() {
                 <li>ユーザーが利用料金の支払を遅滞したときは，ユーザーは年14．6％の割合による遅延損害金を支払うものとします。</li>
             </ol>
 
-            <h2 className="text-xl font-bold mt-8 mb-4 border-b border-gray-200 pb-2">第5条（禁止事項）</h2>
+            <h2 className="text-xl font-bold mt-8 mb-4 border-b border-gray-200 pb-2">第5条（データの保存期間）</h2>
+            <ol className="list-decimal pl-6 mb-4 space-y-2">
+                <li>無料トライアル終了後，本契約が締結されない場合，トライアル終了から14日後にユーザーのデータは消去されます。</li>
+                <li>サブスクリプション解約後，14日間でユーザーのデータは消去されます。</li>
+                <li>前二項に基づくデータ消去前に，ユーザーがサブスクリプションを再購入または新規契約した場合，データは継続して利用可能です。</li>
+            </ol>
+
+            <h2 className="text-xl font-bold mt-8 mb-4 border-b border-gray-200 pb-2">第6条（禁止事項）</h2>
             <p className="leading-relaxed mb-4">ユーザーは，本サービスの利用にあたり，以下の行為をしてはなりません。</p>
             <ul className="list-disc pl-6 mb-4 space-y-1">
                 <li>法令または公序良俗に違反する行為</li>
@@ -68,7 +76,7 @@ export default function TermsPage() {
                 <li>その他，当社が不適切と判断する行為</li>
             </ul>
 
-            <h2 className="text-xl font-bold mt-8 mb-4 border-b border-gray-200 pb-2">第6条（本サービスの提供の停止等）</h2>
+            <h2 className="text-xl font-bold mt-8 mb-4 border-b border-gray-200 pb-2">第7条（本サービスの提供の停止等）</h2>
             <ol className="list-decimal pl-6 mb-4 space-y-4">
                 <li>
                     当社は，以下のいずれかの事由があると判断した場合，ユーザーに事前に通知することなく本サービスの全部または一部の提供を停止または中断することができるものとします。
@@ -82,7 +90,7 @@ export default function TermsPage() {
                 <li>当社は，本サービスの提供の停止または中断により，ユーザーまたは第三者が被ったいかなる不利益または損害についても，一切の責任を負わないものとします。</li>
             </ol>
 
-            <h2 className="text-xl font-bold mt-8 mb-4 border-b border-gray-200 pb-2">第7条（利用制限および登録抹消）</h2>
+            <h2 className="text-xl font-bold mt-8 mb-4 border-b border-gray-200 pb-2">第8条（利用制限および登録抹消）</h2>
             <ol className="list-decimal pl-6 mb-4 space-y-4">
                 <li>
                     当社は，ユーザーが以下のいずれかに該当する場合には，事前の通知なく，ユーザーに対して，本サービスの全部もしくは一部の利用を制限し，またはユーザーとしての登録を抹消することができるものとします。
@@ -98,10 +106,10 @@ export default function TermsPage() {
                 <li>当社は，本条に基づき当社が行った行為によりユーザーに生じた損害について，一切の責任を負わないものとします。</li>
             </ol>
 
-            <h2 className="text-xl font-bold mt-8 mb-4 border-b border-gray-200 pb-2">第8条（退会）</h2>
+            <h2 className="text-xl font-bold mt-8 mb-4 border-b border-gray-200 pb-2">第9条（退会）</h2>
             <p className="leading-relaxed mb-4">ユーザーは，当社の定める退会手続により，本サービスから退会できるものとします。</p>
 
-            <h2 className="text-xl font-bold mt-8 mb-4 border-b border-gray-200 pb-2">第9条（保証の否認および免責事項）</h2>
+            <h2 className="text-xl font-bold mt-8 mb-4 border-b border-gray-200 pb-2">第10条（保証の否認および免責事項）</h2>
             <ol className="list-decimal pl-6 mb-4 space-y-2">
                 <li>当社は，本サービスに事実上または法律上の瑕疵（安全性，信頼性，正確性，完全性，有効性，特定の目的への適合性，セキュリティなどに関する欠陥，エラーやバグ，権利侵害などを含みます。）がないことを明示的にも黙示的にも保証しておりません。</li>
                 <li>当社は，本サービスに起因してユーザーに生じたあらゆる損害について、当社の故意又は重過失による場合を除き、一切の責任を負いません。ただし，本サービスに関する当社とユーザーとの間の契約（本規約を含みます。）が消費者契約法に定める消費者契約となる場合，この免責規定は適用されません。</li>
@@ -109,10 +117,10 @@ export default function TermsPage() {
                 <li>当社は，本サービスに関して，ユーザーと他のユーザーまたは第三者との間において生じた取引，連絡または紛争等について一切責任を負いません。</li>
             </ol>
 
-            <h2 className="text-xl font-bold mt-8 mb-4 border-b border-gray-200 pb-2">第10条（サービス内容の変更等）</h2>
+            <h2 className="text-xl font-bold mt-8 mb-4 border-b border-gray-200 pb-2">第11条（サービス内容の変更等）</h2>
             <p className="leading-relaxed mb-4">当社は，ユーザーへの事前の告知をもって、本サービスの内容を変更、追加または廃止することがあり、ユーザーはこれを承諾するものとします。</p>
 
-            <h2 className="text-xl font-bold mt-8 mb-4 border-b border-gray-200 pb-2">第11条（利用規約の変更）</h2>
+            <h2 className="text-xl font-bold mt-8 mb-4 border-b border-gray-200 pb-2">第12条（利用規約の変更）</h2>
             <ol className="list-decimal pl-6 mb-4 space-y-4">
                 <li>
                     当社は以下の場合には、ユーザーの個別の同意を要せず、本規約を変更することができるものとします。
@@ -124,16 +132,16 @@ export default function TermsPage() {
                 <li>当社はユーザーに対し、前項による本規約の変更にあたり、事前に、本規約を変更する旨及び変更後の本規約の内容並びにその効力発生時期を通知します。</li>
             </ol>
 
-            <h2 className="text-xl font-bold mt-8 mb-4 border-b border-gray-200 pb-2">第12条（個人情報の取扱い）</h2>
+            <h2 className="text-xl font-bold mt-8 mb-4 border-b border-gray-200 pb-2">第13条（個人情報の取扱い）</h2>
             <p className="leading-relaxed mb-4">当社は，本サービスの利用によって取得する個人情報については，当社「プライバシーポリシー」に従い適切に取り扱うものとします。</p>
 
-            <h2 className="text-xl font-bold mt-8 mb-4 border-b border-gray-200 pb-2">第13条（通知または連絡）</h2>
+            <h2 className="text-xl font-bold mt-8 mb-4 border-b border-gray-200 pb-2">第14条（通知または連絡）</h2>
             <p className="leading-relaxed mb-4">ユーザーと当社との間の通知または連絡は，当社の定める方法によって行うものとします。当社は,ユーザーから,当社が別途定める方式に従った変更届け出がない限り,現在登録されている連絡先が有効なものとみなして当該連絡先へ通知または連絡を行い,これらは,発信時にユーザーへ到達したものとみなします。</p>
 
-            <h2 className="text-xl font-bold mt-8 mb-4 border-b border-gray-200 pb-2">第14条（権利義務の譲渡の禁止）</h2>
+            <h2 className="text-xl font-bold mt-8 mb-4 border-b border-gray-200 pb-2">第15条（権利義務の譲渡の禁止）</h2>
             <p className="leading-relaxed mb-4">ユーザーは，当社の書面による事前の承諾なく，利用契約上の地位または本規約に基づく権利もしくは義務を第三者に譲渡し，または担保に供することはできません。</p>
 
-            <h2 className="text-xl font-bold mt-8 mb-4 border-b border-gray-200 pb-2">第15条（準拠法・裁判管轄）</h2>
+            <h2 className="text-xl font-bold mt-8 mb-4 border-b border-gray-200 pb-2">第16条（準拠法・裁判管轄）</h2>
             <ol className="list-decimal pl-6 mb-4 space-y-2">
                 <li>本規約の解釈にあたっては，日本法を準拠法とします。</li>
                 <li>本サービスに関して紛争が生じた場合には，当社の本店所在地を管轄する裁判所を専属的合意管轄とします。</li>

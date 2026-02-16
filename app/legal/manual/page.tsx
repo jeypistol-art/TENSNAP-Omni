@@ -164,6 +164,11 @@ export default function ManualPage() {
                                 <dd className="text-lg font-bold text-red-600">トライアル開始から7日以内の本契約で初期費用50％OFF</dd>
                             </div>
                         </dl>
+                        <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 text-sm text-muted-foreground space-y-1">
+                            <p>※無料トライアル終了後、本契約がなければ14日後にデータは消去されます</p>
+                            <p>※サブスクリプション解約後、14日間でデータは消去されます</p>
+                            <p>※データ消去前に、サブスクリプションを再購入した場合は、データを継続できます</p>
+                        </div>
                     </div>
                 </section>
 
