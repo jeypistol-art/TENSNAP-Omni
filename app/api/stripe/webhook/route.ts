@@ -6,6 +6,7 @@ import Stripe from "stripe";
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 const nextAuthUrl = process.env.NEXTAUTH_URL || "";
+const ALLOWED_COUNTRY = (process.env.STRIPE_ALLOWED_COUNTRY || "JP").toUpperCase();
 const isProductionRuntime =
     process.env.NODE_ENV === "production" &&
     !nextAuthUrl.includes("localhost") &&
@@ -56,6 +57,14 @@ async function updateOrganizationByOrgId(orgId: string, customerId: string, stat
     );
 }
 
+function normalizeCountry(country?: string | null) {
+    return country?.trim().toUpperCase() || null;
+}
+
+function getCheckoutSessionCountry(session: Stripe.Checkout.Session) {
+    return normalizeCountry(session.customer_details?.address?.country);
+}
+
 export async function POST(request: Request) {
     const body = await request.text();
     const sig = (await headers()).get("stripe-signature");
@@ -91,12 +100,28 @@ export async function POST(request: Request) {
                 const orgId = session.metadata?.organization_id;
                 const customerId = typeof session.customer === "string" ? session.customer : "";
                 const subscriptionId = typeof session.subscription === "string" ? session.subscription : "";
+                const sessionCountry = getCheckoutSessionCountry(session);
 
                 if (!orgId || !customerId) {
                     console.warn("checkout.session.completed missing org/customer", {
                         orgId: orgId || null,
                         customerId: customerId || null,
                     });
+                    break;
+                }
+
+                if (sessionCountry && sessionCountry !== ALLOWED_COUNTRY) {
+                    console.error("Non-allowed country checkout detected. Canceling subscription.", {
+                        orgId,
+                        customerId,
+                        subscriptionId: subscriptionId || null,
+                        sessionCountry,
+                        allowedCountry: ALLOWED_COUNTRY,
+                    });
+                    if (subscriptionId) {
+                        await stripe.subscriptions.cancel(subscriptionId);
+                    }
+                    await updateOrganizationByOrgId(orgId, customerId, "canceled");
                     break;
                 }
 

@@ -10,6 +10,9 @@ const DEFAULT_PRODUCT_IDS = {
     setup: "prod_Tv7PUAuavY1I1s",
     monthly: "prod_Tv7RHfcj9WrCP5",
 };
+const ALLOWED_COUNTRY = (
+    process.env.STRIPE_ALLOWED_COUNTRY || "JP"
+).toUpperCase() as Stripe.Checkout.SessionCreateParams.ShippingAddressCollection.AllowedCountry;
 
 async function resolvePriceId(options: {
     explicitPriceId?: string;
@@ -86,6 +89,18 @@ function getErrorMessage(error: unknown) {
     if (error instanceof Error) return error.message;
     if (typeof error === "string") return error;
     return "Unknown error";
+}
+
+function normalizeCountry(country?: string | null) {
+    return country?.trim().toUpperCase() || null;
+}
+
+async function getExistingCustomerCountry(customerId: string) {
+    const customer = await stripe.customers.retrieve(customerId);
+    if ("deleted" in customer && customer.deleted) {
+        return null;
+    }
+    return normalizeCountry(customer.address?.country || customer.shipping?.address?.country || null);
 }
 
 export async function POST() {
@@ -165,11 +180,16 @@ export async function POST() {
                 { price: setupPriceId, quantity: 1 },
                 { price: monthlyPriceId, quantity: 1 },
             ],
+            billing_address_collection: "required",
+            shipping_address_collection: {
+                allowed_countries: [ALLOWED_COUNTRY],
+            },
             success_url: successUrl,
             cancel_url: cancelUrl,
             metadata: {
                 organization_id: orgId,
                 user_id: session.user.id,
+                allowed_country: ALLOWED_COUNTRY,
             },
             customer_email: session.user.email || undefined,
             client_reference_id: orgId,
@@ -177,7 +197,21 @@ export async function POST() {
 
         // Reuse Customer if exists
         if (org.stripe_customer_id) {
+            const existingCountry = await getExistingCustomerCountry(org.stripe_customer_id);
+            if (existingCountry && existingCountry !== ALLOWED_COUNTRY) {
+                return NextResponse.json(
+                    {
+                        error: `Payments are restricted to ${ALLOWED_COUNTRY}. Existing customer country is ${existingCountry}.`,
+                    },
+                    { status: 403 }
+                );
+            }
             checkoutParams.customer = org.stripe_customer_id;
+            checkoutParams.customer_update = {
+                address: "auto",
+                name: "auto",
+                shipping: "auto",
+            };
             delete checkoutParams.customer_email; // Cannot set both
         }
 
