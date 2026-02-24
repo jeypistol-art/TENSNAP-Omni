@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "score-snap",
+  "name": "tensnap01omni2026",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-02-10",
   "compatibility_flags": [
@@ -19,5 +19,11 @@
   ],
   "observability": {
     "enabled": true
+  },
+  "vars": {
+    "STRIPE_ALLOWED_COUNTRY": "JP",
+    "DATA_RETENTION_TRIAL_GRACE_DAYS": "14",
+    "DATA_RETENTION_CANCELED_GRACE_DAYS": "30",
+    "DATA_RETENTION_BATCH_SIZE": "50"
   }
 }

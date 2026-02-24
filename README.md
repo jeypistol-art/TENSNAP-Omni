@@ -43,7 +43,10 @@ GitHub Actions workflow is included at `.github/workflows/data-retention-cleanup
 Set repository secrets:
 
 - `APP_BASE_URL` (example: `https://your-domain.com`)
+- `RETENTION_CLEANUP_BASE_URL` (optional, preferred for GitHub Actions; use a hostname not protected by Cloudflare challenge, e.g. a workers.dev URL)
 - `DATA_RETENTION_CRON_SECRET`
+
+If GitHub Actions receives a Cloudflare "Just a moment..." HTML response (`HTTP 403`), the request is being blocked before the app code runs. In that case, point `RETENTION_CLEANUP_BASE_URL` to an internal/non-challenged hostname or add a Cloudflare WAF/Access bypass for `POST /api/internal/retention/cleanup`.
 
 ## Learn More
 

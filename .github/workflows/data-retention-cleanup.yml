@@ -24,17 +24,24 @@ jobs:
     steps:
       - name: Validate secrets
         run: |
-          test -n "${{ secrets.APP_BASE_URL }}" || (echo "APP_BASE_URL is missing" && exit 1)
+          if [ -z "${{ secrets.RETENTION_CLEANUP_BASE_URL }}" ] && [ -z "${{ secrets.APP_BASE_URL }}" ]; then
+            echo "RETENTION_CLEANUP_BASE_URL or APP_BASE_URL is required"
+            exit 1
+          fi
           test -n "${{ secrets.DATA_RETENTION_CRON_SECRET }}" || (echo "DATA_RETENTION_CRON_SECRET is missing" && exit 1)
 
       - name: Invoke retention cleanup API
         env:
           APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+          RETENTION_CLEANUP_BASE_URL: ${{ secrets.RETENTION_CLEANUP_BASE_URL }}
           DATA_RETENTION_CRON_SECRET: ${{ secrets.DATA_RETENTION_CRON_SECRET }}
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
         run: |
-          RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST "${APP_BASE_URL}/api/internal/retention/cleanup" \
+          BASE_URL="${RETENTION_CLEANUP_BASE_URL:-$APP_BASE_URL}"
+
+          RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST "${BASE_URL}/api/internal/retention/cleanup" \
             -H "content-type: application/json" \
+            -H "user-agent: GitHub-Actions data-retention-cleanup" \
             -H "x-retention-secret: ${DATA_RETENTION_CRON_SECRET}" \
             --data "{\"dryRun\": ${DRY_RUN}}")
 
@@ -43,6 +50,13 @@ jobs:
 
           echo "HTTP: $HTTP_CODE"
           echo "$BODY"
+
+          if echo "$BODY" | grep -qi "Just a moment" && echo "$BODY" | grep -qi "cloudflare"; then
+            echo "Cloudflare challenge blocked the cleanup API call."
+            echo "Set RETENTION_CLEANUP_BASE_URL to a non-challenged internal hostname (for example workers.dev),"
+            echo "or create a Cloudflare WAF/Access bypass rule for /api/internal/retention/cleanup."
+            exit 1
+          fi
 
           if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
             echo "Cleanup API call failed"
