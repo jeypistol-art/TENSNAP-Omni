@@ -37,12 +37,24 @@ jobs:
           DATA_RETENTION_CRON_SECRET: ${{ secrets.DATA_RETENTION_CRON_SECRET }}
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
         run: |
+          set -euo pipefail
+
           BASE_URL="${RETENTION_CLEANUP_BASE_URL:-$APP_BASE_URL}"
+          BASE_HOST=$(printf '%s' "$BASE_URL" | sed -E 's#^https?://([^/]+).*$#\1#')
+
+          if [ -z "${RETENTION_CLEANUP_BASE_URL}" ]; then
+            echo "RETENTION_CLEANUP_BASE_URL is not set. Falling back to APP_BASE_URL (${BASE_HOST})."
+            echo "If APP_BASE_URL is behind a Cloudflare challenge, set RETENTION_CLEANUP_BASE_URL to a non-challenged hostname (for example workers.dev)."
+          else
+            echo "Using RETENTION_CLEANUP_BASE_URL (${BASE_HOST})"
+          fi
 
           RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST "${BASE_URL}/api/internal/retention/cleanup" \
             -H "content-type: application/json" \
             -H "user-agent: GitHub-Actions data-retention-cleanup" \
             -H "x-retention-secret: ${DATA_RETENTION_CRON_SECRET}" \
+            --connect-timeout 10 \
+            --max-time 60 \
             --data "{\"dryRun\": ${DRY_RUN}}")
 
           HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
