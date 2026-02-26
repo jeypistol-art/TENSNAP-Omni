@@ -62,3 +62,14 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+ fix: resolve cleanup workflow Cloudflare challenge and Next.js build issue
+
+  分けるなら（推奨）
+
+  1. fix: wrap analytics pageview in Suspense for Next.js 16 build
+  2. docs: clarify RETENTION_CLEANUP_BASE_URL must be set in GitHub Actions secrets
+
+  workflow のログ改善も一緒に含めるなら
+
+  - chore: improve retention cleanup workflow diagnostics for Cloudflare blocks
