@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import Script from "next/script";
@@ -58,7 +59,9 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <Providers>{children}</Providers>
-        <GoogleAnalyticsPageView measurementId={GA_MEASUREMENT_ID} />
+        <Suspense fallback={null}>
+          <GoogleAnalyticsPageView measurementId={GA_MEASUREMENT_ID} />
+        </Suspense>
         <Script
           src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
           strategy="afterInteractive"
