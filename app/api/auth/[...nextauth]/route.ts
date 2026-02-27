@@ -117,11 +117,15 @@ export const authOptions: NextAuthOptions = {
           return token;
         }
         const sessionId = randomUUID();
-        // Update DB with this new Session ID
-        // We also ensure user exists or update it if needed (though Google Provider ensures auth success)
+        // Upsert prevents first-login race where users row is not yet visible.
         await query(
-          `UPDATE users SET current_session_id = $1 WHERE id = $2`,
-          [sessionId, accountId]
+          `INSERT INTO users (id, email, current_session_id)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (id)
+           DO UPDATE SET
+             current_session_id = EXCLUDED.current_session_id,
+             email = COALESCE(users.email, EXCLUDED.email)`,
+          [accountId, user.email ?? null, sessionId]
         );
         token.sessionId = sessionId;
         token.accountId = accountId;
@@ -146,10 +150,22 @@ export const authOptions: NextAuthOptions = {
             const dbSessionId = result.rows[0].current_session_id;
             // If DB says "Session B" but I am "Session A", I am invalid.
             if (dbSessionId && dbSessionId !== token.sessionId) {
-              // Force Sign Out by returning null session (or handling in client)
-              // NextAuth doesn't easily let us return 'null' here to kill session cookie deeply,
-              // but returning an empty user or specific error flag works for client-side handling.
-              // We'll set an error flag.
+              // Self-heal once to absorb transient read/write races right after login.
+              // If another session already moved the value meanwhile, this returns 0 rows
+              // and we still force logout.
+              const tokenSessionId = typeof token.sessionId === "string" ? token.sessionId : "";
+              if (tokenSessionId) {
+                const takeover = await query<{ id: string }>(
+                  `UPDATE users
+                   SET current_session_id = $1
+                   WHERE id = $2 AND current_session_id = $3
+                   RETURNING id`,
+                  [tokenSessionId, accountId, dbSessionId]
+                );
+                if (takeover.rows.length > 0) {
+                  return session;
+                }
+              }
               return { ...session, error: "ForceLogout" };
             }
           }
