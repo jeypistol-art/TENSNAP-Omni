@@ -22,6 +22,7 @@
   },
   "vars": {
     "STRIPE_ALLOWED_COUNTRY": "JP",
+    "NEXTAUTH_COOKIE_DOMAIN": ".10snap.win",
     "FAMILY_HOST": "family.10snap.win",
     "NEXT_PUBLIC_FAMILY_HOST": "family.10snap.win",
     "STRIPE_SCHOOL_SUBSCRIPTION_LINK": "https://buy.stripe.com/7sY7sLfIX7KVduVgvT9fW00",

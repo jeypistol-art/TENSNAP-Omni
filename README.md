@@ -86,6 +86,7 @@ This project is deployed with OpenNext + Cloudflare Workers.
 
 Current configurable vars are defined in [`wrangler.jsonc`](/C:/Users/use/dev/score-snap/wrangler.jsonc):
 
+- `NEXTAUTH_COOKIE_DOMAIN` (recommended: `.10snap.win` for shared login across `10snap.win` and `family.10snap.win`)
 - `FAMILY_HOST`
 - `NEXT_PUBLIC_FAMILY_HOST`
 - `STRIPE_SCHOOL_SUBSCRIPTION_LINK`

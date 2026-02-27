@@ -26,8 +26,59 @@ function getAllowedRedirectHosts(baseUrl: string): Set<string> {
   return hosts;
 }
 
+function getSharedCookieOptions() {
+  const cookieDomain = process.env.NEXTAUTH_COOKIE_DOMAIN;
+  if (!cookieDomain) {
+    return undefined;
+  }
+
+  const useSecureCookie = process.env.NODE_ENV === "production";
+  const sessionTokenName = useSecureCookie
+    ? "__Secure-next-auth.session-token"
+    : "next-auth.session-token";
+  const callbackUrlName = useSecureCookie
+    ? "__Secure-next-auth.callback-url"
+    : "next-auth.callback-url";
+  const csrfTokenName = useSecureCookie
+    ? "__Host-next-auth.csrf-token"
+    : "next-auth.csrf-token";
+
+  return {
+    sessionToken: {
+      name: sessionTokenName,
+      options: {
+        httpOnly: true,
+        sameSite: "lax" as const,
+        path: "/",
+        secure: useSecureCookie,
+        domain: cookieDomain,
+      },
+    },
+    callbackUrl: {
+      name: callbackUrlName,
+      options: {
+        sameSite: "lax" as const,
+        path: "/",
+        secure: useSecureCookie,
+        domain: cookieDomain,
+      },
+    },
+    csrfToken: {
+      name: csrfTokenName,
+      options: {
+        httpOnly: true,
+        sameSite: "lax" as const,
+        path: "/",
+        secure: useSecureCookie,
+        // Keep default host-only behavior in production when using __Host- cookie.
+      },
+    },
+  };
+}
+
 export const authOptions: NextAuthOptions = {
   adapter: CustomPostgresAdapter(),
+  cookies: getSharedCookieOptions(),
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -57,7 +108,7 @@ export const authOptions: NextAuthOptions = {
       }
 
       // 1. On Sign In: Generate & Save Session ID (Kickout others)
-      if (trigger === "signIn" && user) {
+      if (user) {
         const accountId = user.id || (token.accountId as string) || token.sub;
         if (!accountId) {
           console.error("SignIn callback missing account id");
