@@ -100,15 +100,17 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   callbacks: {
-    async jwt({ token, user, trigger }) {
+    async jwt({ token, user, account }) {
       if (user?.id) {
         token.accountId = user.id;
       } else if (!token.accountId && token.sub) {
         token.accountId = token.sub;
       }
 
-      // 1. On Sign In: Generate & Save Session ID (Kickout others)
-      if (user) {
+      // Rotate session id only during actual sign-in handshake.
+      // OAuth can invoke jwt callback multiple times; gating by `account`
+      // prevents accidental extra rotation that can cause first-login mismatch.
+      if (user && account) {
         const accountId = user.id || (token.accountId as string) || token.sub;
         if (!accountId) {
           console.error("SignIn callback missing account id");
