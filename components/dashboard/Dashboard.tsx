@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import StudentSelector from "./StudentSelector";
 import AddStudentModal from "./AddStudentModal";
 import TrialExpiredGate from "./TrialExpiredGate";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 
 export default function Dashboard() {
     const { data: session, status: authStatus } = useSession();
@@ -21,7 +21,11 @@ export default function Dashboard() {
         const sessionError = (session as { error?: string } | null)?.error;
         if (sessionError === "ForceLogout") {
             alert("セキュリティ保護のため、別端末からのログインを検知しました。再ログインしてください。");
-            signOut({ callbackUrl: "/" });
+            fetch("/api/auth/logout", { method: "POST" })
+                .catch((e) => console.error("Force logout cleanup failed", e))
+                .finally(() => {
+                    window.location.assign("/");
+                });
         }
     }, [session]);
 
@@ -525,13 +529,7 @@ export default function Dashboard() {
         } catch (e) {
             console.error("Logout cleanup failed", e);
         } finally {
-            try {
-                await signOut({ redirect: false, callbackUrl });
-            } catch (e) {
-                console.error("NextAuth signOut failed", e);
-            } finally {
-                window.location.assign(callbackUrl);
-            }
+            window.location.assign(callbackUrl);
         }
     };
 
