@@ -130,6 +130,23 @@ export const authOptions: NextAuthOptions = {
         token.sessionId = sessionId;
         token.accountId = accountId;
       }
+
+      // Hydrate missing token.sessionId from DB for first request races.
+      const accountId = (token.accountId as string) || token.sub;
+      if (accountId && !token.sessionId) {
+        try {
+          const current = await query<{ current_session_id: string | null }>(
+            `SELECT current_session_id FROM users WHERE id = $1`,
+            [accountId]
+          );
+          const dbSessionId = current.rows[0]?.current_session_id || null;
+          if (dbSessionId) {
+            token.sessionId = dbSessionId;
+          }
+        } catch (err) {
+          console.error("JWT sessionId hydration failed:", err);
+        }
+      }
       return token;
     },
     async session({ session, token }) {
@@ -148,6 +165,12 @@ export const authOptions: NextAuthOptions = {
 
           if (result.rows.length > 0) {
             const dbSessionId = result.rows[0].current_session_id;
+            // First access can arrive before token.sessionId is persisted in JWT cookie.
+            // In that case, trust DB value once and continue.
+            if (dbSessionId && !token.sessionId) {
+              token.sessionId = dbSessionId;
+              return session;
+            }
             // If DB says "Session B" but I am "Session A", I am invalid.
             if (dbSessionId && dbSessionId !== token.sessionId) {
               // Self-heal once to absorb transient read/write races right after login.
