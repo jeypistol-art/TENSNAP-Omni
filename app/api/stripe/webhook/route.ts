@@ -65,6 +65,22 @@ function getCheckoutSessionCountry(session: Stripe.Checkout.Session) {
     return normalizeCountry(session.customer_details?.address?.country);
 }
 
+function getCheckoutSessionEmail(session: Stripe.Checkout.Session) {
+    return session.customer_details?.email || session.customer_email || null;
+}
+
+async function findOrgIdByEmail(email: string): Promise<string | null> {
+    const result = await query<{ organization_id: string | null }>(
+        `SELECT organization_id
+         FROM users
+         WHERE lower(email) = lower($1) AND organization_id IS NOT NULL
+         ORDER BY created_at DESC
+         LIMIT 1`,
+        [email]
+    );
+    return result.rows[0]?.organization_id || null;
+}
+
 export async function POST(request: Request) {
     const body = await request.text();
     const sig = (await headers()).get("stripe-signature");
@@ -97,15 +113,30 @@ export async function POST(request: Request) {
         switch (event.type) {
             case "checkout.session.completed": {
                 const session = event.data.object as Stripe.Checkout.Session;
-                const orgId = session.metadata?.organization_id;
+                const metadataOrgId = session.metadata?.organization_id;
+                const referenceOrgId = session.client_reference_id || null;
+                const sessionEmail = getCheckoutSessionEmail(session);
                 const customerId = typeof session.customer === "string" ? session.customer : "";
                 const subscriptionId = typeof session.subscription === "string" ? session.subscription : "";
                 const sessionCountry = getCheckoutSessionCountry(session);
+                let orgId = metadataOrgId || referenceOrgId || null;
+                let orgIdResolvedBy: "metadata" | "client_reference_id" | "email" | "none" =
+                    metadataOrgId ? "metadata" : (referenceOrgId ? "client_reference_id" : "none");
+
+                if (!orgId && sessionEmail) {
+                    orgId = await findOrgIdByEmail(sessionEmail);
+                    if (orgId) {
+                        orgIdResolvedBy = "email";
+                    }
+                }
 
                 if (!orgId || !customerId) {
-                    console.warn("checkout.session.completed missing org/customer", {
+                    console.warn("checkout.session.completed missing org/customer after resolution", {
                         orgId: orgId || null,
                         customerId: customerId || null,
+                        metadataOrgId: metadataOrgId || null,
+                        referenceOrgId: referenceOrgId || null,
+                        sessionEmail: sessionEmail || null,
                     });
                     break;
                 }
@@ -132,7 +163,9 @@ export async function POST(request: Request) {
                 }
 
                 await updateOrganizationByOrgId(orgId, customerId, nextStatus);
-                console.log(`✅ checkout.session.completed applied: org=${orgId} customer=${customerId} status=${nextStatus}`);
+                console.log(
+                    `✅ checkout.session.completed applied: org=${orgId} customer=${customerId} status=${nextStatus} resolved_by=${orgIdResolvedBy}`
+                );
                 break;
             }
             case "customer.subscription.updated":

@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
+const BILLING_PORTAL_URL = "https://billing.stripe.com/p/login/7sY7sLfIX7KVduVgvT9fW00";
+
 type Device = {
     id: string;
     name: string | null;
@@ -39,7 +41,6 @@ export default function SettingsPage() {
     const [stripeLoading, setStripeLoading] = useState(false);
     const [stripeError, setStripeError] = useState("");
     const [stripeHealth, setStripeHealth] = useState<StripeHealth | null>(null);
-    const [portalLoading, setPortalLoading] = useState(false);
 
     const fetchDevices = async () => {
         setLoading(true);
@@ -90,19 +91,12 @@ export default function SettingsPage() {
     };
 
     const handleOpenBillingPortal = async () => {
-        setPortalLoading(true);
         try {
-            const res = await fetch("/api/stripe/portal", { method: "POST" });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data?.error || "Failed to create billing portal session");
-            if (!data?.url) throw new Error("Billing portal URL is missing");
-            window.location.href = data.url;
+            window.location.href = BILLING_PORTAL_URL;
         } catch (e) {
             console.error(e);
             const message = e instanceof Error ? e.message : "ポータルを開けませんでした";
             alert(`お支払い情報の管理・解約を開けませんでした: ${message}`);
-        } finally {
-            setPortalLoading(false);
         }
     };
 
@@ -199,10 +193,9 @@ export default function SettingsPage() {
                     </div>
                     <button
                         onClick={handleOpenBillingPortal}
-                        className="text-sm font-bold text-white bg-blue-700 hover:bg-blue-800 px-4 py-2.5 rounded-md whitespace-nowrap disabled:opacity-60"
-                        disabled={portalLoading}
+                        className="text-sm font-bold text-white bg-blue-700 hover:bg-blue-800 px-4 py-2.5 rounded-md whitespace-nowrap"
                     >
-                        {portalLoading ? "遷移中..." : "お支払い情報の管理・解約"}
+                        お支払い情報の管理・解約
                     </button>
                 </div>
             </div>
