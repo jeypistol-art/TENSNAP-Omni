@@ -1,4 +1,6 @@
+import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
+import { headers } from "next/headers";
 import { authOptions } from "./api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -12,7 +14,33 @@ import {
   Send,
   ShieldCheck,
   Sparkles,
+  FileText,
+  TrendingUp,
+  Layout,
 } from "lucide-react";
+
+const DEFAULT_FAMILY_HOST = "family.10snap.win";
+
+function normalizeHost(raw: string | null): string {
+  if (!raw) return "";
+  return raw.toLowerCase().split(",")[0].trim().replace(/:\\d+$/, "");
+}
+
+function getFamilyHosts(): Set<string> {
+  const configured = process.env.FAMILY_HOSTS || process.env.FAMILY_HOST || DEFAULT_FAMILY_HOST;
+  return new Set(
+    configured
+      .split(",")
+      .map((host) => normalizeHost(host))
+      .filter(Boolean)
+  );
+}
+
+async function isFamilyHostRequest(): Promise<boolean> {
+  const h = await headers();
+  const host = normalizeHost(h.get("x-forwarded-host") || h.get("host"));
+  return getFamilyHosts().has(host);
+}
 
 function hasForceLogoutError(session: unknown): boolean {
   if (!session || typeof session !== "object") return false;
@@ -20,12 +48,21 @@ function hasForceLogoutError(session: unknown): boolean {
   return maybe.error === "ForceLogout";
 }
 
-export const metadata = {
-  alternates: {
-    canonical: "https://family.10snap.win",
-  },
-  keywords: ["TENsNAP", "家庭学習", "教育AI", "答案分析", "弱点分析", "学習サポート"],
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const isFamilyHost = await isFamilyHostRequest();
+
+  if (isFamilyHost) {
+    return {
+      alternates: { canonical: "https://family.10snap.win" },
+      keywords: ["TENsNAP", "家庭学習", "教育AI", "答案分析", "弱点分析", "学習サポート"],
+    };
+  }
+
+  return {
+    alternates: { canonical: "https://10snap.win" },
+    keywords: ["TENsNAP", "教育AI", "塾運営効率化", "答案分析", "成績管理", "指導改善"],
+  };
+}
 
 export default async function Home() {
   const session = await getServerSession(authOptions);
@@ -34,6 +71,112 @@ export default async function Home() {
     redirect("/dashboard");
   }
 
+  const isFamilyHost = await isFamilyHostRequest();
+  return isFamilyHost ? <FamilyLanding /> : <SchoolLanding />;
+}
+
+function SchoolLanding() {
+  return (
+    <div className="min-h-screen flex flex-col bg-background text-foreground overflow-x-hidden">
+      <nav className="sticky top-0 w-full z-50 bg-background/90 backdrop-blur-md border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <span className="text-2xl font-bold text-mizuho">TENsNAP・Omni（塾用）</span>
+            <div className="flex items-center gap-4">
+              <Link href="/login" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                ログイン
+              </Link>
+              <Link href="/login" className="inline-flex items-center justify-center px-4 py-2 rounded-md text-sm font-medium text-white bg-mizuho hover:bg-blue-800 transition-colors">
+                無料で始める
+              </Link>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <main>
+        <section className="relative pt-20 pb-16 lg:pt-28 lg:pb-24 overflow-hidden">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-foreground mb-6">
+              学習理解度を可視化し、<br className="hidden sm:block" />
+              指導を改善する分析支援システム
+            </h1>
+            <p className="text-lg sm:text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
+              採点後の答案用紙をアップロードするだけ。成長率、弱点、次の一手が瞬時に分かる。
+            </p>
+            <Link
+              href="/login"
+              className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold rounded-full text-white bg-mizuho hover:bg-blue-800 transition-all shadow-lg"
+            >
+              今すぐ体験する
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Link>
+          </div>
+        </section>
+
+        <section className="py-20 bg-muted/30">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {[
+                {
+                  icon: <FileText className="h-7 w-7 text-white" />,
+                  title: "画像ドラッグで一括登録",
+                  desc: "問題用紙・解答用紙をまとめてアップロード。AIが自動で整理します。",
+                  color: "bg-blue-500",
+                },
+                {
+                  icon: <TrendingUp className="h-7 w-7 text-white" />,
+                  title: "成長トレンド分析",
+                  desc: "過去データを一覧化し、成績の推移をグラフで見える化します。",
+                  color: "bg-indigo-500",
+                },
+                {
+                  icon: <Layout className="h-7 w-7 text-white" />,
+                  title: "自動資料作成",
+                  desc: "面談・報告に使える資料を短時間で作成し、PDF出力まで対応。",
+                  color: "bg-cyan-500",
+                },
+              ].map((feature) => (
+                <article key={feature.title} className="bg-card rounded-2xl p-7 shadow-sm border border-border">
+                  <div className={`inline-flex items-center justify-center p-3 rounded-xl ${feature.color} shadow-lg mb-5`}>
+                    {feature.icon}
+                  </div>
+                  <h3 className="text-xl font-bold text-foreground mb-2">{feature.title}</h3>
+                  <p className="text-muted-foreground leading-relaxed">{feature.desc}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="py-20">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 className="text-3xl font-extrabold text-foreground sm:text-4xl mb-6">料金プラン（塾用）</h2>
+            <p className="text-xl text-muted-foreground mb-10">初期費用 25,000円（税込） / 月額 9,800円（税込）</p>
+            <Link
+              href="/login"
+              className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold rounded-lg text-white bg-mizuho hover:bg-blue-800 transition-colors"
+            >
+              無料でアカウント作成
+            </Link>
+          </div>
+        </section>
+      </main>
+
+      <footer className="bg-background border-t border-border py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
+          <div>&copy; {new Date().getFullYear()} TENsNAP・Omni</div>
+          <div className="flex gap-6">
+            <Link href="/legal/terms" className="hover:text-foreground">利用規約</Link>
+            <Link href="/legal/privacy" className="hover:text-foreground">プライバシーポリシー</Link>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+function FamilyLanding() {
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       <nav className="sticky top-0 z-50 border-b border-border bg-background/85 backdrop-blur">
