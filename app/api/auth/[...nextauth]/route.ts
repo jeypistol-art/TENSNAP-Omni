@@ -5,6 +5,27 @@ import { CustomPostgresAdapter } from "@/lib/custom-adapter";
 import { query } from "@/lib/db";
 import { randomUUID } from "crypto";
 
+function normalizeHost(raw: string): string {
+  return raw.toLowerCase().trim().replace(/:\d+$/, "");
+}
+
+function getAllowedRedirectHosts(baseUrl: string): Set<string> {
+  const hosts = new Set<string>();
+  try {
+    hosts.add(normalizeHost(new URL(baseUrl).host));
+  } catch {
+    // no-op
+  }
+
+  const familyHostsRaw = process.env.FAMILY_HOSTS || process.env.FAMILY_HOST || "family.10snap.win";
+  for (const host of familyHostsRaw.split(",")) {
+    const normalized = normalizeHost(host);
+    if (normalized) hosts.add(normalized);
+  }
+
+  return hosts;
+}
+
 export const authOptions: NextAuthOptions = {
   adapter: CustomPostgresAdapter(),
   providers: [
@@ -87,6 +108,24 @@ export const authOptions: NextAuthOptions = {
         return { ...session, error: "ForceLogout" };
       }
       return session;
+    },
+    async redirect({ url, baseUrl }) {
+      // Keep users on their current tenant host (e.g. family.10snap.win) after auth.
+      if (url.startsWith("/")) {
+        return `${baseUrl}${url}`;
+      }
+
+      try {
+        const target = new URL(url);
+        const allowedHosts = getAllowedRedirectHosts(baseUrl);
+        if (allowedHosts.has(normalizeHost(target.host))) {
+          return target.toString();
+        }
+      } catch {
+        // fall through
+      }
+
+      return baseUrl;
     },
   },
 };
