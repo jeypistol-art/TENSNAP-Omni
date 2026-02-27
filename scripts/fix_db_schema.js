@@ -36,10 +36,12 @@ async function main() {
                 subscription_status TEXT DEFAULT 'trialing',
                 trial_ends_at TIMESTAMP WITH TIME ZONE,
                 plan_type TEXT DEFAULT 'monthly',
+                account_plan TEXT DEFAULT 'school',
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
         `);
+        await client.query(`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS account_plan TEXT DEFAULT 'school';`);
 
         // 2. Org Devices
         console.log("2. Checking 'org_devices' table...");

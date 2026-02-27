@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { PlusCircle } from "lucide-react";
 
 type Student = {
@@ -15,11 +15,18 @@ type Props = {
     selectedStudentId: string;
     onSelect: (studentId: string) => void;
     onOpenModal: () => void;
+    canAddStudent?: boolean;
     // Passing 'students' prop from parent (Dashboard) to avoid re-fetching or control refreshing
     students: Student[];
 };
 
-export default function StudentSelector({ selectedStudentId, onSelect, onOpenModal, students }: Props) {
+export default function StudentSelector({
+    selectedStudentId,
+    onSelect,
+    onOpenModal,
+    canAddStudent = true,
+    students
+}: Props) {
 
 
     // Filter Logic
@@ -89,13 +96,15 @@ export default function StudentSelector({ selectedStudentId, onSelect, onOpenMod
                         </select>
                     </div>
 
-                    <button
-                        onClick={onOpenModal}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm font-bold shadow-sm whitespace-nowrap"
-                    >
-                        <PlusCircle size={18} />
-                        新規登録
-                    </button>
+                    {canAddStudent && (
+                        <button
+                            onClick={onOpenModal}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm font-bold shadow-sm whitespace-nowrap"
+                        >
+                            <PlusCircle size={18} />
+                            新規登録
+                        </button>
+                    )}
                 </div>
             </div>
         </div>

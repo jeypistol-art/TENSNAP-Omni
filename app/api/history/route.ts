@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { query } from "@/lib/db";
+import { getOrganizationAccountPlan, getRequestedPlanFromRequest } from "@/lib/accountPlan";
+import { getTenantId } from "@/lib/tenant";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -38,6 +40,24 @@ export async function GET(request: Request) {
         }
         if (!UUID_RE.test(studentId)) {
             return NextResponse.json({ error: "Invalid student ID format" }, { status: 400 });
+        }
+
+        const requestedPlan = getRequestedPlanFromRequest(request);
+        const orgId = await getTenantId(session.user.id, session.user.email, requestedPlan);
+        const orgPlan = await getOrganizationAccountPlan(orgId);
+        const isFamilyPlan = requestedPlan === "family" || orgPlan === "family";
+        if (isFamilyPlan) {
+            const primaryStudent = await query<{ id: string }>(
+                `SELECT id FROM students WHERE user_id = $1 ORDER BY created_at ASC LIMIT 1`,
+                [session.user.id]
+            );
+            const primaryStudentId = primaryStudent.rows[0]?.id;
+            if (!primaryStudentId || primaryStudentId !== studentId) {
+                return NextResponse.json(
+                    { error: "Family plan allows only one student profile" },
+                    { status: 403 }
+                );
+            }
         }
 
         // 3. 履歴の取得（テナント分離を徹底）

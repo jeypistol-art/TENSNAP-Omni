@@ -6,6 +6,9 @@ export default function ExpiredPage() {
             const res = await fetch("/api/stripe/checkout", { method: "POST" });
             const data = await res.json();
             if (data.url) {
+                if (data.setupFeeUrl) {
+                    window.open(data.setupFeeUrl, "_blank", "noopener,noreferrer");
+                }
                 window.location.href = data.url;
             } else {
                 const message = data?.error ? `決済・契約が完了できませんでした: ${data.error}` : "決済システムの接続に失敗しました。";

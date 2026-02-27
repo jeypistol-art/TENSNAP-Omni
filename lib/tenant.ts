@@ -1,10 +1,27 @@
 import { query } from "@/lib/db";
+import type { AccountPlan } from "@/lib/accountPlan";
+
+let ensureAccountPlanColumnPromise: Promise<void> | null = null;
+
+async function ensureAccountPlanColumn() {
+    if (!ensureAccountPlanColumnPromise) {
+        ensureAccountPlanColumnPromise = query(
+            `ALTER TABLE organizations ADD COLUMN IF NOT EXISTS account_plan TEXT DEFAULT 'school'`
+        ).then(() => undefined);
+    }
+    await ensureAccountPlanColumnPromise;
+}
 
 // Ensure the user exists in our DB and return their tenant_id
 // Call this after validating the session in the App Router
 // Ensure the user exists in our DB and return their Organization ID (Tenant ID)
 // Call this after validating the session in the App Router
-export async function getTenantId(userId?: string | null, email?: string | null): Promise<string> {
+export async function getTenantId(
+    userId?: string | null,
+    email?: string | null,
+    requestedPlan: AccountPlan = "school"
+): Promise<string> {
+    await ensureAccountPlanColumn();
     let resolvedUserId = userId || null;
 
     // Defensive fallback: older tokens/sessions may miss `user.id`.
@@ -52,10 +69,10 @@ export async function getTenantId(userId?: string | null, email?: string | null)
         trialEnd.setDate(trialEnd.getDate() + 14);
 
         const orgResult = await query<{ id: string }>(
-            `INSERT INTO organizations (name, subscription_status, trial_ends_at, plan_type) 
-             VALUES ($1, 'trialing', $2, 'monthly') 
+            `INSERT INTO organizations (name, subscription_status, trial_ends_at, plan_type, account_plan)
+             VALUES ($1, 'trialing', $2, 'monthly', $3)
              RETURNING id`,
-            [orgName, trialEnd]
+            [orgName, trialEnd, requestedPlan]
         );
         orgId = orgResult.rows[0].id;
 
@@ -63,6 +80,14 @@ export async function getTenantId(userId?: string | null, email?: string | null)
         await query(
             `UPDATE users SET organization_id = $1 WHERE id = $2`,
             [orgId, resolvedUserId]
+        );
+    } else if (requestedPlan === "family") {
+        // Do not auto-downgrade family -> school on other hosts.
+        await query(
+            `UPDATE organizations
+             SET account_plan = 'family', updated_at = CURRENT_TIMESTAMP
+             WHERE id = $1 AND COALESCE(account_plan, 'school') <> 'family'`,
+            [orgId]
         );
     }
 

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { query } from "@/lib/db";
+import { getOrganizationAccountPlan, getRequestedPlanFromRequest } from "@/lib/accountPlan";
+import { getTenantId } from "@/lib/tenant";
 
 export async function PATCH(
     request: NextRequest,
@@ -13,6 +15,24 @@ export async function PATCH(
     try {
         const { id } = await context.params;
         const { studentId, unitName, testDate, score, subject, comprehensionScore } = await request.json();
+        const requestedPlan = getRequestedPlanFromRequest(request);
+        const orgId = await getTenantId(session.user.id, session.user.email, requestedPlan);
+        const orgPlan = await getOrganizationAccountPlan(orgId);
+        const isFamilyPlan = requestedPlan === "family" || orgPlan === "family";
+
+        if (isFamilyPlan && studentId) {
+            const primaryStudent = await query<{ id: string }>(
+                `SELECT id FROM students WHERE user_id = $1 ORDER BY created_at ASC LIMIT 1`,
+                [session.user.id]
+            );
+            const primaryStudentId = primaryStudent.rows[0]?.id;
+            if (!primaryStudentId || primaryStudentId !== studentId) {
+                return NextResponse.json(
+                    { error: "Family plan allows only one student profile" },
+                    { status: 403 }
+                );
+            }
+        }
 
         // Update Analysis
         await query(

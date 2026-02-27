@@ -5,6 +5,13 @@ import { getTenantId } from "@/lib/tenant";
 import { query } from "@/lib/db";
 import { analyzeImage } from "@/lib/ocr_service";
 import { getR2AssetsBucket, R2_ASSETS_BUCKET_NAME, uploadPreparedFilesToR2 } from "@/lib/r2_assets";
+import { getOrganizationAccountPlan, getRequestedPlanFromRequest } from "@/lib/accountPlan";
+
+async function resolveEffectivePlan(request: Request, orgId: string): Promise<"school" | "family"> {
+    const requestedPlan = getRequestedPlanFromRequest(request);
+    const orgPlan = await getOrganizationAccountPlan(orgId);
+    return requestedPlan === "family" || orgPlan === "family" ? "family" : "school";
+}
 
 export async function POST(request: Request) {
     try {
@@ -14,7 +21,9 @@ export async function POST(request: Request) {
         }
 
         // 1. Resolve Tenant
-        const tenantId = await getTenantId(session.user.id, session.user.email);
+        const requestedPlan = getRequestedPlanFromRequest(request);
+        const tenantId = await getTenantId(session.user.id, session.user.email, requestedPlan);
+        const effectivePlan = await resolveEffectivePlan(request, tenantId);
 
         // 2. Process File & Context
         const formData = await request.formData();
@@ -72,7 +81,29 @@ export async function POST(request: Request) {
             console.warn("R2 bucket binding not found; falling back to non-persistent upload path.");
         }
 
-        const studentId = formData.get("studentId") as string | null; // Optional: Linked Student ID
+        let studentId = formData.get("studentId") as string | null; // Optional: Linked Student ID
+        if (effectivePlan === "family") {
+            const primaryStudent = await query<{ id: string }>(
+                `SELECT id FROM students WHERE user_id = $1 ORDER BY created_at ASC LIMIT 1`,
+                [session.user.id]
+            );
+            const primaryStudentId = primaryStudent.rows[0]?.id || (
+                await query<{ id: string }>(
+                    `INSERT INTO students (user_id, name, name_kana, grade, target_school, notes)
+                     VALUES ($1, $2, $3, $4, $5, $6)
+                     RETURNING id`,
+                    [session.user.id, "受講者", null, null, null, null]
+                )
+            ).rows[0].id;
+
+            if (studentId && studentId !== primaryStudentId) {
+                return NextResponse.json(
+                    { error: "Family plan allows only one student profile" },
+                    { status: 403 }
+                );
+            }
+            studentId = primaryStudentId;
+        }
 
         // 3. Save Upload Record (with Student ID)
         // Insert into uploads table

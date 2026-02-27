@@ -46,7 +46,57 @@ Set repository secrets:
 - `RETENTION_CLEANUP_BASE_URL` (optional, preferred for GitHub Actions; use a hostname not protected by Cloudflare challenge, e.g. a workers.dev URL)
 - `DATA_RETENTION_CRON_SECRET`
 
+Notes:
+
+- `RETENTION_CLEANUP_BASE_URL` must be configured in GitHub repository secrets (Actions secrets), because it is read by the GitHub Actions workflow at runtime.
+- Setting `RETENTION_CLEANUP_BASE_URL` only in Cloudflare Worker/Pages environment variables does not affect the cleanup workflow request URL.
+
 If GitHub Actions receives a Cloudflare "Just a moment..." HTML response (`HTTP 403`), the request is being blocked before the app code runs. In that case, point `RETENTION_CLEANUP_BASE_URL` to an internal/non-challenged hostname or add a Cloudflare WAF/Access bypass for `POST /api/internal/retention/cleanup`.
+
+## Family Plan (Subdomain)
+
+Family plan behavior is controlled by request host and feature flags:
+
+- `FAMILY_HOST` (default: `family.10snap.win`)
+- `FAMILY_HOSTS` (optional comma-separated hosts; overrides `FAMILY_HOST`)
+- `NEXT_PUBLIC_FAMILY_HOST` (optional, for client-side UI hiding)
+- `STRIPE_SCHOOL_SUBSCRIPTION_LINK` (default fallback is current provided link)
+- `STRIPE_FAMILY_SUBSCRIPTION_LINK` (default fallback is current provided link)
+- `STRIPE_SCHOOL_SETUP_FEE_LINK` (default fallback is current provided link)
+
+Implemented behavior:
+
+- `organizations.account_plan` is persisted as `school | family`
+- family host enforces one student profile per account
+- student registration API is blocked on family host
+- Stripe checkout API returns Payment Link URL(s):
+  - family: monthly subscription link only
+  - school: setup fee link + monthly subscription link
+
+## Cloudflare Deploy
+
+This project is deployed with OpenNext + Cloudflare Workers.
+
+1. Authenticate:
+   - `npx wrangler login`
+2. Build worker bundle:
+   - `npm run build:worker`
+3. Deploy:
+   - `npm run deploy`
+
+Current configurable vars are defined in [`wrangler.jsonc`](/C:/Users/use/dev/score-snap/wrangler.jsonc):
+
+- `FAMILY_HOST`
+- `NEXT_PUBLIC_FAMILY_HOST`
+- `STRIPE_SCHOOL_SUBSCRIPTION_LINK`
+- `STRIPE_FAMILY_SUBSCRIPTION_LINK`
+- `STRIPE_SCHOOL_SETUP_FEE_LINK`
+
+If you need to override in Cloudflare dashboard:
+
+1. `Workers & Pages` -> `tensnap01omni2026` -> `Settings` -> `Variables`
+2. Update the values above
+3. Re-deploy worker
 
 ## Learn More
 

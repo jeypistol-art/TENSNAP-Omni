@@ -35,10 +35,12 @@ async function main() {
         subscription_status TEXT DEFAULT 'trialing', -- Default to trial
         trial_ends_at TIMESTAMP WITH TIME ZONE,
         plan_type TEXT DEFAULT 'monthly',
+        account_plan TEXT DEFAULT 'school',
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
+    await client.query(`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS account_plan TEXT DEFAULT 'school';`);
     console.log('Verified table: organizations');
 
     // 0.5. Org Devices Table (Security Gatekeeper) - [NEW]

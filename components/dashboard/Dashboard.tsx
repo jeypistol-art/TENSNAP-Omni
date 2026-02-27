@@ -70,6 +70,7 @@ export default function Dashboard() {
     const [students, setStudents] = useState<Student[]>([]);
     const [selectedStudentId, setSelectedStudentId] = useState<string>("");
     const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
+    const [isFamilyHost, setIsFamilyHost] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
     const [editingField, setEditingField] = useState<null | "student" | "subject" | "score" | "testDate">(null);
     const [draftValue, setDraftValue] = useState<string>("");
@@ -194,6 +195,11 @@ export default function Dashboard() {
     useEffect(() => {
         runDeviceCheck();
     }, [runDeviceCheck]);
+
+    useEffect(() => {
+        const familyHost = (process.env.NEXT_PUBLIC_FAMILY_HOST || "family.10snap.win").toLowerCase();
+        setIsFamilyHost(window.location.hostname.toLowerCase() === familyHost);
+    }, []);
 
     const handleReplaceDevice = async (removeDeviceId: string) => {
         if (!currentDeviceId) return;
@@ -519,6 +525,9 @@ export default function Dashboard() {
             const res = await fetch("/api/stripe/checkout", { method: "POST" });
             const data = await res.json();
             if (data.url) {
+                if (data.setupFeeUrl) {
+                    window.open(data.setupFeeUrl, "_blank", "noopener,noreferrer");
+                }
                 window.location.href = data.url;
             } else {
                 const message = data?.error ? `決済・契約が完了できませんでした: ${data.error}` : "決済・契約システムの接続に失敗しました。";
@@ -610,8 +619,13 @@ export default function Dashboard() {
             <StudentSelector
                 selectedStudentId={selectedStudentId}
                 onSelect={setSelectedStudentId}
-                onOpenModal={() => setIsStudentModalOpen(true)}
+                onOpenModal={() => {
+                    if (!isFamilyHost) {
+                        setIsStudentModalOpen(true);
+                    }
+                }}
                 students={students}
+                canAddStudent={!isFamilyHost}
             />
 
             {/* History Toggle & Timeline */}
@@ -644,11 +658,13 @@ export default function Dashboard() {
             </div>
 
             {/* Registration Modal */}
-            <AddStudentModal
-                isOpen={isStudentModalOpen}
-                onClose={() => setIsStudentModalOpen(false)}
-                onAdded={handleStudentAdded}
-            />
+            {!isFamilyHost && (
+                <AddStudentModal
+                    isOpen={isStudentModalOpen}
+                    onClose={() => setIsStudentModalOpen(false)}
+                    onAdded={handleStudentAdded}
+                />
+            )}
 
             {/* Main Upload / Results Area */}
             {(status === "idle" || status === "uploading" || status === "analyzing" || status === "error") && (
