@@ -245,6 +245,19 @@ export default function Dashboard() {
         fetchStudents();
     }, [authStatus]);
 
+    useEffect(() => {
+        if (!isFamilyHost) return;
+        if (students.length === 0) return;
+        if (!selectedStudentId) {
+            setSelectedStudentId(students[0].id);
+            return;
+        }
+        const exists = students.some((s) => s.id === selectedStudentId);
+        if (!exists) {
+            setSelectedStudentId(students[0].id);
+        }
+    }, [isFamilyHost, students, selectedStudentId]);
+
     const handleStudentAdded = useCallback((newStudent: Student) => {
         setStudents([newStudent, ...students]); // Prepend new student
         setSelectedStudentId(newStudent.id); // Auto select
@@ -566,6 +579,8 @@ export default function Dashboard() {
         && (subscriptionStatus === "trialing" || subscriptionStatus === "trial")
         && !!trialEndsAt
         && Date.now() > Date.parse(trialEndsAt as string);
+    const effectiveStudentId = selectedStudentId || (isFamilyHost ? (students[0]?.id || "") : "");
+    const canOpenHistory = isFamilyHost ? !!effectiveStudentId : !!selectedStudentId;
 
     if (isTrialExpired) {
         return <TrialExpiredGate onSubscribe={handleSubscribe} />;
@@ -616,41 +631,56 @@ export default function Dashboard() {
                 </p>
             </header>
 
-            <StudentSelector
-                selectedStudentId={selectedStudentId}
-                onSelect={setSelectedStudentId}
-                onOpenModal={() => {
-                    if (!isFamilyHost) {
-                        setIsStudentModalOpen(true);
-                    }
-                }}
-                students={students}
-                canAddStudent={!isFamilyHost}
-            />
+            {isFamilyHost ? (
+                <div className="mb-6 p-4 bg-white rounded-xl border border-gray-100 shadow-sm animate-in fade-in slide-in-from-bottom-2">
+                    <p className="text-xs text-gray-500 font-bold mb-2 uppercase tracking-wider">ご利用中の対象</p>
+                    <p className="text-base font-semibold text-gray-800">
+                        {students.find(s => s.id === selectedStudentId)?.name || students[0]?.name || "お子さま"}
+                    </p>
+                </div>
+            ) : (
+                <StudentSelector
+                    selectedStudentId={selectedStudentId}
+                    onSelect={setSelectedStudentId}
+                    onOpenModal={() => {
+                        if (!isFamilyHost) {
+                            setIsStudentModalOpen(true);
+                        }
+                    }}
+                    students={students}
+                    canAddStudent={!isFamilyHost}
+                />
+            )}
 
             {/* History Toggle & Timeline */}
             <div className="mb-8 animate-in fade-in slide-in-from-top-1 duration-300">
                 <button
-                    onClick={() => selectedStudentId && setShowHistory(!showHistory)}
-                    disabled={!selectedStudentId}
+                    onClick={() => {
+                        if (canOpenHistory) {
+                            setShowHistory(!showHistory);
+                        }
+                    }}
+                    disabled={!canOpenHistory}
                     className={`
                         w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all
-                        ${selectedStudentId
+                        ${canOpenHistory
                             ? 'bg-white text-blue-600 border border-blue-200 hover:bg-blue-50 hover:shadow-sm cursor-pointer'
                             : 'bg-gray-100 text-gray-400 border border-transparent cursor-not-allowed'}
                     `}
                 >
                     <span>📊</span>
-                    {selectedStudentId ? (showHistory ? "履歴を閉じる" : "この生徒の分析履歴を見る") : "生徒を選択すると履歴が見れます"}
+                    {canOpenHistory
+                        ? (showHistory ? "履歴を閉じる" : (isFamilyHost ? "お子さまの分析履歴を見る" : "この生徒の分析履歴を見る"))
+                        : "生徒を選択すると履歴が見れます"}
                 </button>
 
-                {showHistory && selectedStudentId && (
+                {showHistory && canOpenHistory && (
                     <div className="mt-2 rounded-xl overflow-hidden border border-blue-100 shadow-inner bg-gray-50 animate-in slide-in-from-top-2">
                         <HistoryErrorBoundary>
                             <StudentHistory
-                                studentId={selectedStudentId}
-                                studentName={students.find(s => s.id === selectedStudentId)?.name || "生徒"}
-                                targetSchool={students.find(s => s.id === selectedStudentId)?.target_school || ""}
+                                studentId={effectiveStudentId}
+                                studentName={students.find(s => s.id === effectiveStudentId)?.name || students[0]?.name || (isFamilyHost ? "お子さま" : "生徒")}
+                                targetSchool={students.find(s => s.id === effectiveStudentId)?.target_school || students[0]?.target_school || ""}
                             />
                         </HistoryErrorBoundary>
                     </div>
@@ -982,8 +1012,8 @@ export default function Dashboard() {
                                 {/* Student Name */}
                                 <div className="flex items-center justify-between gap-3 bg-white border border-gray-200 rounded-lg px-3 py-2">
                                     <div className="w-full">
-                                        <span className="block text-[11px] text-gray-500 font-bold mb-1">生徒名</span>
-                                        {editingField === "student" ? (
+                                        <span className="block text-[11px] text-gray-500 font-bold mb-1">{isFamilyHost ? "お子さま" : "生徒名"}</span>
+                                        {editingField === "student" && !isFamilyHost ? (
                                             <select
                                                 autoFocus
                                                 value={draftValue}
@@ -1004,17 +1034,19 @@ export default function Dashboard() {
                                             </select>
                                         ) : (
                                             <span className="text-sm font-semibold text-gray-800">
-                                                {students.find(s => s.id === selectedStudentId)?.name || "生徒"}
+                                                {students.find(s => s.id === selectedStudentId)?.name || students[0]?.name || (isFamilyHost ? "お子さま" : "生徒")}
                                             </span>
                                         )}
                                     </div>
-                                    <button
-                                        onClick={() => startEditField("student", selectedStudentId)}
-                                        className="text-xs text-gray-500 hover:text-blue-600"
-                                        disabled={isSavingField}
-                                    >
-                                        ✏️
-                                    </button>
+                                    {!isFamilyHost && (
+                                        <button
+                                            onClick={() => startEditField("student", selectedStudentId)}
+                                            className="text-xs text-gray-500 hover:text-blue-600"
+                                            disabled={isSavingField}
+                                        >
+                                            ✏️
+                                        </button>
+                                    )}
                                 </div>
 
                                 {/* Subject */}
