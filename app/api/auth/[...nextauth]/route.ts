@@ -5,6 +5,8 @@ import { CustomPostgresAdapter } from "@/lib/custom-adapter";
 import { query } from "@/lib/db";
 import { randomUUID } from "crypto";
 
+const strictSessionGuard = process.env.ENFORCE_STRICT_SESSION_GUARD === "true";
+
 function normalizeHost(raw: string): string {
   return raw.toLowerCase().trim().replace(/:\d+$/, "");
 }
@@ -173,6 +175,21 @@ export const authOptions: NextAuthOptions = {
             }
             // If DB says "Session B" but I am "Session A", I am invalid.
             if (dbSessionId && dbSessionId !== token.sessionId) {
+              if (!strictSessionGuard) {
+                // Compatibility mode: prefer keeping the user signed in.
+                // This avoids first-login bounce caused by callback race timing.
+                const tokenSessionId = typeof token.sessionId === "string" ? token.sessionId : "";
+                if (tokenSessionId) {
+                  await query(
+                    `UPDATE users SET current_session_id = $1 WHERE id = $2`,
+                    [tokenSessionId, accountId]
+                  );
+                } else {
+                  token.sessionId = dbSessionId;
+                }
+                return session;
+              }
+
               // Self-heal once to absorb transient read/write races right after login.
               // If another session already moved the value meanwhile, this returns 0 rows
               // and we still force logout.
