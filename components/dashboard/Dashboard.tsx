@@ -21,7 +21,7 @@ export default function Dashboard() {
         const sessionError = (session as { error?: string } | null)?.error;
         if (sessionError === "ForceLogout") {
             alert("セキュリティ保護のため、別端末からのログインを検知しました。再ログインしてください。");
-            signOut({ callbackUrl: "/login" });
+            signOut({ callbackUrl: "/" });
         }
     }, [session]);
 
@@ -524,11 +524,7 @@ export default function Dashboard() {
         } catch (e) {
             console.error("Logout cleanup failed", e);
         } finally {
-            if (callbackUrl) {
-                signOut({ callbackUrl });
-            } else {
-                signOut();
-            }
+            signOut({ callbackUrl: callbackUrl ?? "/" });
         }
     };
 
