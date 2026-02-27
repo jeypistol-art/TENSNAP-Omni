@@ -507,6 +507,7 @@ export default function Dashboard() {
                             再読み込み
                         </button>
                         <button
+                            type="button"
                             onClick={() => handleLogout("/")}
                             className="text-sm text-gray-500 hover:text-gray-800 underline transition-colors"
                         >
@@ -518,13 +519,19 @@ export default function Dashboard() {
         );
     }
 
-    const handleLogout = async (callbackUrl?: string) => {
+    const handleLogout = async (callbackUrl: string = "/") => {
         try {
             await fetch("/api/auth/logout", { method: "POST" });
         } catch (e) {
             console.error("Logout cleanup failed", e);
         } finally {
-            signOut({ callbackUrl: callbackUrl ?? "/" });
+            try {
+                await signOut({ redirect: false, callbackUrl });
+            } catch (e) {
+                console.error("NextAuth signOut failed", e);
+            } finally {
+                window.location.assign(callbackUrl);
+            }
         }
     };
 
@@ -608,6 +615,7 @@ export default function Dashboard() {
                         設定
                     </a>
                     <button
+                        type="button"
                         onClick={() => handleLogout()}
                         className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold px-3 py-1.5 rounded-lg transition-colors"
                     >
