@@ -44,6 +44,15 @@ function getSharedCookieOptions() {
   const csrfTokenName = useSecureCookie
     ? "__Host-next-auth.csrf-token"
     : "next-auth.csrf-token";
+  const stateName = useSecureCookie
+    ? "__Secure-next-auth.state"
+    : "next-auth.state";
+  const pkceCodeVerifierName = useSecureCookie
+    ? "__Secure-next-auth.pkce.code_verifier"
+    : "next-auth.pkce.code_verifier";
+  const nonceName = useSecureCookie
+    ? "__Secure-next-auth.nonce"
+    : "next-auth.nonce";
 
   return {
     sessionToken: {
@@ -73,6 +82,38 @@ function getSharedCookieOptions() {
         path: "/",
         secure: useSecureCookie,
         // Keep default host-only behavior in production when using __Host- cookie.
+      },
+    },
+    state: {
+      name: stateName,
+      options: {
+        httpOnly: true,
+        sameSite: "lax" as const,
+        path: "/",
+        secure: useSecureCookie,
+        domain: cookieDomain,
+        maxAge: 60 * 15,
+      },
+    },
+    pkceCodeVerifier: {
+      name: pkceCodeVerifierName,
+      options: {
+        httpOnly: true,
+        sameSite: "lax" as const,
+        path: "/",
+        secure: useSecureCookie,
+        domain: cookieDomain,
+        maxAge: 60 * 15,
+      },
+    },
+    nonce: {
+      name: nonceName,
+      options: {
+        httpOnly: true,
+        sameSite: "lax" as const,
+        path: "/",
+        secure: useSecureCookie,
+        domain: cookieDomain,
       },
     },
   };
