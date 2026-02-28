@@ -338,7 +338,7 @@ export default function Dashboard() {
                 const nextSubject = normalizeSubjectLabel(editingField === "subject" ? draftValue : subject);
                 const nextTestDate = editingField === "testDate" ? draftValue : testDate;
                 const nextScoreRaw = editingField === "score" ? Number(draftValue) : Number(result?.test_score ?? 0);
-                const nextScore = Number.isFinite(nextScoreRaw) ? nextScoreRaw : null;
+                const nextScore = Number.isFinite(nextScoreRaw) ? nextScoreRaw : undefined;
 
                 const res = await fetch(`/api/analysis/${analysisId}`, {
                     method: "PATCH",
@@ -1191,7 +1191,7 @@ export default function Dashboard() {
                             <div className="p-5 bg-red-50 rounded-lg border border-red-100">
                                 <span className="block text-red-600 text-xs font-bold mb-3 tracking-wide">重点克服分野</span>
                                 <div className="flex flex-col gap-3">
-                                    {result.weakness_areas.map((w: WeaknessArea, i: number) => (
+                                    {(result.weakness_areas ?? []).map((w: WeaknessArea, i: number) => (
                                         <div key={i} className="flex items-center gap-3">
                                             <span className={`text-[10px] font-bold px-2 py-1 rounded text-white shadow-sm min-w-[60px] text-center ${w.level === 'Primary' ? 'bg-red-500' : 'bg-orange-400'
                                                 }`}>
