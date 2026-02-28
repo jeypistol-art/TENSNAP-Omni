@@ -17,7 +17,6 @@ import {
   ShieldCheck,
   Sparkles,
   FileText,
-  TrendingUp,
   Layout,
   Users,
   Zap,
@@ -52,19 +51,122 @@ function hasForceLogoutError(session: unknown): boolean {
   return maybe.error === "ForceLogout";
 }
 
+function JsonLd({ data }: { data: Record<string, unknown> }) {
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+    />
+  );
+}
+
 export async function generateMetadata(): Promise<Metadata> {
   const isFamilyHost = await isFamilyHostRequest();
 
   if (isFamilyHost) {
     return {
+      title: "TENsNAP家庭用 | AIが「つまずきの根っこ」を特定。小中高12年間の学習ログ",
+      description:
+        "月額2,980円で、わが家専属のAI家庭教師を。テストや問題集を撮るだけで、AIが苦手単元を自動特定。算数から高校数学まで12年間の成長を可視化します。初期費用0円、塾クオリティの分析エンジンで、お子様の「わからない」を解決へ。",
       alternates: { canonical: "https://family.10snap.win" },
-      keywords: ["TENsNAP", "家庭学習", "教育AI", "答案分析", "弱点分析", "学習サポート"],
+      robots: {
+        index: true,
+        follow: true,
+        googleBot: {
+          index: true,
+          follow: true,
+          "max-snippet": -1,
+          "max-image-preview": "large",
+          "max-video-preview": -1,
+        },
+      },
+      keywords: [
+        "子供 AI 勉強",
+        "AI 弱点分析 アプリ",
+        "AI つまずき特定",
+        "AI 苦手単元 診断",
+        "学習ログ 可視化",
+        "算数 つまずき 原因",
+        "中学 英語 わからない どこから",
+        "高校数学 苦手克服",
+        "AI 学習進捗 可視化 ツール",
+      ],
+      openGraph: {
+        type: "website",
+        url: "https://family.10snap.win",
+        siteName: "TENsNAP家庭用",
+        title: "TENsNAP家庭用 | AI学習分析で、12年間の成長を一生モノの資産に。",
+        description: "「どこがわからないか、わからない」をAIが解決。2,980円で始める、プロ仕様の学習分析。",
+        locale: "ja_JP",
+        images: [
+          {
+            url: "https://family.10snap.win/images/og-family.png",
+            width: 1200,
+            height: 628,
+            alt: "テストを撮るだけ。AIがつまずきを言葉にする。",
+          },
+        ],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: "TENsNAP家庭用 | AIがつまずきを言葉にする",
+        description: "算数から高校数学まで。12年間の学習ログをAIで見える化。",
+        images: ["https://family.10snap.win/images/og-family.png"],
+      },
+      category: "education",
     };
   }
 
   return {
+    title: "TENsNAP・Omni | 小1から高3まで。12年間のつまずきをAIで可視化",
+    description:
+      "塾向けAI学習分析プラットフォーム。答案を撮るだけで、弱点分析・成長推移・面談用PDFを自動生成。算数/数学・英語/外国語・国語・理科/科学/理数・社会/地理/歴史の主要5教科を横断し、指導品質と運営効率を同時に高めます。",
     alternates: { canonical: "https://10snap.win" },
-    keywords: ["TENsNAP", "教育AI", "塾運営効率化", "答案分析", "成績管理", "指導改善"],
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-snippet": -1,
+        "max-image-preview": "large",
+        "max-video-preview": -1,
+      },
+    },
+    keywords: [
+      "塾 AI",
+      "塾運営効率化",
+      "答案分析",
+      "AI 弱点分析",
+      "AI 学習進捗 可視化",
+      "保護者面談 PDF",
+      "個別指導 学習管理",
+      "算数 数学 つまずき",
+      "中学 高校 学習データ",
+    ],
+    openGraph: {
+      type: "website",
+      url: "https://10snap.win",
+      siteName: "TENsNAP・Omni",
+      title: "TENsNAP・Omni | 小1から高3まで。12年間のつまずきをAIで可視化",
+      description: "塾の指導品質を上げる。答案撮影だけで弱点分析・成長グラフ・面談資料を自動生成。",
+      locale: "ja_JP",
+      images: [
+        {
+          url: "https://10snap.win/images/og-image.png",
+          width: 1200,
+          height: 630,
+          alt: "TENsNAP・Omni - 塾向けAI学習分析",
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: "TENsNAP・Omni | 塾向けAI学習分析",
+      description: "小中高12年間のつまずきをつなぎ、指導品質を向上。",
+      images: ["https://10snap.win/images/og-image.png"],
+    },
+    category: "education",
   };
 }
 
@@ -80,6 +182,55 @@ export default async function Home() {
 }
 
 function SchoolLanding() {
+  const subjectLabels = ["算数/数学", "英語/外国語", "国語", "理科/科学/理数", "社会/地理/歴史"];
+  const schoolStructuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        name: "TENsNAP・Omni",
+        url: "https://10snap.win",
+        inLanguage: "ja",
+      },
+      {
+        "@type": "SoftwareApplication",
+        name: "TENsNAP・Omni",
+        applicationCategory: "EducationalApplication",
+        operatingSystem: "Web",
+        url: "https://10snap.win",
+        description:
+          "小中高12年間の学習ログを可視化する、塾向けAI学習分析プラットフォーム。答案撮影だけで弱点分析・成長推移・面談用PDFを自動生成。",
+        offers: {
+          "@type": "Offer",
+          priceCurrency: "JPY",
+          price: "9800",
+        },
+      },
+      {
+        "@type": "Organization",
+        name: "TENsNAP・Omni",
+        url: "https://10snap.win",
+      },
+    ],
+  };
+  const schoolFeatures = [
+    {
+      icon: <LineChart className="h-6 w-6 text-blue-700" />,
+      title: "データの資産化",
+      desc: "担当講師が変わっても、学年が上がっても、AI学習進捗可視化ツールとして学習文脈を継承。小1から高3までのつまずきを一本の線でつなぎます。",
+    },
+    {
+      icon: <FileText className="h-6 w-6 text-blue-700" />,
+      title: "面談の武器",
+      desc: "期間成長レポートとPDF出力で「中学に入って苦労しないために、今どこを固めるか」を根拠提示。保護者面談の説得力を強化します。",
+    },
+    {
+      icon: <Layout className="h-6 w-6 text-blue-700" />,
+      title: "運用手間を最小化",
+      desc: "不必要な機能を隠した迷わないUI。撮影して送るだけでAI弱点分析アプリの価値を現場に即導入でき、事務負担を削減します。",
+    },
+  ];
+
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground overflow-x-hidden">
       <nav className="sticky top-0 w-full z-50 bg-background/80 backdrop-blur-md border-b border-border">
@@ -107,16 +258,21 @@ function SchoolLanding() {
       </nav>
 
       <main>
-        <section className="relative pt-24 pb-20 lg:pt-40 lg:pb-28 overflow-hidden">
+        <JsonLd data={schoolStructuredData} />
+        <section className="relative pt-24 pb-14 lg:pt-32 lg:pb-18 overflow-hidden border-b border-border">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <div className="text-center max-w-4xl mx-auto">
-              <h1 className="text-4xl sm:text-5xl lg:text-7xl font-extrabold tracking-tight text-foreground mb-8 text-balance">
-                <span className="block text-mizuho">学習理解度を可視化</span>
-                <span className="block mt-2">指導を改善する分析支援システム</span>
+              <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-4 py-1.5 text-sm font-semibold text-blue-700">
+                <Sparkles className="h-4 w-4" />
+                小1から高3まで。12年間の学習ログを一元管理
+              </p>
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-foreground mb-8 text-balance">
+                <span className="block text-mizuho">小1から高3まで。</span>
+                <span className="block mt-2">12年間のつまずきを、AIが一本の線でつなぐ。</span>
               </h1>
-              <p className="mt-4 text-xl sm:text-2xl text-muted-foreground max-w-2xl mx-auto mb-10 text-balance">
-                採点後の答案用紙をスキャンするだけ。<br className="hidden sm:block" />
-                成長率、弱点、次の一手が瞬時に分かる。
+              <p className="mt-4 text-lg sm:text-xl text-muted-foreground max-w-3xl mx-auto mb-10 text-balance leading-relaxed">
+                小・中・高の全学年、主要5教科を完全カバー。個別指導の学習管理をこれ一端に。<br className="hidden sm:block" />
+                AIつまずき特定・AI苦手単元診断・AI学習進捗可視化を、答案スキャンだけで実現します。
               </p>
               <div className="flex flex-col sm:flex-row justify-center gap-4">
                 <Link
@@ -127,9 +283,6 @@ function SchoolLanding() {
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </div>
-              <p className="mt-6 text-sm text-muted-foreground">
-                機材投資ゼロ・PC/スマホ対応・高度なセキュリティ
-              </p>
             </div>
           </div>
 
@@ -140,41 +293,38 @@ function SchoolLanding() {
           </div>
         </section>
 
+        <section className="py-10 border-b border-border bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <p className="text-xs uppercase tracking-[0.2em] text-gray-500 font-semibold mb-3">対応科目</p>
+            <div className="flex flex-wrap gap-2">
+              {subjectLabels.map((subject) => (
+                <span
+                  key={subject}
+                  className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-800"
+                >
+                  {subject}
+                </span>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <section className="py-24 bg-muted/30">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
-              <h2 className="text-base font-semibold text-mizuho tracking-wide uppercase">Features</h2>
+              <h2 className="text-base font-semibold text-mizuho tracking-wide uppercase">B2B Value</h2>
               <p className="mt-2 text-3xl font-extrabold text-foreground sm:text-4xl">
-                AIが講師の「目」を拡張する
+                指導効率と保護者説得力を同時に強化
               </p>
               <p className="mt-4 max-w-2xl text-xl text-muted-foreground mx-auto">
-                事務作業を最小限に抑え、生徒と向き合う時間を最大化するための直感的なツール群。
+                「勉強してるのに成績が上がらない原因」を、現場感覚ではなくデータで示せる状態を作ります。
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-              {[
-                {
-                  icon: <FileText className="h-8 w-8 text-white" />,
-                  title: "画像ドラッグで一括登録",
-                  desc: "問題用紙も解答用紙も、画像の向きや順番を気にせずドラッグ＆ドロップで放り込むだけ。AIが自動で整理します。",
-                  color: "bg-blue-500",
-                },
-                {
-                  icon: <TrendingUp className="h-8 w-8 text-white" />,
-                  title: "成長トレンド分析",
-                  desc: "過去の分析結果を一覧表示し、人目で成績の動きが分かるグラフを生成。生徒の「伸び」を逃しません。",
-                  color: "bg-indigo-500",
-                },
-                {
-                  icon: <Layout className="h-8 w-8 text-white" />,
-                  title: "自動資料作成",
-                  desc: "データをまとめて資料作りに費やしていた数時間を、わずか数分に短縮。PDFとして即保存・印刷可能です。",
-                  color: "bg-cyan-500",
-                },
-              ].map((feature, idx) => (
+              {schoolFeatures.map((feature, idx) => (
                 <div key={idx} className="bg-card rounded-2xl p-8 shadow-sm border border-border hover:shadow-md transition-shadow">
-                  <div className={`inline-flex items-center justify-center p-3 rounded-xl ${feature.color} shadow-lg mb-6`}>
+                  <div className="inline-flex items-center justify-center rounded-xl bg-blue-100 p-3 mb-6">
                     {feature.icon}
                   </div>
                   <h3 className="text-xl font-bold text-foreground mb-3">{feature.title}</h3>
@@ -185,7 +335,7 @@ function SchoolLanding() {
           </div>
         </section>
 
-        <section className="py-24 overflow-hidden">
+        <section className="py-24 overflow-hidden bg-white border-y border-border">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="lg:grid lg:grid-cols-2 lg:gap-16 items-center">
               <div className="mb-12 lg:mb-0">
@@ -198,10 +348,8 @@ function SchoolLanding() {
                   「客観的エビデンス」で信頼を勝ち取る。
                 </h2>
                 <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-                  単なる点数の報告ではなく、説得力のあるグラフ付きPDFレポートが、
-                  保護者への信頼感を劇的に高めます。<br /><br />
-                  「ここが弱点です」と口で言うのと、データで示すのでは、
-                  説得力が段違いです。
+                  「算数 つまずき どこから」「中学 英語 わからなくなった どこから」といった悩みに、
+                  根拠ある回答を即提示。塾内共有・保護者面談・次回授業設計まで一本化できます。
                 </p>
 
                 <ul className="space-y-4">
@@ -218,11 +366,27 @@ function SchoolLanding() {
                 </ul>
               </div>
               <div className="relative">
-                <div className="aspect-[4/3] rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 border border-border shadow-2xl flex items-center justify-center relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent"></div>
-                  <div className="relative z-10 text-center p-8">
-                    <TrendingUp className="h-16 w-16 text-mizuho mx-auto mb-4" />
-                    <p className="text-xl font-bold">成長トレンドを見える化</p>
+                <div className="rounded-2xl border border-border bg-white shadow-2xl p-6">
+                  <p className="text-xs font-bold text-blue-700 mb-4 tracking-wider">算数から数学へ 可視化デモ</p>
+                  <div className="space-y-3">
+                    <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
+                      <p className="text-xs text-gray-600">小5 / 算数</p>
+                      <p className="font-bold text-gray-800">分数の計算</p>
+                    </div>
+                    <div className="flex justify-center">
+                      <ArrowRight className="h-5 w-5 text-gray-400 rotate-90" />
+                    </div>
+                    <div className="rounded-xl border border-amber-100 bg-amber-50 p-4">
+                      <p className="text-xs text-gray-600">中1 / 数学</p>
+                      <p className="font-bold text-gray-800">方程式に注意アラート</p>
+                    </div>
+                    <div className="flex justify-center">
+                      <ArrowRight className="h-5 w-5 text-gray-400 rotate-90" />
+                    </div>
+                    <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4">
+                      <p className="text-xs text-gray-600">高校 / 理系科目</p>
+                      <p className="font-bold text-gray-800">基礎の抜けを早期補修</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -423,8 +587,8 @@ function SchoolLanding() {
               次のレベルへ。
             </h2>
             <p className="text-xl text-muted-foreground mb-10">
-              事務作業を減らし、生徒の成長に向き合う時間を。<br />
-              まずは無料でお試しください。
+              AI弱点分析アプリとしての即効性と、12年間の学習地図としての長期価値を両立。<br />
+              まずは無料トライアルで運用負荷の軽さを体感してください。
             </p>
             <Link
               href="/login"
@@ -457,6 +621,63 @@ function SchoolLanding() {
 }
 
 function FamilyLanding() {
+  const subjectLabels = ["算数/数学", "英語/外国語", "国語", "理科/科学/理数", "社会/地理/歴史"];
+  const familyStructuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        name: "TENsNAP家庭用",
+        url: "https://family.10snap.win",
+        inLanguage: "ja",
+      },
+      {
+        "@type": "SoftwareApplication",
+        name: "TENsNAP家庭用",
+        applicationCategory: "EducationalApplication",
+        operatingSystem: "Web",
+        url: "https://family.10snap.win",
+        description:
+          "月額2,980円で、AIが苦手単元とつまずきの根っこを特定。算数から高校数学まで12年間の学習ログを可視化する家庭向け学習分析サービス。",
+        offers: {
+          "@type": "Offer",
+          priceCurrency: "JPY",
+          price: "2980",
+          availability: "https://schema.org/InStock",
+        },
+      },
+      {
+        "@type": "FAQPage",
+        mainEntity: [
+          {
+            "@type": "Question",
+            name: "2週間経ったら勝手にお金がかかりますか？",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "いいえ。お試し期間終了後に自動で課金されることはありません。",
+            },
+          },
+          {
+            "@type": "Question",
+            name: "問題と回答が1枚になっているテストでも大丈夫？",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "はい。画像1枚だけでもAIが分析できます。",
+            },
+          },
+          {
+            "@type": "Question",
+            name: "中学や高校に進んでもデータは使えますか？",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "はい。小中高をまたいで学習ログを継続利用できます。",
+            },
+          },
+        ],
+      },
+    ],
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       <nav className="sticky top-0 z-50 border-b border-border bg-background/85 backdrop-blur">
@@ -480,19 +701,21 @@ function FamilyLanding() {
       </nav>
 
       <main>
+        <JsonLd data={familyStructuredData} />
         <section className="relative overflow-hidden border-b border-border bg-[radial-gradient(circle_at_top_right,_#dbeafe_0%,_transparent_45%),radial-gradient(circle_at_bottom_left,_#e0f2fe_0%,_transparent_40%)]">
           <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-20 sm:px-6 lg:py-28">
             <div className="max-w-4xl">
               <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-blue-200 bg-white/80 px-4 py-1 text-sm font-medium text-mizuho">
                 <Sparkles className="h-4 w-4" />
-                お子様専用 学習分析アシスタント
+                ご家庭専用 AI学習パートナー
               </p>
               <h1 className="text-4xl font-black leading-tight sm:text-5xl lg:text-6xl">
-                「点数」で終わらせない。<br />
-                AIが導く、お子様専用の成長ロードマップ。
+                「わからない」の根っこを見つける。<br />
+                2,980円で、わが家専属のAI家庭教師を。
               </h1>
               <p className="mt-6 max-w-3xl text-lg text-muted-foreground sm:text-xl">
-                テストやプリントを撮って送るだけ。AIが弱点と「次の一手」を自動抽出。
+                算数から高校数学まで。12年間の成長をAIが見守る、ご家庭のための学習パートナー。<br />
+                AIつまずき特定・AI苦手単元診断で「勉強してるのに成績上がらない原因」を見える化します。
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Link
@@ -504,31 +727,41 @@ function FamilyLanding() {
                 </Link>
                 <p className="text-sm text-muted-foreground">2週間フル機能を体験（自動更新なしで安心）</p>
               </div>
+              <div className="mt-8 flex flex-wrap gap-2">
+                {subjectLabels.map((subject) => (
+                  <span
+                    key={subject}
+                    className="inline-flex items-center rounded-full border border-blue-200 bg-white/80 px-3 py-1 text-xs font-semibold text-blue-800"
+                  >
+                    {subject}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
         </section>
 
         <section className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6">
-          <h2 className="text-2xl font-bold sm:text-3xl">解決できる3つのこと</h2>
+          <h2 className="text-2xl font-bold sm:text-3xl">ご家庭に届く「3つの安心」</h2>
           <div className="mt-8 grid gap-5 md:grid-cols-3">
             {[
               {
                 icon: <LineChart className="h-6 w-6 text-mizuho" />,
-                title: "【分析】採点ではなく「成長率」と「弱点」を可視化",
+                title: "プロの道具を、そのままご家庭に",
                 description:
-                  "単なる〇×ではなく、どの単元が苦手で、前回からどこが成長したかをAIが抽出します。",
+                  "塾で使う分析エンジンをそのまま搭載。問題と回答を撮るだけで、AI弱点分析アプリとして苦手を自動言語化します。",
               },
               {
                 icon: <Lightbulb className="h-6 w-6 text-mizuho" />,
-                title: "【戦略】「次の一手」をAIがアドバイス",
+                title: "12年間の「学習地図」",
                 description:
-                  "「次に何を覚えるべきか」を具体的に提示。迷う時間を勉強の時間に変えます。",
+                  "小学校のつまずきが中学・高校のどこに響くかを継続可視化。進学しても積み上げた努力を失いません。",
               },
               {
                 icon: <CheckCircle2 className="h-6 w-6 text-mizuho" />,
-                title: "【継続】モチベーションを科学する",
+                title: "迷わない最小限UI",
                 description:
-                  "自分の成長を数値で知ることで、学習への意欲を引き出し、自走する力を育みます。",
+                  "親が「勉強しなさい」と言わなくても、AIデータを一緒に見るだけで会話が進む。スマホで最短手順で記録できます。",
               },
             ].map((feature) => (
               <article key={feature.title} className="rounded-2xl border border-border bg-card p-6 shadow-sm">
@@ -571,6 +804,14 @@ function FamilyLanding() {
                 </article>
               ))}
             </div>
+            <div className="mt-10 rounded-2xl border border-blue-100 bg-white p-6">
+              <p className="text-sm font-semibold text-blue-700 mb-2">キーワードへの答え</p>
+              <p className="text-sm leading-relaxed text-gray-700">
+                「算数が苦手になったのは、いつから？」に対して、TENsNAPは過去データを横断分析。
+                「小4の壁」「中学英語で急にわからない」「理数系が伸びない」といった悩みを、
+                AIが根本原因ベースで整理し、次にやるべき1ステップを提案します。
+              </p>
+            </div>
           </div>
         </section>
 
@@ -581,6 +822,7 @@ function FamilyLanding() {
               <tbody>
                 {[
                   ["月額料金", "2,980円（税込）"],
+                  ["初期費用", "0円"],
                   ["対象", "1アカウントにつきお子様1名様まで"],
                   ["お試し期間", "2週間無料（期間終了後に自動課金されることはありません）"],
                   ["ログイン方法", "メールアドレス または Googleアカウント"],
@@ -635,6 +877,12 @@ function FamilyLanding() {
               <p className="font-semibold">Q: 問題と回答が1枚になっているテストでも大丈夫？</p>
               <p className="mt-2 text-sm text-muted-foreground">
                 A: はい、その画像1枚だけでAIがしっかり分析いたします。
+              </p>
+            </article>
+            <article className="rounded-2xl border border-border bg-card p-6">
+              <p className="font-semibold">Q: 中学や高校に進んでもデータは使えますか？</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                A: はい。小・中・高をまたいで蓄積できるため、「あとで効く」学習ログとして使い続けられます。
               </p>
             </article>
           </div>
