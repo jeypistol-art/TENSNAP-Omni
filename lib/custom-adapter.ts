@@ -122,13 +122,16 @@ export function CustomPostgresAdapter(): Adapter {
             // Not used with JWT strategy usually, but required by interface
             return session;
         },
-        async getSessionAndUser(sessionToken: string) {
+        async getSessionAndUser(_sessionToken: string) {
+            void _sessionToken;
             return null;
         },
-        async updateSession(session: Partial<AdapterSession> & Pick<AdapterSession, "sessionToken">) {
+        async updateSession(_session: Partial<AdapterSession> & Pick<AdapterSession, "sessionToken">) {
+            void _session;
             return null;
         },
-        async deleteSession(sessionToken: string) {
+        async deleteSession(_sessionToken: string) {
+            void _sessionToken;
             return;
         },
         async createVerificationToken({ identifier, token, expires }: VerificationToken) {

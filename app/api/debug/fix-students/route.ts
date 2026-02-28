@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 
+const getErrorMessage = (error: unknown) =>
+    error instanceof Error ? error.message : String(error);
+
 export async function GET() {
     try {
         console.log("Starting Student Schema Fix via API...");
@@ -23,7 +26,7 @@ export async function GET() {
             verification: exists ? "Column 'name_kana' exists" : "Column MISSING after update"
         });
 
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error: unknown) {
+        return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
     }
 }

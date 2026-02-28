@@ -1,6 +1,8 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 import React, { forwardRef } from 'react';
+import { normalizeSubjectLabel } from "@/lib/subjects";
 
 type AnalysisReportProps = {
     data: {
@@ -44,7 +46,7 @@ const AnalysisReport = forwardRef<HTMLDivElement, AnalysisReportProps>(({ data }
                 <div className="flex justify-between items-center">
                     <h2 className="text-xl font-bold text-gray-800">{data.studentName} <span className="text-sm font-normal text-gray-500 ml-1">様</span></h2>
                     <div className="text-right">
-                        <span className="inline-block bg-blue-100 text-blue-800 text-xs font-bold px-3 py-1 rounded-full mr-2">{data.subject}</span>
+                        <span className="inline-block bg-blue-100 text-blue-800 text-xs font-bold px-3 py-1 rounded-full mr-2">{normalizeSubjectLabel(data.subject)}</span>
                         <span className="text-sm font-medium text-gray-700">{data.unitName}</span>
                     </div>
                 </div>

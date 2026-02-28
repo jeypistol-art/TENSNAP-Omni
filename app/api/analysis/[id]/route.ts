@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { query } from "@/lib/db";
 import { getOrganizationAccountPlan, getRequestedPlanFromRequest } from "@/lib/accountPlan";
 import { getTenantId } from "@/lib/tenant";
+import { normalizeSubjectLabel } from "@/lib/subjects";
 
 export async function PATCH(
     request: NextRequest,
@@ -15,6 +16,7 @@ export async function PATCH(
     try {
         const { id } = await context.params;
         const { studentId, unitName, testDate, score, subject, comprehensionScore } = await request.json();
+        const normalizedSubject = subject ? normalizeSubjectLabel(subject) : null;
         const requestedPlan = getRequestedPlanFromRequest(request);
         const orgId = await getTenantId(session.user.id, session.user.email, requestedPlan);
         const orgPlan = await getOrganizationAccountPlan(orgId);
@@ -52,7 +54,7 @@ export async function PATCH(
                 testDate ?? null,
                 score ?? null,
                 score ?? null,
-                subject ?? null,
+                normalizedSubject,
                 comprehensionScore ?? null,
                 id,
                 session.user.id

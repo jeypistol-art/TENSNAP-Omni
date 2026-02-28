@@ -6,6 +6,7 @@ import { query } from "@/lib/db";
 import { analyzeImage } from "@/lib/ocr_service";
 import { getR2AssetsBucket, R2_ASSETS_BUCKET_NAME, uploadPreparedFilesToR2 } from "@/lib/r2_assets";
 import { getOrganizationAccountPlan, getRequestedPlanFromRequest } from "@/lib/accountPlan";
+import { DEFAULT_SUBJECT, normalizeSubjectLabel } from "@/lib/subjects";
 
 async function resolveEffectivePlan(request: Request, orgId: string): Promise<"school" | "family"> {
     const requestedPlan = getRequestedPlanFromRequest(request);
@@ -113,7 +114,7 @@ export async function POST(request: Request) {
         );
         const uploadId = uploadResult.rows[0].id;
 
-        const subject = (formData.get("subject") as string) || "Math"; // Default to Math if missing
+        const subject = normalizeSubjectLabel((formData.get("subject") as string) || DEFAULT_SUBJECT);
 
         // 4. Perform Analysis
         const analysis = await analyzeImage(answerSheets, {

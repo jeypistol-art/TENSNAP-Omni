@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import LoginForm from "@/components/LoginForm";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+/* eslint-disable @next/next/no-img-element */
 
 function hasForceLogoutError(session: unknown): boolean {
   if (!session || typeof session !== "object") return false;

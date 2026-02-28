@@ -5,10 +5,25 @@ import { query } from "@/lib/db";
 import { getTenantId } from "@/lib/tenant";
 import { randomUUID } from "crypto";
 
+type SessionWithError = {
+    user?: {
+        id: string;
+        email?: string | null;
+    };
+    error?: string;
+} | null;
+
+type DeviceRow = {
+    id: string;
+    name: string | null;
+    last_active_at: string | null;
+    created_at: string | null;
+};
+
 export async function POST(request: Request) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session || !session.user || (session as any).error === "ForceLogout") {
+        const session = (await getServerSession(authOptions)) as SessionWithError;
+        if (!session || !session.user || session.error === "ForceLogout") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -35,9 +50,9 @@ export async function POST(request: Request) {
         // But we need to see if we can register it.
 
         // 3. Check against DB
-        let dbDevice = null;
+        let dbDevice: DeviceRow | null = null;
         if (currentDeviceId) {
-            const checkRes = await query(
+            const checkRes = await query<DeviceRow>(
                 `SELECT * FROM org_devices WHERE organization_id = $1 AND device_hash = $2`,
                 [orgId, currentDeviceId]
             );
@@ -46,7 +61,7 @@ export async function POST(request: Request) {
                 // Update Last Active
                 await query(
                     `UPDATE org_devices SET last_active_at = CURRENT_TIMESTAMP WHERE id = $1`,
-                    [(dbDevice as any).id]
+                    [dbDevice.id]
                 );
             } else {
                 // Client has an ID but DB doesn't know it (Maybe purged?). Treat as new.
@@ -83,7 +98,7 @@ export async function POST(request: Request) {
             const currentCount = parseInt(countRes.rows[0].count);
 
             if (currentCount >= 2) {
-                const devicesRes = await query(
+                const devicesRes = await query<DeviceRow>(
                     `SELECT id, name, last_active_at, created_at FROM org_devices WHERE organization_id = $1 ORDER BY created_at ASC`,
                     [orgId]
                 );

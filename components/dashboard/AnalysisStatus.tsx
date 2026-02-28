@@ -1,5 +1,3 @@
-import { ComponentType } from "react";
-
 // Fallback spinner if lucide-react isn't available or for simple SVG usage
 const Spinner = () => (
     <svg className="animate-spin h-10 w-10 text-blue-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

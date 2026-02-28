@@ -14,7 +14,7 @@ export default function ExpiredPage() {
                 const message = data?.error ? `決済・契約が完了できませんでした: ${data.error}` : "決済システムの接続に失敗しました。";
                 alert(message);
             }
-        } catch (e) {
+        } catch {
             alert("エラーが発生しました。");
         }
     };

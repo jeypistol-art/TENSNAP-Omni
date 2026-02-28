@@ -23,16 +23,19 @@ export async function query<T = QueryResultRow>(
   params: unknown[] = []
 ) : Promise<QueryResult<T>> {
   try {
-    const rows = await sql(text, params as any[]);
+    const rows = await sql(text, params as unknown[]);
     return {
       rows: (rows as T[]) ?? [],
       rowCount: (rows as T[])?.length ?? 0,
     };
-  } catch (err: any) {
-    const code = err?.code || "";
+  } catch (err: unknown) {
+    const code =
+      typeof err === "object" && err !== null && "code" in err
+        ? String((err as { code?: unknown }).code ?? "")
+        : "";
     if (code === "ECONNRESET") {
       resetClient();
-      const retry = await sql(text, params as any[]);
+      const retry = await sql(text, params as unknown[]);
       return {
         rows: (retry as T[]) ?? [],
         rowCount: (retry as T[])?.length ?? 0,

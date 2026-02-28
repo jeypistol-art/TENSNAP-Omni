@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import Chart from 'chart.js/auto';
 import type { Chart as ChartJS, TooltipItem } from 'chart.js';
 
@@ -17,12 +17,15 @@ export default function StudentTrendChart({ history }: { history: TrendPoint[] }
     const chartRef = useRef<ChartJS<"line"> | null>(null);
 
     // データを時系列（古い順）に並べ替え
-    const safeHistory = Array.isArray(history)
-        ? history.filter((h) => h && typeof h === "object")
-        : [];
-    const sortedData = [...safeHistory].reverse();
+    const safeHistory = useMemo(
+        () => (Array.isArray(history)
+            ? history.filter((h) => h && typeof h === "object")
+            : []),
+        [history]
+    );
+    const sortedData = useMemo(() => [...safeHistory].reverse(), [safeHistory]);
 
-    const data = {
+    const data = useMemo(() => ({
         labels: sortedData.map(h => {
             const raw = h.test_date || h.created_at || "";
             const d = new Date(raw);
@@ -40,9 +43,9 @@ export default function StudentTrendChart({ history }: { history: TrendPoint[] }
                 tension: 0.3, // 滑らかな曲線に
             }
         ],
-    };
+    }), [sortedData]);
 
-    const options = {
+    const options = useMemo(() => ({
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
@@ -59,7 +62,7 @@ export default function StudentTrendChart({ history }: { history: TrendPoint[] }
         scales: {
             y: { min: 0, max: 100 }
         }
-    };
+    }), [sortedData]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -90,7 +93,7 @@ export default function StudentTrendChart({ history }: { history: TrendPoint[] }
                 chartRef.current = null;
             }
         };
-    }, [history]);
+    }, [data, history, options]);
 
     return (
         <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">

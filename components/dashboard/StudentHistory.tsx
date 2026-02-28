@@ -7,6 +7,13 @@ import ReportPreviewModal from "./ReportPreviewModal"; // [NEW] Import
 import HistoryResultDetail from "./HistoryResultDetail";
 import type { AnalysisDetails } from "./HistoryResultDetail";
 import { useReactToPrint } from "react-to-print";
+import {
+    DEFAULT_SUBJECT,
+    SUBJECT_OPTIONS,
+    detectSubjectCategory,
+    isSubjectMatch,
+    normalizeSubjectLabel,
+} from "@/lib/subjects";
 
 const StudentTrendChart = dynamic(() => import("./StudentTrendChart"), {
     ssr: false,
@@ -52,7 +59,7 @@ export default function StudentHistory({ studentId, studentName, targetSchool }:
     const [error, setError] = useState("");
     const [editingHistoryId, setEditingHistoryId] = useState<string | null>(null);
     const [historyDraft, setHistoryDraft] = useState<{ subject: string; test_date: string; comprehension_score: string }>({
-        subject: "数学",
+        subject: DEFAULT_SUBJECT,
         test_date: "",
         comprehension_score: "0"
     });
@@ -80,7 +87,7 @@ export default function StudentHistory({ studentId, studentName, targetSchool }:
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [previewType, setPreviewType] = useState<"single" | "periodical">("single");
     const [previewMode, setPreviewMode] = useState<"view" | "action">("view");
-    const subjectOptions = ["数学", "英語", "国語", "理科", "社会"];
+    const subjectOptions = SUBJECT_OPTIONS;
 
     const formatDateForInput = (value?: string) => {
         if (!value) return "";
@@ -109,16 +116,16 @@ export default function StudentHistory({ studentId, studentName, targetSchool }:
     };
 
     const subjectBadgeClass = (subject: string) => {
-        switch (subject) {
-            case "数学":
+        switch (detectSubjectCategory(subject)) {
+            case "math":
                 return "bg-blue-500";
-            case "英語":
+            case "english":
                 return "bg-orange-500";
-            case "国語":
+            case "japanese":
                 return "bg-emerald-500";
-            case "理科":
+            case "science":
                 return "bg-teal-500";
-            case "社会":
+            case "social":
                 return "bg-purple-500";
             default:
                 return "bg-gray-500";
@@ -130,7 +137,7 @@ export default function StudentHistory({ studentId, studentName, targetSchool }:
         setHistoryError("");
         setEditingHistoryId(item.id);
         setHistoryDraft({
-            subject: item.subject || "数学",
+            subject: normalizeSubjectLabel(item.subject) || DEFAULT_SUBJECT,
             test_date: dateVal,
             comprehension_score: String(item.comprehension_score ?? 0)
         });
@@ -145,7 +152,7 @@ export default function StudentHistory({ studentId, studentName, targetSchool }:
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    subject: historyDraft.subject,
+                    subject: normalizeSubjectLabel(historyDraft.subject),
                     testDate: historyDraft.test_date,
                     comprehensionScore: Number(historyDraft.comprehension_score)
                 })
@@ -156,7 +163,7 @@ export default function StudentHistory({ studentId, studentName, targetSchool }:
                 if (item.id !== editingHistoryId) return item;
                 return {
                     ...item,
-                    subject: historyDraft.subject,
+                    subject: normalizeSubjectLabel(historyDraft.subject),
                     test_date: historyDraft.test_date,
                     comprehension_score: Number(historyDraft.comprehension_score)
                 };
@@ -202,7 +209,7 @@ export default function StudentHistory({ studentId, studentName, targetSchool }:
                 studentName: studentName || "生徒",
                 targetSchool: targetSchool || "",
                 periodStr: `${new Date(startDate).toLocaleDateString()} 〜 ${new Date(endDate).toLocaleDateString()}`,
-                subjectLabel: subjectFilter === "all" ? "全教科" : subjectFilter,
+                subjectLabel: subjectFilter === "all" ? "全教科" : normalizeSubjectLabel(subjectFilter),
                 ...data.aggregated
             });
 
@@ -230,7 +237,7 @@ export default function StudentHistory({ studentId, studentName, targetSchool }:
         if (!itemDate) return false;
         if (startDate && itemDate < startDate) return false;
         if (endDate && itemDate > endDate) return false;
-        if (subjectFilter !== "all" && item.subject !== subjectFilter) return false;
+        if (subjectFilter !== "all" && !isSubjectMatch(item.subject, subjectFilter)) return false;
         return true;
     });
 
@@ -251,7 +258,10 @@ export default function StudentHistory({ studentId, studentName, targetSchool }:
                     throw new Error(message);
                 }
                 const data = await res.json();
-                setHistory(data.history || []);
+                setHistory((data.history || []).map((item: HistoryItem) => ({
+                    ...item,
+                    subject: normalizeSubjectLabel(item.subject),
+                })));
             } catch (err) {
                 console.error(err);
                 setError(err instanceof Error ? err.message : "履歴データを読み込めませんでした");
@@ -311,11 +321,9 @@ export default function StudentHistory({ studentId, studentName, targetSchool }:
                             className="bg-transparent text-xs font-bold text-gray-600 px-2 py-1 outline-none cursor-pointer"
                         >
                             <option value="all">全教科</option>
-                            <option value="数学">数学</option>
-                            <option value="英語">英語</option>
-                            <option value="国語">国語</option>
-                            <option value="理科">理科</option>
-                            <option value="社会">社会</option>
+                            {subjectOptions.map((s) => (
+                                <option key={s} value={s}>{s}</option>
+                            ))}
                         </select>
                     </div>
                 </div>
@@ -365,7 +373,7 @@ export default function StudentHistory({ studentId, studentName, targetSchool }:
                                     px-2 py-0.5 rounded text-[10px] font-bold text-white
                                     ${subjectBadgeClass(item.subject)}
                                 `}>
-                                    {item.subject || '教科未設定'}
+                                    {normalizeSubjectLabel(item.subject) || "教科未設定"}
                                 </span>
                                 <span className="text-gray-500 text-xs font-mono">
                                     {formatDateForDisplay(item.test_date || item.created_at)}

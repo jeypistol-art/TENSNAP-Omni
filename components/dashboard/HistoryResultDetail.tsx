@@ -1,6 +1,7 @@
 "use client";
 
 import React, { forwardRef } from "react";
+import { normalizeSubjectLabel } from "@/lib/subjects";
 
 type Weakness = { topic: string; level: string };
 type ComprehensionDetails = {
@@ -186,7 +187,7 @@ const HistoryResultDetail = forwardRef<HTMLDivElement, HistoryResultDetailProps>
                         </div>
                         <div className="bg-white border border-gray-200 rounded-lg px-3 py-2">
                             <span className="block text-[11px] text-gray-500 font-bold mb-1">教科</span>
-                            <span className="text-sm font-semibold text-gray-800">{item.subject || "未設定"}</span>
+                            <span className="text-sm font-semibold text-gray-800">{normalizeSubjectLabel(item.subject) || "未設定"}</span>
                         </div>
                         <div className="bg-white border border-gray-200 rounded-lg px-3 py-2">
                             <span className="block text-[11px] text-gray-500 font-bold mb-1">スコア</span>

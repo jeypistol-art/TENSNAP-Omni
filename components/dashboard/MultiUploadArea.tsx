@@ -1,7 +1,8 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 import { useState, useCallback, useEffect } from "react";
-import { useDropzone, FileRejection, DropEvent } from "react-dropzone";
+import { useDropzone } from "react-dropzone";
 
 type MultiUploadAreaProps = {
     onFilesChange: (files: File[]) => void;

@@ -60,7 +60,7 @@
   const safeGet = (key) => {
     try {
       return window.localStorage.getItem(key);
-    } catch (_err) {
+    } catch {
       return null;
     }
   };
@@ -68,7 +68,7 @@
   const safeSet = (key, value) => {
     try {
       window.localStorage.setItem(key, value);
-    } catch (_err) {
+    } catch {
       // localStorage unavailable; keep UI functional without persistence.
     }
   };
@@ -134,7 +134,7 @@
       if (typeof parsed.interpretation !== "string") return;
       if (!Array.isArray(parsed.guide)) return;
       applyState(parsed);
-    } catch (_err) {
+    } catch {
       // Ignore invalid stored state.
     }
   };

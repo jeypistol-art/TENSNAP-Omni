@@ -1,6 +1,7 @@
 "use client";
 
 import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer';
+import { normalizeSubjectLabel } from "@/lib/subjects";
 
 // Register Japanese font (using a CDN or local font if available, 
 // for MVP we might default to standard sans if CDN fails, but let's try to set up Noto Sans JP)
@@ -144,7 +145,7 @@ export default function AnalysisPDF({ data }: AnalysisPDFProps) {
                 {/* Student Info */}
                 <View style={styles.studentSection}>
                     <Text style={styles.studentName}>{data.studentName} 様</Text>
-                    <Text style={styles.text}>教科: {data.subject} | 単元: {data.unitName}</Text>
+                    <Text style={styles.text}>教科: {normalizeSubjectLabel(data.subject)} | 単元: {data.unitName}</Text>
                 </View>
 
                 {/* Score Cards */}

@@ -1,8 +1,10 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
-import React, { forwardRef, useEffect, useRef } from 'react';
+import React, { forwardRef, useEffect, useMemo, useRef } from 'react';
 import Chart from 'chart.js/auto';
 import type { Chart as ChartJS } from 'chart.js';
+import { normalizeSubjectLabel } from "@/lib/subjects";
 
 type PeriodicalReportProps = {
     data: {
@@ -21,7 +23,7 @@ const PeriodicalReport = forwardRef<HTMLDivElement, PeriodicalReportProps>(({ da
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const chartRef = useRef<ChartJS<"radar"> | null>(null);
 
-    const chartData = {
+    const chartData = useMemo(() => ({
         labels: ['得点理解度', '思考プロセス', '学習の安定感'],
         datasets: [
             {
@@ -39,9 +41,9 @@ const PeriodicalReport = forwardRef<HTMLDivElement, PeriodicalReportProps>(({ da
                 borderWidth: 2,
             },
         ],
-    };
+    }), [data.currentStats.accuracy, data.currentStats.consistency, data.currentStats.process, data.startStats.accuracy, data.startStats.consistency, data.startStats.process]);
 
-    const chartOptions = {
+    const chartOptions = useMemo(() => ({
         responsive: true,
         maintainAspectRatio: false,
         scales: {
@@ -58,7 +60,7 @@ const PeriodicalReport = forwardRef<HTMLDivElement, PeriodicalReportProps>(({ da
                 position: 'bottom' as const,
             }
         }
-    };
+    }), []);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -85,7 +87,7 @@ const PeriodicalReport = forwardRef<HTMLDivElement, PeriodicalReportProps>(({ da
                 chartRef.current = null;
             }
         };
-    }, [data]);
+    }, [chartData, chartOptions, data]);
 
     return (
         <div ref={ref} className="w-full max-w-[210mm] print:w-[210mm] min-h-[297mm] p-4 sm:p-[20mm] print:p-[20mm] bg-white text-gray-800 font-sans mx-auto">
@@ -104,7 +106,7 @@ const PeriodicalReport = forwardRef<HTMLDivElement, PeriodicalReportProps>(({ da
                 <div className="text-right">
                     <p className="text-sm text-gray-600 font-medium">対象期間</p>
                     <p className="text-md font-bold text-blue-900">{data.periodStr}</p>
-                    <p className="text-xs text-gray-600 font-semibold mt-1">対象教科: {data.subjectLabel}</p>
+                    <p className="text-xs text-gray-600 font-semibold mt-1">対象教科: {normalizeSubjectLabel(data.subjectLabel)}</p>
                 </div>
             </header>
 

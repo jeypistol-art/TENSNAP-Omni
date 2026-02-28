@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 import { useState, useCallback, useEffect } from "react";
 // import UploadArea from "./UploadArea"; // Replaced by MultiUploadArea
@@ -11,8 +12,37 @@ import StudentSelector from "./StudentSelector";
 import AddStudentModal from "./AddStudentModal";
 import TrialExpiredGate from "./TrialExpiredGate";
 import { useSession } from "next-auth/react";
+import { DEFAULT_SUBJECT, SUBJECT_OPTIONS, normalizeSubjectLabel } from "@/lib/subjects";
 
 export default function Dashboard() {
+    type DeviceItem = {
+        id: string;
+        name?: string | null;
+        last_active_at?: string | null;
+    };
+    type WeaknessArea = { topic?: string; level?: string };
+    type AnalysisResult = {
+        test_score?: number;
+        test_score_raw?: number | string;
+        raw_test_score?: number | string;
+        input_test_score?: number | string;
+        exam_phase?: boolean;
+        provisional?: boolean;
+        comprehension_score?: number;
+        comprehension_details?: {
+            accuracy: number;
+            question_accuracy?: number;
+            process: number;
+            consistency: number;
+        };
+        insight_bullets?: string[];
+        insight_conclusion?: string;
+        covered_topics?: string[];
+        weakness_areas?: WeaknessArea[];
+        disclaimer?: string;
+        [key: string]: unknown;
+    };
+
     const { data: session, status: authStatus } = useSession();
     const router = useRouter();
 
@@ -41,13 +71,12 @@ export default function Dashboard() {
 
     // State
     const [status, setStatus] = useState<"idle" | "uploading" | "analyzing" | "completed" | "error">("idle");
-    const [progress, setProgress] = useState(0);
-    const [result, setResult] = useState<any>(null); // Analysis Result JSON
+    const [result, setResult] = useState<AnalysisResult | null>(null); // Analysis Result JSON
     const [analysisId, setAnalysisId] = useState<string | null>(null); // DB ID
     const [errorMsg, setErrorMsg] = useState("");
     const [deviceError, setDeviceError] = useState(false); // New state for device block
     const [deviceErrorCode, setDeviceErrorCode] = useState<string | null>(null);
-    const [blockedDevices, setBlockedDevices] = useState<any[]>([]);
+    const [blockedDevices, setBlockedDevices] = useState<DeviceItem[]>([]);
     const [currentDeviceId, setCurrentDeviceId] = useState<string>("");
     const [currentDeviceName, setCurrentDeviceName] = useState<string>("");
     const [isReplacingDevice, setIsReplacingDevice] = useState(false);
@@ -58,7 +87,7 @@ export default function Dashboard() {
 
     // V2: Analysis Options
     const [unitName, setUnitName] = useState("");
-    const [subject, setSubject] = useState("数学");
+    const [subject, setSubject] = useState<string>(DEFAULT_SUBJECT);
     const [testDate, setTestDate] = useState(new Date().toISOString().split('T')[0]);
     const [examPhase, setExamPhase] = useState(false);
     const [isProblemLocked, setIsProblemLocked] = useState(false);
@@ -80,7 +109,7 @@ export default function Dashboard() {
     const [draftValue, setDraftValue] = useState<string>("");
     const [isSavingField, setIsSavingField] = useState(false);
     const [fieldError, setFieldError] = useState("");
-    const subjectOptions = ["数学", "英語", "国語", "理科", "社会"];
+    const subjectOptions = SUBJECT_OPTIONS;
 
     const isDevicePolicyErrorCode = (code?: string | null) =>
         code === "DeviceLimitExceeded" || code === "TrialAbuseDetected";
@@ -159,7 +188,7 @@ export default function Dashboard() {
                         }
                         return;
                     }
-                } catch (e) {
+                } catch {
                     console.error("Device check returned non-JSON error:", res.status, text.substring(0, 500));
                 }
                 setIsDeviceVerified(true);
@@ -306,7 +335,7 @@ export default function Dashboard() {
                 }
                 setSelectedStudentId(nextStudentId);
             } else {
-                const nextSubject = editingField === "subject" ? draftValue : subject;
+                const nextSubject = normalizeSubjectLabel(editingField === "subject" ? draftValue : subject);
                 const nextTestDate = editingField === "testDate" ? draftValue : testDate;
                 const nextScoreRaw = editingField === "score" ? Number(draftValue) : Number(result?.test_score ?? 0);
                 const nextScore = Number.isFinite(nextScoreRaw) ? nextScoreRaw : null;
@@ -353,7 +382,6 @@ export default function Dashboard() {
         setResult(null);
         setAnalysisId(null);
         setStatus("uploading");
-        setProgress(10);
         setErrorMsg("");
 
         const formData = new FormData();
@@ -370,7 +398,7 @@ export default function Dashboard() {
 
         // Append Context & Student ID
         if (unitName) formData.append("unitName", unitName);
-        formData.append("subject", subject);
+        formData.append("subject", normalizeSubjectLabel(subject));
         formData.append("testDate", testDate);
         formData.append("studentId", selectedStudentId);
         formData.append("examPhase", examPhase ? "true" : "false");
@@ -413,13 +441,13 @@ export default function Dashboard() {
             setResult(data.analysis);
             setAnalysisId(data.analysisId); // Capture ID
             setStatus("completed");
-            setProgress(100);
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error(error);
+            const maybeError = error instanceof Error ? error : null;
             const message =
-                error?.name === "AbortError"
+                maybeError?.name === "AbortError"
                     ? "分析がタイムアウトしました。画像枚数を減らして再実行してください。"
-                    : (error?.message || "分析に失敗しました。");
+                    : (maybeError?.message || "分析に失敗しました。");
             setErrorMsg(message);
             setStatus("error");
         }
@@ -472,7 +500,7 @@ export default function Dashboard() {
                             <p className="text-xs text-gray-500 font-bold mb-2">登録済みデバイス（解除してこの端末を登録）</p>
                             {blockedDevices.length > 0 ? (
                                 <div className="space-y-2">
-                                    {blockedDevices.map((d: any) => (
+                                    {blockedDevices.map((d) => (
                                         <div key={d.id} className="flex items-center justify-between gap-3 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
                                             <div className="min-w-0">
                                                 <p className="text-xs font-semibold text-gray-700 truncate">{d.name || "Unknown Device"}</p>
@@ -718,11 +746,9 @@ export default function Dashboard() {
                                             onChange={(e) => setSubject(e.target.value)}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                                         >
-                                            <option value="数学">数学</option>
-                                            <option value="英語">英語</option>
-                                            <option value="国語">国語</option>
-                                            <option value="理科">理科</option>
-                                            <option value="社会">社会</option>
+                                            {subjectOptions.map((s) => (
+                                                <option key={s} value={s}>{s}</option>
+                                            ))}
                                         </select>
                                     </div>
                                     <div className="min-w-0">
@@ -1074,11 +1100,11 @@ export default function Dashboard() {
                                                 ))}
                                             </select>
                                         ) : (
-                                            <span className="text-sm font-semibold text-gray-800">{subject}</span>
+                                            <span className="text-sm font-semibold text-gray-800">{normalizeSubjectLabel(subject)}</span>
                                         )}
                                     </div>
                                     <button
-                                        onClick={() => startEditField("subject", subject)}
+                                        onClick={() => startEditField("subject", normalizeSubjectLabel(subject))}
                                         className="text-xs text-gray-500 hover:text-blue-600"
                                         disabled={isSavingField}
                                     >
@@ -1165,7 +1191,7 @@ export default function Dashboard() {
                             <div className="p-5 bg-red-50 rounded-lg border border-red-100">
                                 <span className="block text-red-600 text-xs font-bold mb-3 tracking-wide">重点克服分野</span>
                                 <div className="flex flex-col gap-3">
-                                    {result.weakness_areas.map((w: any, i: number) => (
+                                    {result.weakness_areas.map((w: WeaknessArea, i: number) => (
                                         <div key={i} className="flex items-center gap-3">
                                             <span className={`text-[10px] font-bold px-2 py-1 rounded text-white shadow-sm min-w-[60px] text-center ${w.level === 'Primary' ? 'bg-red-500' : 'bg-orange-400'
                                                 }`}>

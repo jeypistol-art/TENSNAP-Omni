@@ -2,15 +2,33 @@
 
 import { useState } from "react";
 
+type Student = {
+    id: string;
+    name: string;
+    name_kana?: string;
+    grade?: string;
+    target_school?: string;
+    notes?: string;
+};
+
+type StudentForm = {
+    name: string;
+    name_kana: string;
+    grade: string;
+    target_school: string;
+    notes: string;
+};
+
 type Props = {
     isOpen: boolean;
     onClose: () => void;
-    onAdded: (newStudent: any) => void;
+    onAdded: (newStudent: Student) => void;
 };
 
 export default function AddStudentModal({ isOpen, onClose, onAdded }: Props) {
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<StudentForm>({
         name: "",
+        name_kana: "",
         grade: "",
         target_school: "",
         notes: ""
@@ -37,7 +55,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdded }: Props) {
                 onAdded(data.student);
                 onClose();
                 // Reset form
-                setFormData({ name: "", grade: "", target_school: "", notes: "" });
+                setFormData({ name: "", name_kana: "", grade: "", target_school: "", notes: "" });
             } else {
                 alert("Failed to create student");
             }
@@ -70,8 +88,8 @@ export default function AddStudentModal({ isOpen, onClose, onAdded }: Props) {
                         <input
                             className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                             placeholder="やまだ たろう"
-                            value={(formData as any).name_kana || ""}
-                            onChange={e => setFormData({ ...formData, name_kana: e.target.value } as any)}
+                            value={formData.name_kana}
+                            onChange={e => setFormData({ ...formData, name_kana: e.target.value })}
                         />
                     </div>
                     <div className="grid grid-cols-2 gap-4">

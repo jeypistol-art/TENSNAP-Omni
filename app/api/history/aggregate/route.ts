@@ -5,6 +5,7 @@ import { query } from "@/lib/db";
 import { getOpenAIClient, runOpenAIWithRetry, serializeOpenAIError } from "@/lib/openai_client";
 import { getOrganizationAccountPlan, getRequestedPlanFromRequest } from "@/lib/accountPlan";
 import { getTenantId } from "@/lib/tenant";
+import { normalizeSubjectLabel, subjectAliasesForFilter } from "@/lib/subjects";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -93,8 +94,8 @@ export async function GET(request: Request) {
             paramIndex++;
         }
         if (subject && subject !== "all") {
-            dateCondition += ` AND subject = $${paramIndex}`;
-            params.push(subject);
+            dateCondition += ` AND subject = ANY($${paramIndex})`;
+            params.push(subjectAliasesForFilter(subject));
             paramIndex++;
         }
 
@@ -204,7 +205,7 @@ Task: 指定期間の学習データを基に、生徒の成長を称賛し、�
 
 Data:
 - 期間: ${startDate || "全期間"} 〜 ${endDate || "現在"}
-- 教科: ${subject && subject !== "all" ? subject : "全教科"}
+- 教科: ${subject && subject !== "all" ? normalizeSubjectLabel(subject) : "全教科"}
 - 分析回数: ${total}回
 - リスト(古い順): 
 ${records.map((r, i: number) => {
