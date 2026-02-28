@@ -101,9 +101,9 @@ export async function generateMetadata(): Promise<Metadata> {
         locale: "ja_JP",
         images: [
           {
-            url: "https://family.10snap.win/images/og-family.png",
+            url: "https://family.10snap.win/images/og-family.jpg",
             width: 1200,
-            height: 628,
+            height: 630,
             alt: "テストを撮るだけ。AIがつまずきを言葉にする。",
           },
         ],
@@ -112,7 +112,7 @@ export async function generateMetadata(): Promise<Metadata> {
         card: "summary_large_image",
         title: "TENsNAP家庭用 | AIがつまずきを言葉にする",
         description: "算数から高校数学まで。12年間の学習ログをAIで見える化。",
-        images: ["https://family.10snap.win/images/og-family.png"],
+        images: ["https://family.10snap.win/images/og-family.jpg"],
       },
       category: "education",
     };
@@ -154,7 +154,7 @@ export async function generateMetadata(): Promise<Metadata> {
       locale: "ja_JP",
       images: [
         {
-          url: "https://10snap.win/images/og-image.png",
+          url: "https://10snap.win/images/og-image.jpg",
           width: 1200,
           height: 630,
           alt: "TENsNAP・Omni - 塾向けAI学習分析",
@@ -165,7 +165,7 @@ export async function generateMetadata(): Promise<Metadata> {
       card: "summary_large_image",
       title: "TENsNAP・Omni | 塾向けAI学習分析",
       description: "小中高12年間のつまずきをつなぎ、指導品質を向上。",
-      images: ["https://10snap.win/images/og-image.png"],
+      images: ["https://10snap.win/images/og-image.jpg"],
     },
     category: "education",
   };
