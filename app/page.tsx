@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { authOptions } from "./api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowRight,
   Camera,
@@ -400,8 +401,15 @@ function SchoolLanding() {
               <div className="order-2 lg:order-1 relative">
                 <div className="mx-auto w-64 h-[500px] bg-gray-900 rounded-[3rem] border-[8px] border-gray-800 shadow-2xl overflow-hidden relative">
                   <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-32 h-6 bg-gray-800 rounded-b-2xl"></div>
-                  <div className="w-full h-full bg-white flex items-center justify-center overflow-hidden">
-                    <span className="text-gray-400 text-sm">スマホ撮影イメージ</span>
+                  <div className="w-full h-full bg-white relative overflow-hidden">
+                    <Image
+                      src="/images/school-phone-demo.png"
+                      alt="TENsNAP・Omniのスマホ画面イメージ"
+                      fill
+                      className="object-cover object-top"
+                      sizes="256px"
+                      priority
+                    />
                   </div>
                 </div>
               </div>
