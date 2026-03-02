@@ -79,7 +79,7 @@ export default function ManualPage() {
                         </div>
                         <div className="bg-white dark:bg-card p-6 rounded-xl border border-gray-200 shadow-sm">
                             <h3 className="font-bold text-lg mb-2">期間成長レポート</h3>
-                            <p className="text-muted-foreground text-sm">期間を指定してボタンを押すだけ。「弱点」と「一言評価」がまとまった、即戦力の面談資料が出力されます。</p>
+                            <p className="text-muted-foreground text-sm">期間を指定してボタンを押すだけ。「弱点」と「一言評価」がまとまった、成長レポートが出力されます。</p>
                         </div>
                     </div>
                 </section>
