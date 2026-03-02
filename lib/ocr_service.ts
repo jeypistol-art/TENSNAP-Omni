@@ -83,6 +83,12 @@ Instructions:
 4. **弱点の優先順位付け (Priority Tagging)**:
    - 弱点を「Primary (最優先・基礎欠落)」と「Secondary (副次的・応用課題)」に分類せよ。
 
+4.1 **社会/地理/歴史の単元抽出ルール (Specific Topic Extraction)**:
+   - 教科が「社会/地理/歴史」の場合、covered_topics には設問本文に登場する具体語を優先して入れよ。
+   - 具体語の例: 国名、地域名、時代名、歴史用語、地理用語（例: 「ブラジル」「関東地方」「江戸時代」「三権分立」）。
+   - 「基礎知識」「地理的知識」「歴史的出来事」「地理分野」などの抽象語は禁止。
+   - 3〜6件程度、短い名詞句で出力せよ（長文説明は不要）。
+
 5. **責任ある表明 (Professional Tone)**:
    - 逃げの言葉ではなく、厳密な事実に基づいて課題を指摘する。
    - 「本分析は複数の設問傾向から推定した学習状態です」という文言を必ず添えろ。
@@ -207,6 +213,41 @@ function toSocialSpecificWeakness(topic: string, coveredTopics: string[], index:
     return toSocialDetailedWeakness(topic, coveredTopics, index);
 }
 
+function extractSocialKeywordSeed(text: string): string {
+    return normalizeTopicLabel(text)
+        .replace(/^(最優先|関連課題|要確認)\s*/g, "")
+        .replace(/(への知識定着|地域の復習|の復習|の理解が乏しい|に弱い|の理解が不十分)$/g, "")
+        .trim();
+}
+
+function isSpecificSocialKeyword(topic: string): boolean {
+    const t = normalizeTopicLabel(topic);
+    if (!t || t.length < 2) return false;
+
+    const abstractOnly = /(基礎知識|応用知識|地理的知識|歴史的出来事|知識|理解|課題|分野|読み取り|復習)/;
+    const properHint = /(時代|条約|改革|戦争|内閣|幕府|憲法|地方|地域|都道府県|地形|気候|産業|貿易|平野|盆地|海流|モンスーン|EU|ASEAN|NATO|北海道|東北|関東|中部|近畿|中国|四国|九州|日本|世界|アジア|ヨーロッパ|アフリカ|オセアニア|北アメリカ|南アメリカ|ブラジル|アメリカ|中国|ロシア|インド|江戸|明治|大正|昭和|平成|令和)/;
+
+    if (properHint.test(t)) return true;
+    if (abstractOnly.test(t)) return false;
+    // Keep short noun-like Japanese terms as fallback when not abstract.
+    return /^[\p{sc=Han}\p{sc=Hiragana}\p{sc=Katakana}A-Za-z0-9・\-]{2,20}$/u.test(t);
+}
+
+function buildSpecificSocialTopics(coveredTopics: string[], weaknesses: WeaknessArea[]): string[] {
+    const pool = [
+        ...coveredTopics,
+        ...weaknesses.map((w) => String(w?.topic || "")),
+    ]
+        .map(extractSocialKeywordSeed)
+        .filter(Boolean);
+
+    const specific = pool.filter(isSpecificSocialKeyword);
+    const deduped = Array.from(new Map(specific.map((t) => [canonicalTopic(t), t] as const)).values());
+
+    if (deduped.length > 0) return deduped.slice(0, 6);
+    return coveredTopics;
+}
+
 function sanitizeWeaknessAreas(
     inputWeaknesses: WeaknessArea[] | undefined,
     inputCoveredTopics: string[] | undefined,
@@ -224,6 +265,7 @@ function sanitizeWeaknessAreas(
     const isScience = /理科|科学|理数|science|stem/.test(lowerSubject);
     const isSocial = /社会|地理|歴史|social|geography|history/.test(lowerSubject);
     const rawWeaknesses = Array.isArray(inputWeaknesses) ? inputWeaknesses : [];
+    const socialSpecificTopics = isSocial ? buildSpecificSocialTopics(coveredTopics, rawWeaknesses) : coveredTopics;
 
     const sanitized = rawWeaknesses
         .map((w, index) => {
@@ -245,11 +287,11 @@ function sanitizeWeaknessAreas(
                 }
             } else if (isSocial) {
                 if (matchedCovered) {
-                    topic = toSocialDetailedWeakness(matchedCovered, coveredTopics, index);
+                    topic = toSocialDetailedWeakness(matchedCovered, socialSpecificTopics, index);
                 } else if (isGenericWeaknessTopic(rawTopic)) {
-                    topic = toSocialSpecificWeakness(rawTopic, coveredTopics, index);
+                    topic = toSocialSpecificWeakness(rawTopic, socialSpecificTopics, index);
                 } else {
-                    topic = toSocialDetailedWeakness(rawTopic, coveredTopics, index);
+                    topic = toSocialDetailedWeakness(rawTopic, socialSpecificTopics, index);
                 }
             } else if (matchedCovered) {
                 topic = matchedCovered;
@@ -275,7 +317,7 @@ function sanitizeWeaknessAreas(
         };
     }
 
-    return { coveredTopics, weaknessAreas: deduped };
+    return { coveredTopics: isSocial ? socialSpecificTopics : coveredTopics, weaknessAreas: deduped };
 }
 
 export async function analyzeImage(
