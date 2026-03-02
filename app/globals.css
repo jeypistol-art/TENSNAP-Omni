@@ -14,20 +14,6 @@
   --border: #e2e8f0;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --card: #171717;
-    --card-foreground: #ededed;
-    --primary: #3b82f6;
-    /* Lighter blue for dark mode visibility */
-    --primary-foreground: #ffffff;
-    --muted: #262626;
-    --muted-foreground: #a3a3a3;
-    --border: #404040;
-  }
-}
 
 body {
   color: var(--foreground);
