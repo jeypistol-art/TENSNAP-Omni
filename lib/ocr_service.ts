@@ -121,6 +121,141 @@ Output Format (JSON):
 }
 `;
 
+type WeaknessArea = {
+    topic?: string;
+    level?: "Primary" | "Secondary" | string;
+};
+
+function normalizeTopicLabel(value: string): string {
+    return value
+        .replace(/[「」"'`]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function canonicalTopic(value: string): string {
+    return normalizeTopicLabel(value)
+        .toLowerCase()
+        .replace(/[ 　/・,，。.:：;；\-＿_()（）[\]【】]/g, "");
+}
+
+function normalizeWeaknessLevel(level?: string): "Primary" | "Secondary" {
+    return level === "Secondary" ? "Secondary" : "Primary";
+}
+
+function isGenericWeaknessTopic(topic: string): boolean {
+    return /(基礎知識が足りない|応用知識が必要|知識不足|理解不足|基礎の欠如|基礎理解が不十分|課題がある|理解が浅い)/.test(topic);
+}
+
+function findCoveredTopicMatch(topic: string, coveredTopics: string[]): string | null {
+    const cTopic = canonicalTopic(topic);
+    if (!cTopic) return null;
+
+    // exact / near-exact (normalized)
+    for (const covered of coveredTopics) {
+        if (canonicalTopic(covered) === cTopic) return covered;
+    }
+    // partial include in either direction
+    for (const covered of coveredTopics) {
+        const cCovered = canonicalTopic(covered);
+        if (!cCovered) continue;
+        if (cCovered.includes(cTopic) || cTopic.includes(cCovered)) {
+            return covered;
+        }
+    }
+    return null;
+}
+
+function toSocialSpecificWeakness(topic: string, coveredTopics: string[], index: number): string {
+    const eraPattern = /(縄文|弥生|古墳|飛鳥|奈良|平安|鎌倉|室町|安土桃山|江戸|明治|大正|昭和|平成|令和)(時代)?/;
+    const regionPattern = /(地方|地域|都道府県|地形|気候|地理|世界|日本|アジア|ヨーロッパ|アフリカ|オセアニア|北アメリカ|南アメリカ|北海道|東北|関東|中部|近畿|中国|四国|九州)/;
+
+    const eraTopic = coveredTopics.find((t) => eraPattern.test(t));
+    if (eraTopic) {
+        const m = eraTopic.match(eraPattern);
+        const eraName = m?.[1] ? `${m[1]}時代` : eraTopic;
+        return `${eraName}に弱い`;
+    }
+
+    const regionTopic = coveredTopics.find((t) => regionPattern.test(t));
+    if (regionTopic) {
+        return `${regionTopic}の理解が乏しい`;
+    }
+
+    const fallback = coveredTopics[index % Math.max(coveredTopics.length, 1)];
+    if (fallback) return `${fallback}の理解が不十分`;
+    return topic;
+}
+
+function sanitizeWeaknessAreas(
+    inputWeaknesses: WeaknessArea[] | undefined,
+    inputCoveredTopics: string[] | undefined,
+    subject: string
+): { coveredTopics: string[]; weaknessAreas: { topic: string; level: "Primary" | "Secondary" }[] } {
+    const coveredTopics = Array.from(
+        new Set(
+            (Array.isArray(inputCoveredTopics) ? inputCoveredTopics : [])
+                .map((t) => normalizeTopicLabel(String(t || "")))
+                .filter(Boolean)
+        )
+    );
+
+    const lowerSubject = subject.toLowerCase();
+    const isScience = /理科|科学|理数|science|stem/.test(lowerSubject);
+    const isSocial = /社会|地理|歴史|social|geography|history/.test(lowerSubject);
+    const rawWeaknesses = Array.isArray(inputWeaknesses) ? inputWeaknesses : [];
+
+    const sanitized = rawWeaknesses
+        .map((w, index) => {
+            const rawTopic = normalizeTopicLabel(String(w?.topic || ""));
+            if (!rawTopic) return null;
+
+            const matchedCovered = findCoveredTopicMatch(rawTopic, coveredTopics);
+            let topic = rawTopic;
+            const level = normalizeWeaknessLevel(w?.level);
+
+            if (isScience) {
+                // Science-family: never surface weakness topics outside covered topics.
+                if (matchedCovered) {
+                    topic = matchedCovered;
+                } else if (coveredTopics.length > 0 && isGenericWeaknessTopic(rawTopic)) {
+                    topic = coveredTopics[Math.min(index, coveredTopics.length - 1)];
+                } else {
+                    return null;
+                }
+            } else if (isSocial) {
+                if (matchedCovered) {
+                    topic = matchedCovered;
+                } else if (isGenericWeaknessTopic(rawTopic)) {
+                    topic = toSocialSpecificWeakness(rawTopic, coveredTopics, index);
+                }
+            } else if (matchedCovered) {
+                topic = matchedCovered;
+            }
+
+            return { topic, level };
+        })
+        .filter((w): w is { topic: string; level: "Primary" | "Secondary" } => !!w);
+
+    const deduped = Array.from(
+        new Map(
+            sanitized.map((w) => [`${canonicalTopic(w.topic)}::${w.level}`, w] as const)
+        ).values()
+    );
+
+    if (isScience && deduped.length === 0 && coveredTopics.length > 0) {
+        return {
+            coveredTopics,
+            weaknessAreas: [
+                { topic: coveredTopics[0], level: "Primary" },
+                ...(coveredTopics[1] ? [{ topic: coveredTopics[1], level: "Secondary" as const }] : [])
+            ]
+        };
+    }
+
+    return { coveredTopics, weaknessAreas: deduped };
+}
+
 export async function analyzeImage(
     answerSheets: { buffer: Buffer; mimeType: string }[],
     context?: {
@@ -212,6 +347,16 @@ export async function analyzeImage(
         if (parsed.insight_conclusion) {
             parsed.insight_conclusion = replaceForbidden(parsed.insight_conclusion);
         }
+
+        const finalizeTopicAndWeakness = () => {
+            const normalized = sanitizeWeaknessAreas(
+                parsed.weakness_areas as WeaknessArea[] | undefined,
+                parsed.covered_topics,
+                subject
+            );
+            parsed.covered_topics = normalized.coveredTopics;
+            parsed.weakness_areas = normalized.weaknessAreas;
+        };
 
         // Ensure exam_phase is always explicit in responses.
         parsed.exam_phase = !!context?.examPhase;
@@ -326,6 +471,7 @@ export async function analyzeImage(
             parsed.insight_conclusion =
                 "評価不能（受験期モードでは得点検出が必須です）。";
             parsed.raw_test_score = parsed.raw_test_score ?? undefined;
+            finalizeTopicAndWeakness();
             return parsed;
         }
         const aiProc = Number(parsed?.comprehension_details?.process ?? scoreAccuracy);
@@ -418,6 +564,7 @@ export async function analyzeImage(
             parsed.insight_conclusion = context?.examPhase
                 ? "この得点帯では「安定感」は評価対象にならない。基礎問題を確実に得点できる状態まで戻す必要がある。"
                 : "基礎理解が著しく不足している。まずは基本問題の解き直しから着手する必要がある。";
+            finalizeTopicAndWeakness();
             return parsed;
         }
 
@@ -445,6 +592,7 @@ export async function analyzeImage(
             }
         }
 
+        finalizeTopicAndWeakness();
         return parsed;
     } catch (error) {
         console.error("OpenAI Analysis Error:", serializeOpenAIError(error));
