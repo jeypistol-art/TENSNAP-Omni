@@ -903,6 +903,21 @@ function FamilyLanding() {
                   </article>
                 ))}
               </div>
+
+              <div className="mt-16 w-full max-w-3xl mx-auto rounded-[2rem] overflow-hidden shadow-2xl border-[6px] border-white relative bg-slate-100">
+                <div className="aspect-video relative w-full h-full">
+                  <iframe
+                    className="absolute top-0 left-0 w-full h-full"
+                    src="https://www.youtube.com/embed/n85xb4WF7QQ?si=FPYVnYe-ZGX9L1i0&rel=0&modestbranding=1"
+                    title="使い方動画 | 家庭用TENsNAP"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    referrerPolicy="strict-origin-when-cross-origin"
+                    allowFullScreen>
+                  </iframe>
+                </div>
+              </div>
+
               <div className="mt-16 rounded-[2rem] border-2 border-amber-100 bg-gradient-to-br from-white to-amber-50 p-8 sm:p-10 shadow-md">
                 <p className="text-base font-bold text-amber-700 mb-3 flex items-center gap-2">
                   <Lightbulb className="h-5 w-5" />
