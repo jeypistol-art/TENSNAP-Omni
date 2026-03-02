@@ -50,7 +50,6 @@ const HistoryResultDetail = forwardRef<HTMLDivElement, HistoryResultDetailProps>
     const comprehensionDetails = details?.comprehension_details;
     const examBlocked = !!(details?.exam_phase && details?.provisional && !details?.raw_test_score);
 
-    const insightBullets: string[] = Array.isArray(details?.insight_bullets) ? details.insight_bullets : [];
     const coveredTopics: string[] = Array.isArray(details?.covered_topics)
         ? details.covered_topics
         : item.unit_name
@@ -148,15 +147,17 @@ const HistoryResultDetail = forwardRef<HTMLDivElement, HistoryResultDetailProps>
 
             <div className="space-y-6">
                 <div className="bg-blue-50 rounded-lg border border-blue-100 p-6">
-                    <span className="block text-blue-700 text-xs font-bold mb-4 tracking-wide">専門的分析インサイト</span>
-                    <ul className="space-y-3 mb-5">
-                        {(insightBullets.length > 0 ? insightBullets : [item.insight_summary || "詳細な分析はありません"]).map((bullet, i) => (
-                            <li key={i} className="flex items-start text-sm text-gray-700 leading-relaxed">
-                                <span className="mr-2 text-blue-500 mt-1">•</span>
-                                {bullet}
-                            </li>
+                    <span className="block text-blue-700 text-xs font-bold mb-4 tracking-wide">単元別分析インサイト</span>
+                    <p className="text-xs text-gray-500 mb-3">
+                        設問単位の正誤ではなく、答案から抽出した単元を表示しています。
+                    </p>
+                    <div className="flex flex-wrap gap-2 mb-5">
+                        {(coveredTopics.length > 0 ? coveredTopics : [item.unit_name || "単元の抽出データなし"]).map((topic, i) => (
+                            <span key={i} className="bg-white border border-blue-200 text-gray-700 text-xs px-3 py-1.5 rounded-full font-semibold shadow-sm">
+                                {topic}
+                            </span>
                         ))}
-                    </ul>
+                    </div>
 
                     {(details?.insight_conclusion || item.insight_summary) && (
                         <div className="bg-white/80 p-4 rounded-lg border border-blue-100 shadow-sm">
@@ -165,17 +166,6 @@ const HistoryResultDetail = forwardRef<HTMLDivElement, HistoryResultDetailProps>
                             </p>
                         </div>
                     )}
-                </div>
-
-                <div className="p-5 bg-gray-50 rounded-lg border border-gray-100">
-                    <span className="block text-gray-500 text-xs font-bold mb-3 tracking-wide">今回の学習範囲</span>
-                    <div className="flex flex-wrap gap-2">
-                        {coveredTopics.map((topic, i) => (
-                            <span key={i} className="bg-white border border-gray-200 text-gray-600 text-xs px-3 py-1.5 rounded-full font-medium shadow-sm">
-                                {topic}
-                            </span>
-                        ))}
-                    </div>
                 </div>
 
                 <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-100">

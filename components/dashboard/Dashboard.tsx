@@ -617,6 +617,9 @@ export default function Dashboard() {
 
     // examBlocked: single source of truth for "evaluation unavailable" in exam mode.
     const examBlocked = !!(result?.exam_phase && result?.provisional && !result?.raw_test_score);
+    const coveredTopics = Array.isArray(result?.covered_topics)
+        ? result.covered_topics.filter((t): t is string => typeof t === "string" && t.trim().length > 0)
+        : [];
 
     return (
         <div className="max-w-4xl mx-auto px-4 py-8">
@@ -994,19 +997,19 @@ export default function Dashboard() {
                     </div>
 
                     <div className="space-y-6">
-                        {/* Layered Insights */}
+                        {/* Topic-focused Insights */}
                         <div className="bg-blue-50 rounded-lg border border-blue-100 p-6">
-                            <span className="block text-blue-700 text-xs font-bold mb-4 tracking-wide">専門的分析インサイト</span>
-
-                            {/* Facts */}
-                            <ul className="space-y-3 mb-5">
-                                {(result.insight_bullets ?? []).map((bullet: string, i: number) => (
-                                    <li key={i} className="flex items-start text-sm text-gray-700 leading-relaxed">
-                                        <span className="mr-2 text-blue-500 mt-1">•</span>
-                                        {bullet}
-                                    </li>
+                            <span className="block text-blue-700 text-xs font-bold mb-4 tracking-wide">単元別分析インサイト</span>
+                            <p className="text-xs text-gray-500 mb-3">
+                                設問ごとの正誤ではなく、今回の答案から抽出した学習単元を表示しています。
+                            </p>
+                            <div className="flex flex-wrap gap-2 mb-5">
+                                {(coveredTopics.length > 0 ? coveredTopics : ["単元の抽出データなし"]).map((topic: string, i: number) => (
+                                    <span key={i} className="bg-white border border-blue-200 text-gray-700 text-xs px-3 py-1.5 rounded-full font-semibold shadow-sm">
+                                        {topic}
+                                    </span>
                                 ))}
-                            </ul>
+                            </div>
 
                             {/* Conclusion */}
                             {result.insight_conclusion && (
@@ -1016,18 +1019,6 @@ export default function Dashboard() {
                                     </p>
                                 </div>
                             )}
-                        </div>
-
-                        {/* Covered Topics */}
-                        <div className="p-5 bg-gray-50 rounded-lg border border-gray-100">
-                            <span className="block text-gray-500 text-xs font-bold mb-3 tracking-wide">今回の学習範囲</span>
-                            <div className="flex flex-wrap gap-2">
-                                {(result.covered_topics ?? []).map((t: string, i: number) => (
-                                    <span key={i} className="bg-white border border-gray-200 text-gray-600 text-xs px-3 py-1.5 rounded-full font-medium shadow-sm">
-                                        {t}
-                                    </span>
-                                ))}
-                            </div>
                         </div>
 
                         {/* Inline Editable Metadata */}

@@ -166,25 +166,45 @@ function findCoveredTopicMatch(topic: string, coveredTopics: string[]): string |
     return null;
 }
 
-function toSocialSpecificWeakness(topic: string, coveredTopics: string[], index: number): string {
+function extractSocialEraLabel(text: string): string | null {
     const eraPattern = /(縄文|弥生|古墳|飛鳥|奈良|平安|鎌倉|室町|安土桃山|江戸|明治|大正|昭和|平成|令和)(時代)?/;
-    const regionPattern = /(地方|地域|都道府県|地形|気候|地理|世界|日本|アジア|ヨーロッパ|アフリカ|オセアニア|北アメリカ|南アメリカ|北海道|東北|関東|中部|近畿|中国|四国|九州)/;
+    const m = text.match(eraPattern);
+    if (!m?.[1]) return null;
+    return `${m[1]}時代`;
+}
 
-    const eraTopic = coveredTopics.find((t) => eraPattern.test(t));
-    if (eraTopic) {
-        const m = eraTopic.match(eraPattern);
-        const eraName = m?.[1] ? `${m[1]}時代` : eraTopic;
-        return `${eraName}に弱い`;
+function extractSocialRegionLabel(text: string): string | null {
+    const regionPattern = /(北海道|東北|関東|中部|近畿|中国|四国|九州|日本|アジア|ヨーロッパ|アフリカ|オセアニア|北アメリカ|南アメリカ|世界)/;
+    const m = text.match(regionPattern);
+    return m?.[1] || null;
+}
+
+function toSocialDetailedWeakness(baseTopic: string, coveredTopics: string[], index: number): string {
+    const joinedCovered = coveredTopics.join(" ");
+    const era = extractSocialEraLabel(baseTopic) || extractSocialEraLabel(joinedCovered);
+    if (era) {
+        return `${era}への知識定着`;
     }
 
-    const regionTopic = coveredTopics.find((t) => regionPattern.test(t));
-    if (regionTopic) {
-        return `${regionTopic}の理解が乏しい`;
+    const region = extractSocialRegionLabel(baseTopic) || extractSocialRegionLabel(joinedCovered);
+    if (region) {
+        return `${region}地域の復習`;
+    }
+
+    if (/年号/.test(baseTopic)) {
+        return "歴史年号の知識定着";
+    }
+    if (/地理|地形|気候|都道府県|産業|農業|工業/.test(baseTopic)) {
+        return "地理分野の復習";
     }
 
     const fallback = coveredTopics[index % Math.max(coveredTopics.length, 1)];
-    if (fallback) return `${fallback}の理解が不十分`;
-    return topic;
+    if (fallback) return `${fallback}の復習`;
+    return `${baseTopic}の復習`;
+}
+
+function toSocialSpecificWeakness(topic: string, coveredTopics: string[], index: number): string {
+    return toSocialDetailedWeakness(topic, coveredTopics, index);
 }
 
 function sanitizeWeaknessAreas(
@@ -225,9 +245,11 @@ function sanitizeWeaknessAreas(
                 }
             } else if (isSocial) {
                 if (matchedCovered) {
-                    topic = matchedCovered;
+                    topic = toSocialDetailedWeakness(matchedCovered, coveredTopics, index);
                 } else if (isGenericWeaknessTopic(rawTopic)) {
                     topic = toSocialSpecificWeakness(rawTopic, coveredTopics, index);
+                } else {
+                    topic = toSocialDetailedWeakness(rawTopic, coveredTopics, index);
                 }
             } else if (matchedCovered) {
                 topic = matchedCovered;
