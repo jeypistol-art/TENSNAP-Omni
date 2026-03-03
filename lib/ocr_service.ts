@@ -1,5 +1,6 @@
 import type OpenAI from "openai";
 import { getOpenAIClient, runOpenAIWithRetry, serializeOpenAIError } from "@/lib/openai_client";
+import { detectSubjectCategory, type SubjectCategory } from "@/lib/subjects";
 
 const openai = getOpenAIClient();
 
@@ -168,6 +169,13 @@ function splitSocialDomainTopic(topic: string): { domain: "地理" | "歴史" | 
     return { domain: null, unit: normalizeTopicLabel(normalized) };
 }
 
+function splitDomainTopic(topic: string): { domain: string | null; unit: string } {
+    const normalized = normalizeTopicLabel(topic).replace(/：/g, ":");
+    const m = normalized.match(/^([^:]+)\s*:\s*(.+)$/);
+    if (m?.[1] && m?.[2]) return { domain: normalizeTopicLabel(m[1]), unit: normalizeTopicLabel(m[2]) };
+    return { domain: null, unit: normalizeTopicLabel(normalized) };
+}
+
 function inferSocialDomain(unit: string): "地理" | "歴史" | "公民" | null {
     if (!unit) return null;
     if (isCivicsKeyword(unit)) return "公民";
@@ -176,11 +184,58 @@ function inferSocialDomain(unit: string): "地理" | "歴史" | "公民" | null 
     return null;
 }
 
+function inferDomainByCategory(unit: string, category: SubjectCategory): string | null {
+    if (!unit) return null;
+    switch (category) {
+        case "math":
+            if (/(方程式|連立方程式|関数|一次関数|二次関数|比例|反比例|式|計算|展開|因数分解|代数|確率|場合の数|図形|合同|相似|三平方|円|角度|面積|体積|整数)/.test(unit)) {
+                if (/(図形|合同|相似|三平方|円|角度|面積|体積)/.test(unit)) return "図形";
+                if (/(確率|場合の数|データ|統計)/.test(unit)) return "確率・統計";
+                return "代数";
+            }
+            return "数学";
+        case "english":
+            if (/(文法|時制|受動態|助動詞|不定詞|動名詞|関係代名詞|比較|語順)/.test(unit)) return "文法";
+            if (/(読解|長文|本文|内容一致)/.test(unit)) return "読解";
+            if (/(語彙|単語|熟語|イディオム)/.test(unit)) return "語彙";
+            if (/(英作文|作文|和訳|英訳)/.test(unit)) return "英作文";
+            return "英語";
+        case "japanese":
+            if (/(漢字|語句|語彙|ことわざ|慣用句)/.test(unit)) return "語彙・漢字";
+            if (/(文法|品詞|敬語|活用)/.test(unit)) return "文法";
+            if (/(読解|説明文|論説文|小説|文学的文章)/.test(unit)) return "読解";
+            if (/(古文|漢文)/.test(unit)) return "古文・漢文";
+            return "国語";
+        case "science":
+            if (/(力|運動|電流|電圧|回路|光|音|仕事|エネルギー|圧力)/.test(unit)) return "物理";
+            if (/(化学|原子|分子|イオン|中和|酸|アルカリ|気体|水溶液|金属)/.test(unit)) return "化学";
+            if (/(生物|細胞|遺伝|生態系|光合成|呼吸|植物|動物)/.test(unit)) return "生物";
+            if (/(地層|天気|気象|地震|火山|天体|星|月|地球)/.test(unit)) return "地学";
+            return "理科";
+        case "social":
+            return inferSocialDomain(unit) ?? "社会";
+        default:
+            return null;
+    }
+}
+
+function formatTopicWithDomain(topic: string, category: SubjectCategory): string {
+    const { domain, unit } = splitDomainTopic(topic);
+    if (!unit) return "";
+
+    if (category === "social") {
+        return toSocialDomainTopic(topic);
+    }
+
+    const resolved = domain || inferDomainByCategory(unit, category);
+    return resolved ? `${resolved}：${unit}` : unit;
+}
+
 function toSocialDomainTopic(topic: string): string {
     const { domain, unit } = splitSocialDomainTopic(topic);
     if (!unit) return "";
     const resolvedDomain = domain ?? inferSocialDomain(unit);
-    return resolvedDomain ? `${resolvedDomain}：${unit}` : unit;
+    return resolvedDomain ? `${resolvedDomain}：${unit}` : `社会：${unit}`;
 }
 
 function isGenericWeaknessTopic(topic: string): boolean {
@@ -316,6 +371,7 @@ function sanitizeWeaknessAreas(
     const lowerSubject = subject.toLowerCase();
     const isScience = /理科|科学|理数|science|stem/.test(lowerSubject);
     const isSocial = /社会|地理|歴史|social|geography|history/.test(lowerSubject);
+    const subjectCategory = detectSubjectCategory(subject);
     const rawWeaknesses = Array.isArray(inputWeaknesses) ? inputWeaknesses : [];
     const wrongTopics = Array.from(
         new Set(
@@ -388,29 +444,57 @@ function sanitizeWeaknessAreas(
         );
 
     if (isScience && deduped.length === 0 && coveredTopics.length > 0) {
+        const formattedCovered = Array.from(
+            new Map(
+                coveredTopics
+                    .map((t) => formatTopicWithDomain(t, subjectCategory))
+                    .filter(Boolean)
+                    .map((t) => [canonicalTopic(t), t] as const)
+            ).values()
+        );
         return {
-            coveredTopics,
+            coveredTopics: formattedCovered,
             weaknessAreas: [
-                { topic: coveredTopics[0], level: "Primary" },
-                ...(coveredTopics[1] ? [{ topic: coveredTopics[1], level: "Secondary" as const }] : [])
+                { topic: formatTopicWithDomain(coveredTopics[0], subjectCategory), level: "Primary" },
+                ...(coveredTopics[1] ? [{ topic: formatTopicWithDomain(coveredTopics[1], subjectCategory), level: "Secondary" as const }] : [])
             ]
         };
     }
 
+    const formattedCoveredTopics = Array.from(
+        new Map(
+            (isSocial ? socialBaseTopics : coveredTopics)
+                .map((t) => formatTopicWithDomain(t, subjectCategory))
+                .filter(Boolean)
+                .map((t) => [canonicalTopic(t), t] as const)
+        ).values()
+    );
+    const formattedWeaknesses = Array.from(
+        new Map(
+            deduped
+                .map((w) => ({
+                    topic: formatTopicWithDomain(w.topic, subjectCategory),
+                    level: w.level
+                }))
+                .filter((w) => !!w.topic)
+                .map((w) => [`${canonicalTopic(w.topic)}::${w.level}`, w] as const)
+        ).values()
+    );
+
     if (isSocial && preferCivics) {
-        const civicsWeaknesses = deduped.filter((w) => isCivicsKeyword(w.topic) || w.topic.startsWith("公民："));
+        const civicsWeaknesses = formattedWeaknesses.filter((w) => isCivicsKeyword(w.topic) || w.topic.startsWith("公民："));
         if (civicsWeaknesses.length > 0) {
             const [first, ...rest] = civicsWeaknesses;
             const primaryFirst = { topic: first.topic, level: "Primary" as const };
             const secondaryRest = rest.map((w) => ({ topic: w.topic, level: "Secondary" as const }));
             return {
-                coveredTopics: socialBaseTopics,
+                coveredTopics: formattedCoveredTopics,
                 weaknessAreas: [primaryFirst, ...secondaryRest].slice(0, 3),
             };
         }
     }
 
-    return { coveredTopics: isSocial ? socialBaseTopics : coveredTopics, weaknessAreas: deduped };
+    return { coveredTopics: formattedCoveredTopics, weaknessAreas: formattedWeaknesses };
 }
 
 function limitWeaknessByMistakeDensity(
