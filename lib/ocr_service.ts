@@ -236,6 +236,22 @@ function formatTopicWithDomain(topic: string, category: SubjectCategory): string
     return resolved ? `${resolved}：${unit}` : unit;
 }
 
+function isLowValueUnit(unit: string, category: SubjectCategory): boolean {
+    const u = normalizeTopicLabel(unit);
+    if (!u) return true;
+    if (category === "japanese") {
+        if (/^(設問|問)\s*\d+\s*(の内容|への理解|の理解)?$/.test(u)) return true;
+        if (/^(本文|文章)\s*(の内容|理解)?$/.test(u)) return true;
+        if (/^内容理解$/.test(u)) return true;
+    }
+    return false;
+}
+
+function isLowValueTopic(topic: string, category: SubjectCategory): boolean {
+    const { unit } = splitDomainTopic(topic);
+    return isLowValueUnit(unit, category);
+}
+
 function toSocialDomainTopic(topic: string): string {
     const { domain, unit } = splitSocialDomainTopic(topic);
     if (!unit) return "";
@@ -493,6 +509,7 @@ function sanitizeWeaknessAreas(
         new Map(
             (isSocial ? socialBaseTopics : (nonSocialBaseTopics.length > 0 ? nonSocialBaseTopics : coveredDomainTopics))
                 .map((t) => (isSocial ? t : formatTopicWithDomain(t, subjectCategory)))
+                .filter((t) => !isLowValueTopic(t, subjectCategory))
                 .filter(Boolean)
                 .map((t) => [canonicalTopic(t), t] as const)
         ).values()
@@ -504,7 +521,7 @@ function sanitizeWeaknessAreas(
                     topic: formatTopicWithDomain(w.topic, subjectCategory),
                     level: w.level
                 }))
-                .filter((w) => !!w.topic)
+                .filter((w) => !!w.topic && !isLowValueTopic(w.topic, subjectCategory))
                 .map((w) => [`${canonicalTopic(w.topic)}::${w.level}`, w] as const)
         ).values()
     );
