@@ -154,6 +154,10 @@ function normalizeWeaknessLevel(level?: string): "Primary" | "Secondary" {
     return level === "Secondary" ? "Secondary" : "Primary";
 }
 
+function isCivicsKeyword(text: string): boolean {
+    return /(憲法|国会|内閣|裁判所|三権分立|社会権|自由権|参政権|基本的人権|選挙|政党|地方自治|条例|請願|財政|税|租税|国際連合|国連|安全保障|PKO|条約|ASEAN|EU|NATO|WTO|SDGs|主権|人権|民主主義)/.test(text);
+}
+
 function splitSocialDomainTopic(topic: string): { domain: "地理" | "歴史" | "公民" | null; unit: string } {
     const normalized = normalizeTopicLabel(topic).replace(/：/g, ":");
     const m = normalized.match(/^(地理|歴史|公民)\s*:\s*(.+)$/);
@@ -166,7 +170,7 @@ function splitSocialDomainTopic(topic: string): { domain: "地理" | "歴史" | 
 
 function inferSocialDomain(unit: string): "地理" | "歴史" | "公民" | null {
     if (!unit) return null;
-    if (/(憲法|国会|内閣|裁判所|三権分立|社会権|自由権|参政権|基本的人権|選挙|政党|地方自治|条約|国際連合|国連|ASEAN|EU|NATO|税|財政)/.test(unit)) return "公民";
+    if (isCivicsKeyword(unit)) return "公民";
     if (/(時代|戦争|幕府|改革|明治|大正|昭和|平成|令和|縄文|弥生|古墳|飛鳥|奈良|平安|鎌倉|室町|安土桃山|江戸|日清|日露|第一次世界大戦|第二次世界大戦)/.test(unit)) return "歴史";
     if (/(地図|地形|気候|都道府県|地域|地方|平野|盆地|山脈|海流|統計|雨温図|人口|都市|貿易|産業|農業|工業|三大洋|サンフランシスコ|ヒマラヤ|オーストラリア)/.test(unit)) return "地理";
     return null;
@@ -288,6 +292,13 @@ function mergeSocialTopicPool(wrongTopics: string[], coveredTopics: string[]): s
     return Array.from(new Map(merged.map((t) => [canonicalTopic(t), t] as const)).values());
 }
 
+function prioritizeCivicsTopics(topics: string[], preferCivics: boolean): string[] {
+    if (!preferCivics) return topics;
+    const civics = topics.filter((t) => isCivicsKeyword(t) || t.startsWith("公民："));
+    const others = topics.filter((t) => !(isCivicsKeyword(t) || t.startsWith("公民：")));
+    return [...civics, ...others];
+}
+
 function sanitizeWeaknessAreas(
     inputWeaknesses: WeaknessArea[] | undefined,
     inputCoveredTopics: string[] | undefined,
@@ -314,6 +325,7 @@ function sanitizeWeaknessAreas(
                 .filter(Boolean)
         )
     );
+    const preferCivics = isSocial && wrongTopics.some((t) => isCivicsKeyword(t) || t.startsWith("公民："));
     const socialSpecificTopics = isSocial
         ? (
             wrongTopics.length > 0
@@ -321,7 +333,9 @@ function sanitizeWeaknessAreas(
                 : buildSpecificSocialTopics(coveredTopics, rawWeaknesses)
         )
         : coveredTopics;
-    const socialBaseTopics = isSocial && socialSpecificTopics.length > 0 ? socialSpecificTopics : coveredTopics;
+    const socialBaseTopics = isSocial && socialSpecificTopics.length > 0
+        ? prioritizeCivicsTopics(socialSpecificTopics, preferCivics)
+        : coveredTopics;
 
     const sanitized = rawWeaknesses
         .map((w, index) => {
@@ -381,6 +395,19 @@ function sanitizeWeaknessAreas(
                 ...(coveredTopics[1] ? [{ topic: coveredTopics[1], level: "Secondary" as const }] : [])
             ]
         };
+    }
+
+    if (isSocial && preferCivics) {
+        const civicsWeaknesses = deduped.filter((w) => isCivicsKeyword(w.topic) || w.topic.startsWith("公民："));
+        if (civicsWeaknesses.length > 0) {
+            const [first, ...rest] = civicsWeaknesses;
+            const primaryFirst = { topic: first.topic, level: "Primary" as const };
+            const secondaryRest = rest.map((w) => ({ topic: w.topic, level: "Secondary" as const }));
+            return {
+                coveredTopics: socialBaseTopics,
+                weaknessAreas: [primaryFirst, ...secondaryRest].slice(0, 3),
+            };
+        }
     }
 
     return { coveredTopics: isSocial ? socialBaseTopics : coveredTopics, weaknessAreas: deduped };
