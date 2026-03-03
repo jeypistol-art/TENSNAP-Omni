@@ -249,6 +249,13 @@ function buildSpecificSocialTopics(coveredTopics: string[], weaknesses: Weakness
     return coveredTopics;
 }
 
+function mergeSocialTopicPool(wrongTopics: string[], coveredTopics: string[]): string[] {
+    const merged = [...wrongTopics, ...coveredTopics]
+        .map((t) => normalizeTopicLabel(String(t || "")))
+        .filter(Boolean);
+    return Array.from(new Map(merged.map((t) => [canonicalTopic(t), t] as const)).values());
+}
+
 function sanitizeWeaknessAreas(
     inputWeaknesses: WeaknessArea[] | undefined,
     inputCoveredTopics: string[] | undefined,
@@ -277,7 +284,7 @@ function sanitizeWeaknessAreas(
     const socialSpecificTopics = isSocial
         ? (
             wrongTopics.length > 0
-                ? buildSpecificSocialTopics(wrongTopics, rawWeaknesses)
+                ? buildSpecificSocialTopics(mergeSocialTopicPool(wrongTopics, coveredTopics), rawWeaknesses)
                 : buildSpecificSocialTopics(coveredTopics, rawWeaknesses)
         )
         : coveredTopics;
@@ -355,6 +362,11 @@ function limitWeaknessByMistakeDensity(
     const slashes = Number(markCounts?.slashes || 0);
     const triangles = Number(markCounts?.triangles || 0);
     const unmarked = Number(markCounts?.unmarked_questions || 0);
+    const totalObserved = crosses + slashes + triangles + unmarked + Number(markCounts?.circles || 0);
+    if (totalObserved <= 0) {
+        // No reliable mark-count signal -> keep model/topic-based output as-is.
+        return weaknessAreas;
+    }
     const weightedMistakeSignals = crosses + slashes + Math.ceil(triangles * 0.5) + unmarked;
 
     // Careless-miss pattern: keep one clear focus instead of forcing multiple themes.
