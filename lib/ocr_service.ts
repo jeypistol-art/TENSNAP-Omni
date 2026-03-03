@@ -88,6 +88,8 @@ Instructions:
    - 具体語の例: 国名、地域名、時代名、歴史用語、地理用語（例: 「ブラジル」「関東地方」「江戸時代」「三権分立」）。
    - 「基礎知識」「地理的知識」「歴史的出来事」「地理分野」などの抽象語は禁止。
    - 3〜6件程度、短い名詞句で出力せよ（長文説明は不要）。
+   - 特に、誤答（×/斜線）または部分点（△）が付いた設問の内容から語句を優先して抽出せよ。
+   - weakness_areas.topic も同様に、誤答・部分点設問の「内容語句」をそのまま短句で記載せよ。
 
 5. **責任ある表明 (Professional Tone)**:
    - 逃げの言葉ではなく、厳密な事実に基づいて課題を指摘する。
@@ -224,7 +226,7 @@ function isSpecificSocialKeyword(topic: string): boolean {
     const t = normalizeTopicLabel(topic);
     if (!t || t.length < 2) return false;
 
-    const abstractOnly = /(基礎知識|応用知識|地理的知識|歴史的出来事|知識|理解|課題|分野|読み取り|復習)/;
+    const abstractOnly = /(基礎知識|応用知識|地理的知識|歴史的出来事|知識|理解|課題|分野|読み取り|復習|応用力|基礎力|思考力|判断力|表現力)/;
     const properHint = /(時代|条約|改革|戦争|内閣|幕府|憲法|地方|地域|都道府県|地形|気候|産業|貿易|平野|盆地|海流|モンスーン|EU|ASEAN|NATO|北海道|東北|関東|中部|近畿|中国|四国|九州|日本|世界|アジア|ヨーロッパ|アフリカ|オセアニア|北アメリカ|南アメリカ|ブラジル|アメリカ|中国|ロシア|インド|江戸|明治|大正|昭和|平成|令和)/;
 
     if (properHint.test(t)) return true;
@@ -301,11 +303,20 @@ function sanitizeWeaknessAreas(
         })
         .filter((w): w is { topic: string; level: "Primary" | "Secondary" } => !!w);
 
-    const deduped = Array.from(
-        new Map(
-            sanitized.map((w) => [`${canonicalTopic(w.topic)}::${w.level}`, w] as const)
-        ).values()
-    );
+    // Dedup weakness topics. For social subjects, avoid showing the same topic in both levels.
+    const deduped = isSocial
+        ? Array.from(
+            new Map(
+                sanitized
+                    .sort((a, b) => (a.level === "Primary" ? -1 : 1) - (b.level === "Primary" ? -1 : 1))
+                    .map((w) => [canonicalTopic(w.topic), w] as const)
+            ).values()
+        )
+        : Array.from(
+            new Map(
+                sanitized.map((w) => [`${canonicalTopic(w.topic)}::${w.level}`, w] as const)
+            ).values()
+        );
 
     if (isScience && deduped.length === 0 && coveredTopics.length > 0) {
         return {
