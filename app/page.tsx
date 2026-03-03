@@ -837,6 +837,94 @@ function FamilyLanding() {
             </div>
           </section>
 
+          <section className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
+            <div className="space-y-16 sm:space-y-24 mt-8">
+              {/* Feature 1 */}
+              <div className="flex flex-col md:flex-row items-center gap-10 md:gap-16">
+                <div className="w-full md:w-1/2 flex justify-center">
+                  <div className="relative w-full max-w-[480px] aspect-[4/3] rounded-[2rem] overflow-hidden shadow-[0_20px_50px_-12px_rgba(249,115,22,0.3)] border border-orange-100/50 bg-white">
+                    <Image
+                      src="/images/03_result_kokugo.png"
+                      alt="AIが『つまずきの根っこ』を言語化"
+                      fill
+                      className="object-contain p-4"
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                    />
+                  </div>
+                </div>
+                <div className="w-full md:w-1/2 space-y-6">
+                  <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-orange-100 text-orange-700 text-sm font-bold tracking-wider">
+                    <Lightbulb className="h-4 w-4" />
+                    つまずきの特定
+                  </div>
+                  <h3 className="text-3xl sm:text-4xl font-extrabold text-slate-800 leading-tight">
+                    採点はしません。<br />
+                    AIが<span className="text-orange-600">『つまずきの根っこ』</span>を言語化します。
+                  </h3>
+                  <p className="text-lg text-slate-600 leading-relaxed font-medium">
+                    マル・バツをつけるだけではなく、「なぜ間違えたのか」「どこでつまずいているのか」をAIが優しく解説。保護者様がお子様に接する際のヒントになります。
+                  </p>
+                </div>
+              </div>
+
+              {/* Feature 2 */}
+              <div className="flex flex-col md:flex-row-reverse items-center gap-10 md:gap-16">
+                <div className="w-full md:w-1/2 flex justify-center">
+                  <div className="relative w-full max-w-[540px] aspect-[5/3] rounded-[2rem] overflow-hidden shadow-[0_20px_50px_-12px_rgba(59,130,246,0.3)] border border-blue-100/50 bg-white">
+                    <Image
+                      src="/images/trends.png"
+                      alt="12年間の学習ログを一生の資産に"
+                      fill
+                      className="object-contain p-4"
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                    />
+                  </div>
+                </div>
+                <div className="w-full md:w-1/2 space-y-6">
+                  <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-100 text-blue-700 text-sm font-bold tracking-wider">
+                    <LineChart className="h-4 w-4" />
+                    学習推移の可視化
+                  </div>
+                  <h3 className="text-3xl sm:text-4xl font-extrabold text-slate-800 leading-tight">
+                    算数のつまずきを、数学の得意に変える。<br />
+                    12年間の学習ログを<span className="text-blue-600">一生の資産</span>に。
+                  </h3>
+                  <p className="text-lg text-slate-600 leading-relaxed font-medium">
+                    点数の上がり下がりだけでなく、根本的な理解度の推移をグラフ化。長期間のデータを積み重ねることで、「わかった！」の瞬間を見逃さず、将来の飛躍へと繋げます。
+                  </p>
+                </div>
+              </div>
+
+              {/* Feature 3 */}
+              <div className="flex flex-col md:flex-row items-center gap-10 md:gap-16">
+                <div className="w-full md:w-1/2 flex justify-center">
+                  <div className="relative w-full max-w-[480px] aspect-[4/3] rounded-[2rem] overflow-hidden shadow-[0_20px_50px_-12px_rgba(16,185,129,0.3)] border border-emerald-100/50 bg-white">
+                    <Image
+                      src="/images/jyuten.png"
+                      alt="全部復習しなくていい。AIが『今やるべき1問』をナビゲート"
+                      fill
+                      className="object-contain p-4"
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                    />
+                  </div>
+                </div>
+                <div className="w-full md:w-1/2 space-y-6">
+                  <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-100 text-emerald-700 text-sm font-bold tracking-wider">
+                    <CheckCircle2 className="h-4 w-4" />
+                    効率的なサポート
+                  </div>
+                  <h3 className="text-3xl sm:text-4xl font-extrabold text-slate-800 leading-tight">
+                    全部復習しなくていい。<br />
+                    AIが<span className="text-emerald-600">『今やるべき1問』</span>をナビゲート。
+                  </h3>
+                  <p className="text-lg text-slate-600 leading-relaxed font-medium">
+                    テスト範囲から抜け漏れのあるピンポイントな単元をAIが抽出し、優先順位をつけて提示。「何を勉強すればいいか」で迷う時間をなくし、確実な定着をサポートします。
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
           <section className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 mb-12">
             <div className="text-center mb-12">
               <h2 className="text-2xl font-extrabold sm:text-3xl text-slate-800 relative inline-block">
