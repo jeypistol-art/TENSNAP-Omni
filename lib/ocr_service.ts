@@ -94,6 +94,11 @@ Instructions:
    - weakness_areas.topic も同様に、誤答・部分点設問の「内容語句」をそのまま短句で記載せよ。
    - wrong_question_topics に、誤答・部分点設問から抽出した語句のみを 2〜6件で出力せよ。
 
+4.2 **全教科共通の誤答トピック抽出 (Wrong-Question Priority)**:
+   - 全教科で wrong_question_topics を出力せよ。
+   - wrong_question_topics には、誤答（×/斜線）または部分点（△）の設問から抽出した語句のみを入れること。
+   - covered_topics や weakness_areas より、wrong_question_topics の語句を優先して選ぶこと。
+
 5. **責任ある表明 (Professional Tone)**:
    - 逃げの言葉ではなく、厳密な事実に基づいて課題を指摘する。
    - 「本分析は複数の設問傾向から推定した学習状態です」という文言を必ず添えろ。
@@ -373,14 +378,30 @@ function sanitizeWeaknessAreas(
     const isSocial = /社会|地理|歴史|social|geography|history/.test(lowerSubject);
     const subjectCategory = detectSubjectCategory(subject);
     const rawWeaknesses = Array.isArray(inputWeaknesses) ? inputWeaknesses : [];
+    const coveredDomainTopics = Array.from(
+        new Map(
+            coveredTopics
+                .map((t) => formatTopicWithDomain(t, subjectCategory))
+                .filter(Boolean)
+                .map((t) => [canonicalTopic(t), t] as const)
+        ).values()
+    );
     const wrongTopics = Array.from(
         new Set(
             (Array.isArray(wrongQuestionTopics) ? wrongQuestionTopics : [])
                 .map((t) => normalizeTopicLabel(String(t || "")))
-                .map(toSocialDomainTopic)
+                .map((t) => (isSocial ? toSocialDomainTopic(t) : formatTopicWithDomain(t, subjectCategory)))
                 .filter(Boolean)
         )
     );
+    const nonSocialBaseTopics = !isSocial
+        ? Array.from(
+            new Map(
+                (wrongTopics.length > 0 ? [...wrongTopics, ...coveredDomainTopics] : coveredDomainTopics)
+                    .map((t) => [canonicalTopic(t), t] as const)
+            ).values()
+        )
+        : [];
     const preferCivics = isSocial && wrongTopics.some((t) => isCivicsKeyword(t) || t.startsWith("公民："));
     const socialSpecificTopics = isSocial
         ? (
@@ -403,11 +424,12 @@ function sanitizeWeaknessAreas(
             const level = normalizeWeaknessLevel(w?.level);
 
             if (isScience) {
-                // Science-family: never surface weakness topics outside covered topics.
-                if (matchedCovered) {
-                    topic = matchedCovered;
-                } else if (coveredTopics.length > 0 && isGenericWeaknessTopic(rawTopic)) {
-                    topic = coveredTopics[Math.min(index, coveredTopics.length - 1)];
+                // Science-family: prioritize wrong-question topics first, then covered topics.
+                const matchedScienceBase = findCoveredTopicMatch(rawTopic, nonSocialBaseTopics);
+                if (matchedScienceBase) {
+                    topic = matchedScienceBase;
+                } else if (nonSocialBaseTopics.length > 0 && isGenericWeaknessTopic(rawTopic)) {
+                    topic = nonSocialBaseTopics[Math.min(index, nonSocialBaseTopics.length - 1)];
                 } else {
                     return null;
                 }
@@ -420,8 +442,15 @@ function sanitizeWeaknessAreas(
                 } else {
                     topic = toSocialDetailedWeakness(rawTopic, socialBaseTopics, index);
                 }
-            } else if (matchedCovered) {
-                topic = matchedCovered;
+            } else {
+                const matchedNonSocial = findCoveredTopicMatch(rawTopic, nonSocialBaseTopics);
+                if (matchedNonSocial) {
+                    topic = matchedNonSocial;
+                } else if (isGenericWeaknessTopic(rawTopic) && nonSocialBaseTopics.length > 0) {
+                    topic = nonSocialBaseTopics[Math.min(index, nonSocialBaseTopics.length - 1)];
+                } else if (matchedCovered) {
+                    topic = formatTopicWithDomain(matchedCovered, subjectCategory);
+                }
             }
 
             return { topic, level };
@@ -446,8 +475,7 @@ function sanitizeWeaknessAreas(
     if (isScience && deduped.length === 0 && coveredTopics.length > 0) {
         const formattedCovered = Array.from(
             new Map(
-                coveredTopics
-                    .map((t) => formatTopicWithDomain(t, subjectCategory))
+                (nonSocialBaseTopics.length > 0 ? nonSocialBaseTopics : coveredDomainTopics)
                     .filter(Boolean)
                     .map((t) => [canonicalTopic(t), t] as const)
             ).values()
@@ -455,16 +483,16 @@ function sanitizeWeaknessAreas(
         return {
             coveredTopics: formattedCovered,
             weaknessAreas: [
-                { topic: formatTopicWithDomain(coveredTopics[0], subjectCategory), level: "Primary" },
-                ...(coveredTopics[1] ? [{ topic: formatTopicWithDomain(coveredTopics[1], subjectCategory), level: "Secondary" as const }] : [])
+                { topic: formattedCovered[0], level: "Primary" },
+                ...(formattedCovered[1] ? [{ topic: formattedCovered[1], level: "Secondary" as const }] : [])
             ]
         };
     }
 
     const formattedCoveredTopics = Array.from(
         new Map(
-            (isSocial ? socialBaseTopics : coveredTopics)
-                .map((t) => formatTopicWithDomain(t, subjectCategory))
+            (isSocial ? socialBaseTopics : (nonSocialBaseTopics.length > 0 ? nonSocialBaseTopics : coveredDomainTopics))
+                .map((t) => (isSocial ? t : formatTopicWithDomain(t, subjectCategory)))
                 .filter(Boolean)
                 .map((t) => [canonicalTopic(t), t] as const)
         ).values()
