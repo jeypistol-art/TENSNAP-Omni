@@ -26,6 +26,7 @@ export type AnalysisResult = {
         topic: string;
         level: "Primary" | "Secondary";
     }[];
+    wrong_question_topics?: string[]; // Topics extracted from wrong/partial questions
     disclaimer: string;
     mark_counts?: {
         circles: number; // ◯
@@ -90,6 +91,7 @@ Instructions:
    - 3〜6件程度、短い名詞句で出力せよ（長文説明は不要）。
    - 特に、誤答（×/斜線）または部分点（△）が付いた設問の内容から語句を優先して抽出せよ。
    - weakness_areas.topic も同様に、誤答・部分点設問の「内容語句」をそのまま短句で記載せよ。
+   - wrong_question_topics に、誤答・部分点設問から抽出した語句のみを 2〜6件で出力せよ。
 
 5. **責任ある表明 (Professional Tone)**:
    - 逃げの言葉ではなく、厳密な事実に基づいて課題を指摘する。
@@ -118,6 +120,7 @@ Output Format (JSON):
     { "topic": "単元名", "level": "Primary" },
     { "topic": "単元名", "level": "Secondary" }
   ],
+  "wrong_question_topics": ["誤答設問から抽出した語句1", "誤答設問から抽出した語句2"],
   "disclaimer": "本分析は複数の設問傾向から推定した学習状態です。",
   "mark_counts": {
     "circles": 0,
@@ -188,13 +191,12 @@ function extractSocialRegionLabel(text: string): string | null {
 }
 
 function toSocialDetailedWeakness(baseTopic: string, coveredTopics: string[], index: number): string {
-    const joinedCovered = coveredTopics.join(" ");
-    const era = extractSocialEraLabel(baseTopic) || extractSocialEraLabel(joinedCovered);
+    const era = extractSocialEraLabel(baseTopic);
     if (era) {
         return `${era}への知識定着`;
     }
 
-    const region = extractSocialRegionLabel(baseTopic) || extractSocialRegionLabel(joinedCovered);
+    const region = extractSocialRegionLabel(baseTopic);
     if (region) {
         return `${region}地域の復習`;
     }
@@ -250,7 +252,8 @@ function buildSpecificSocialTopics(coveredTopics: string[], weaknesses: Weakness
 function sanitizeWeaknessAreas(
     inputWeaknesses: WeaknessArea[] | undefined,
     inputCoveredTopics: string[] | undefined,
-    subject: string
+    subject: string,
+    wrongQuestionTopics?: string[] | undefined
 ): { coveredTopics: string[]; weaknessAreas: { topic: string; level: "Primary" | "Secondary" }[] } {
     const coveredTopics = Array.from(
         new Set(
@@ -264,7 +267,21 @@ function sanitizeWeaknessAreas(
     const isScience = /理科|科学|理数|science|stem/.test(lowerSubject);
     const isSocial = /社会|地理|歴史|social|geography|history/.test(lowerSubject);
     const rawWeaknesses = Array.isArray(inputWeaknesses) ? inputWeaknesses : [];
-    const socialSpecificTopics = isSocial ? buildSpecificSocialTopics(coveredTopics, rawWeaknesses) : coveredTopics;
+    const wrongTopics = Array.from(
+        new Set(
+            (Array.isArray(wrongQuestionTopics) ? wrongQuestionTopics : [])
+                .map((t) => normalizeTopicLabel(String(t || "")))
+                .filter(Boolean)
+        )
+    );
+    const socialSpecificTopics = isSocial
+        ? (
+            wrongTopics.length > 0
+                ? buildSpecificSocialTopics(wrongTopics, rawWeaknesses)
+                : buildSpecificSocialTopics(coveredTopics, rawWeaknesses)
+        )
+        : coveredTopics;
+    const socialBaseTopics = isSocial && socialSpecificTopics.length > 0 ? socialSpecificTopics : coveredTopics;
 
     const sanitized = rawWeaknesses
         .map((w, index) => {
@@ -285,12 +302,13 @@ function sanitizeWeaknessAreas(
                     return null;
                 }
             } else if (isSocial) {
-                if (matchedCovered) {
-                    topic = toSocialDetailedWeakness(matchedCovered, socialSpecificTopics, index);
+                const matchedSocial = findCoveredTopicMatch(rawTopic, socialBaseTopics);
+                if (matchedSocial) {
+                    topic = toSocialDetailedWeakness(matchedSocial, socialBaseTopics, index);
                 } else if (isGenericWeaknessTopic(rawTopic)) {
-                    topic = toSocialSpecificWeakness(rawTopic, socialSpecificTopics, index);
+                    topic = toSocialSpecificWeakness(rawTopic, socialBaseTopics, index);
                 } else {
-                    topic = toSocialDetailedWeakness(rawTopic, socialSpecificTopics, index);
+                    topic = toSocialDetailedWeakness(rawTopic, socialBaseTopics, index);
                 }
             } else if (matchedCovered) {
                 topic = matchedCovered;
@@ -325,7 +343,7 @@ function sanitizeWeaknessAreas(
         };
     }
 
-    return { coveredTopics: isSocial ? socialSpecificTopics : coveredTopics, weaknessAreas: deduped };
+    return { coveredTopics: isSocial ? socialBaseTopics : coveredTopics, weaknessAreas: deduped };
 }
 
 function limitWeaknessByMistakeDensity(
@@ -443,7 +461,8 @@ export async function analyzeImage(
             const normalized = sanitizeWeaknessAreas(
                 parsed.weakness_areas as WeaknessArea[] | undefined,
                 parsed.covered_topics,
-                subject
+                subject,
+                parsed.wrong_question_topics
             );
             parsed.covered_topics = normalized.coveredTopics;
             parsed.weakness_areas = limitWeaknessByMistakeDensity(normalized.weaknessAreas, parsed.mark_counts);
