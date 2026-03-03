@@ -154,6 +154,31 @@ function normalizeWeaknessLevel(level?: string): "Primary" | "Secondary" {
     return level === "Secondary" ? "Secondary" : "Primary";
 }
 
+function splitSocialDomainTopic(topic: string): { domain: "地理" | "歴史" | "公民" | null; unit: string } {
+    const normalized = normalizeTopicLabel(topic).replace(/：/g, ":");
+    const m = normalized.match(/^(地理|歴史|公民)\s*:\s*(.+)$/);
+    if (m?.[1] && m?.[2]) {
+        const domain = m[1] as "地理" | "歴史" | "公民";
+        return { domain, unit: normalizeTopicLabel(m[2]) };
+    }
+    return { domain: null, unit: normalizeTopicLabel(normalized) };
+}
+
+function inferSocialDomain(unit: string): "地理" | "歴史" | "公民" | null {
+    if (!unit) return null;
+    if (/(憲法|国会|内閣|裁判所|三権分立|社会権|自由権|参政権|基本的人権|選挙|政党|地方自治|条約|国際連合|国連|ASEAN|EU|NATO|税|財政)/.test(unit)) return "公民";
+    if (/(時代|戦争|幕府|改革|明治|大正|昭和|平成|令和|縄文|弥生|古墳|飛鳥|奈良|平安|鎌倉|室町|安土桃山|江戸|日清|日露|第一次世界大戦|第二次世界大戦)/.test(unit)) return "歴史";
+    if (/(地図|地形|気候|都道府県|地域|地方|平野|盆地|山脈|海流|統計|雨温図|人口|都市|貿易|産業|農業|工業|三大洋|サンフランシスコ|ヒマラヤ|オーストラリア)/.test(unit)) return "地理";
+    return null;
+}
+
+function toSocialDomainTopic(topic: string): string {
+    const { domain, unit } = splitSocialDomainTopic(topic);
+    if (!unit) return "";
+    const resolvedDomain = domain ?? inferSocialDomain(unit);
+    return resolvedDomain ? `${resolvedDomain}：${unit}` : unit;
+}
+
 function isGenericWeaknessTopic(topic: string): boolean {
     return /(基礎知識が足りない|応用知識が必要|知識不足|理解不足|基礎の欠如|基礎理解が不十分|課題がある|理解が浅い)/.test(topic);
 }
@@ -191,23 +216,28 @@ function extractSocialRegionLabel(text: string): string | null {
 }
 
 function toSocialDetailedWeakness(baseTopic: string, coveredTopics: string[], index: number): string {
+    const normalizedTopic = toSocialDomainTopic(baseTopic);
+    if (normalizedTopic) {
+        return normalizedTopic;
+    }
+
     const era = extractSocialEraLabel(baseTopic);
     if (era) {
-        return `${era}への知識定着`;
+        return `歴史：${era}`;
     }
 
     const region = extractSocialRegionLabel(baseTopic);
     if (region) {
-        return `${region}地域の復習`;
+        return `地理：${region}`;
     }
 
     if (/年号/.test(baseTopic)) {
-        return "歴史年号の知識定着";
+        return "歴史：歴史年号";
     }
 
     const fallback = coveredTopics[index % Math.max(coveredTopics.length, 1)];
-    if (fallback) return `${fallback}の復習`;
-    return `${baseTopic}の復習`;
+    if (fallback) return toSocialDomainTopic(fallback) || fallback;
+    return toSocialDomainTopic(baseTopic) || baseTopic;
 }
 
 function toSocialSpecificWeakness(topic: string, coveredTopics: string[], index: number): string {
@@ -225,7 +255,7 @@ function isSpecificSocialKeyword(topic: string): boolean {
     const t = normalizeTopicLabel(topic);
     if (!t || t.length < 2) return false;
 
-    const abstractOnly = /(基礎知識|応用知識|地理的知識|歴史的出来事|知識|理解|課題|分野|読み取り|復習|応用力|基礎力|思考力|判断力|表現力)/;
+    const abstractOnly = /(基礎知識|応用知識|地理的知識|歴史的出来事|歴史的事件|知識|理解|課題|分野|読み取り|復習|応用力|基礎力|思考力|判断力|表現力)/;
     const properHint = /(時代|条約|改革|戦争|内閣|幕府|憲法|地方|地域|都道府県|地形|気候|産業|貿易|平野|盆地|海流|モンスーン|EU|ASEAN|NATO|北海道|東北|関東|中部|近畿|中国|四国|九州|日本|世界|アジア|ヨーロッパ|アフリカ|オセアニア|北アメリカ|南アメリカ|ブラジル|アメリカ|中国|ロシア|インド|江戸|明治|大正|昭和|平成|令和)/;
 
     if (properHint.test(t)) return true;
@@ -240,6 +270,7 @@ function buildSpecificSocialTopics(coveredTopics: string[], weaknesses: Weakness
         ...weaknesses.map((w) => String(w?.topic || "")),
     ]
         .map(extractSocialKeywordSeed)
+        .map(toSocialDomainTopic)
         .filter(Boolean);
 
     const specific = pool.filter(isSpecificSocialKeyword);
@@ -252,6 +283,7 @@ function buildSpecificSocialTopics(coveredTopics: string[], weaknesses: Weakness
 function mergeSocialTopicPool(wrongTopics: string[], coveredTopics: string[]): string[] {
     const merged = [...wrongTopics, ...coveredTopics]
         .map((t) => normalizeTopicLabel(String(t || "")))
+        .map(toSocialDomainTopic)
         .filter(Boolean);
     return Array.from(new Map(merged.map((t) => [canonicalTopic(t), t] as const)).values());
 }
@@ -278,6 +310,7 @@ function sanitizeWeaknessAreas(
         new Set(
             (Array.isArray(wrongQuestionTopics) ? wrongQuestionTopics : [])
                 .map((t) => normalizeTopicLabel(String(t || "")))
+                .map(toSocialDomainTopic)
                 .filter(Boolean)
         )
     );
