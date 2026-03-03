@@ -202,9 +202,6 @@ function toSocialDetailedWeakness(baseTopic: string, coveredTopics: string[], in
     if (/年号/.test(baseTopic)) {
         return "歴史年号の知識定着";
     }
-    if (/地理|地形|気候|都道府県|産業|農業|工業/.test(baseTopic)) {
-        return "地理分野の復習";
-    }
 
     const fallback = coveredTopics[index % Math.max(coveredTopics.length, 1)];
     if (fallback) return `${fallback}の復習`;
@@ -331,6 +328,25 @@ function sanitizeWeaknessAreas(
     return { coveredTopics: isSocial ? socialSpecificTopics : coveredTopics, weaknessAreas: deduped };
 }
 
+function limitWeaknessByMistakeDensity(
+    weaknessAreas: { topic: string; level: "Primary" | "Secondary" }[],
+    markCounts?: AnalysisResult["mark_counts"]
+): { topic: string; level: "Primary" | "Secondary" }[] {
+    if (!Array.isArray(weaknessAreas) || weaknessAreas.length <= 1) return weaknessAreas;
+    const crosses = Number(markCounts?.crosses || 0);
+    const slashes = Number(markCounts?.slashes || 0);
+    const triangles = Number(markCounts?.triangles || 0);
+    const unmarked = Number(markCounts?.unmarked_questions || 0);
+    const weightedMistakeSignals = crosses + slashes + Math.ceil(triangles * 0.5) + unmarked;
+
+    // Careless-miss pattern: keep one clear focus instead of forcing multiple themes.
+    if (weightedMistakeSignals <= 2) {
+        const primary = weaknessAreas.find((w) => w.level === "Primary");
+        return [primary ?? weaknessAreas[0]];
+    }
+    return weaknessAreas;
+}
+
 export async function analyzeImage(
     answerSheets: { buffer: Buffer; mimeType: string }[],
     context?: {
@@ -430,7 +446,7 @@ export async function analyzeImage(
                 subject
             );
             parsed.covered_topics = normalized.coveredTopics;
-            parsed.weakness_areas = normalized.weaknessAreas;
+            parsed.weakness_areas = limitWeaknessByMistakeDensity(normalized.weaknessAreas, parsed.mark_counts);
         };
 
         // Ensure exam_phase is always explicit in responses.
