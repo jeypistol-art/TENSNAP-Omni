@@ -328,41 +328,61 @@ function inferDomainByCategory(unit: string, category: SubjectCategory): string 
     }
 }
 
+function canonicalEnglishTopicLabel(topic: string): string {
+    const t = normalizeTopicLabel(topic).replace(/：/g, ":");
+    if (!t) return "";
+
+    if (/^リスニング/.test(t)) return "リスニング";
+    if (/^英作文/.test(t)) return "英作文";
+    if (/^(語彙(:語彙)?|単語|熟語)$/i.test(t)) return "語彙";
+    if (/^文法:語順$/.test(t)) return "文法（語順）";
+    if (/^(文法:文法|文法)$/.test(t)) return "文法（基本）";
+    if (/^英文の完成:適語補充$/.test(t)) return "英文の完成（適語補充）";
+
+    const conversation = t.match(/^会話文読解:(.+)$/);
+    if (conversation?.[1]) return `会話文読解（${conversation[1]}）`;
+
+    const reading = t.match(/^文章読解:(.+)$/);
+    if (reading?.[1]) return `文章読解（${reading[1]}）`;
+
+    return t;
+}
+
 function toEnglishDomainTopic(topic: string): string {
     const { unit } = splitDomainTopic(topic);
     const u = normalizeTopicLabel(unit || topic);
     if (!u) return "";
     if (isPlaceholderUnit(u)) return "";
     if (/^(英語|英文)$/.test(u)) return "";
-    if (/^文法$/.test(u)) return "文法：文法";
-    if (/^語彙$/.test(u)) return "語彙：語彙";
-    if (/^(読解|内容理解)$/.test(u)) return "文章読解：内容理解";
-    if (/^表現$/.test(u)) return "英作文";
+    if (/^文法$/.test(u)) return canonicalEnglishTopicLabel("文法:文法");
+    if (/^語彙$/.test(u)) return canonicalEnglishTopicLabel("語彙:語彙");
+    if (/^(読解|内容理解)$/.test(u)) return canonicalEnglishTopicLabel("文章読解:内容理解");
+    if (/^表現$/.test(u)) return canonicalEnglishTopicLabel("英作文");
 
-    if (/(リスニング|聞き取り|放送|listening)/i.test(u)) return "リスニング";
-    if (/(英作文|和文英訳|自由英作文|作文|日本語記述|ライティング|writing)/i.test(u)) return "英作文";
-    if (/(英文の完成|適語補充|空所補充|語句補充)/.test(u)) return "英文の完成：適語補充";
+    if (/(リスニング|聞き取り|放送|listening)/i.test(u)) return canonicalEnglishTopicLabel("リスニング");
+    if (/(英作文|和文英訳|自由英作文|作文|日本語記述|ライティング|writing)/i.test(u)) return canonicalEnglishTopicLabel("英作文");
+    if (/(英文の完成|適語補充|空所補充|語句補充)/.test(u)) return canonicalEnglishTopicLabel("英文の完成:適語補充");
 
     if (/(会話文|対話文|dialog|conversation)/i.test(u)) {
-        if (/(適語補充|空所補充)/.test(u)) return "会話文読解：適語補充";
-        if (/(日本語記述|和訳|英訳)/.test(u)) return "会話文読解：日本語記述";
-        return "会話文読解：内容理解";
+        if (/(適語補充|空所補充)/.test(u)) return canonicalEnglishTopicLabel("会話文読解:適語補充");
+        if (/(日本語記述|和訳|英訳)/.test(u)) return canonicalEnglishTopicLabel("会話文読解:日本語記述");
+        return canonicalEnglishTopicLabel("会話文読解:内容理解");
     }
 
     if (/(読解|長文|本文|内容理解|英問英答|適切選択|並べかえ|要旨|reading)/i.test(u)) {
-        if (/(適語補充|空所補充)/.test(u)) return "文章読解：適語補充";
-        if (/(英問英答)/.test(u)) return "文章読解：英問英答";
-        if (/(適切選択)/.test(u)) return "文章読解：適切選択";
-        if (/(並べかえ)/.test(u)) return "文章読解：並べかえ";
-        return "文章読解：内容理解";
+        if (/(適語補充|空所補充)/.test(u)) return canonicalEnglishTopicLabel("文章読解:適語補充");
+        if (/(英問英答)/.test(u)) return canonicalEnglishTopicLabel("文章読解:英問英答");
+        if (/(適切選択)/.test(u)) return canonicalEnglishTopicLabel("文章読解:適切選択");
+        if (/(並べかえ)/.test(u)) return canonicalEnglishTopicLabel("文章読解:並べかえ");
+        return canonicalEnglishTopicLabel("文章読解:内容理解");
     }
 
-    if (/(語順)/.test(u)) return "文法：語順";
-    if (/(文法|時制|助動詞|不定詞|動名詞|関係代名詞|関係副詞|比較|受動態|現在完了|前置詞|接続詞|品詞)/.test(u)) return "文法：文法";
-    if (/(語彙|単語|熟語|イディオム|vocabulary|idiom)/i.test(u)) return "語彙：語彙";
+    if (/(語順)/.test(u)) return canonicalEnglishTopicLabel("文法:語順");
+    if (/(文法|時制|助動詞|不定詞|動名詞|関係代名詞|関係副詞|比較|受動態|現在完了|前置詞|接続詞|品詞)/.test(u)) return canonicalEnglishTopicLabel("文法:文法");
+    if (/(語彙|単語|熟語|イディオム|vocabulary|idiom)/i.test(u)) return canonicalEnglishTopicLabel("語彙:語彙");
 
     const resolved = inferDomainByCategory(u, "english") || "英語";
-    return resolved === "英語" ? `英語：${u}` : `${resolved}：${u}`;
+    return canonicalEnglishTopicLabel(resolved === "英語" ? `英語:${u}` : `${resolved}:${u}`);
 }
 
 function formatTopicWithDomain(topic: string, category: SubjectCategory): string {
@@ -708,7 +728,7 @@ function sanitizeWeaknessAreas(
 
     if (subjectCategory === "english" && finalCoveredTopics.length === 0) {
         return {
-            coveredTopics: ["文章読解：内容理解", "文法：文法"],
+            coveredTopics: ["文章読解（内容理解）", "文法（基本）"],
             weaknessAreas: formattedWeaknesses
         };
     }
