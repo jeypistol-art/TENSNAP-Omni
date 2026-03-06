@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { query } from "@/lib/db";
-import { getRequestedPlanFromRequest, getOrganizationAccountPlan } from "@/lib/accountPlan";
+import { getRequestedPlanFromRequest } from "@/lib/accountPlan";
 import { getTenantId } from "@/lib/tenant";
 
 type SessionUser = {
@@ -10,22 +10,16 @@ type SessionUser = {
     email?: string | null;
 };
 
-async function resolveEffectivePlan(request: Request, user: SessionUser): Promise<"school" | "family"> {
-    const requestedPlan = getRequestedPlanFromRequest(request);
-    const orgId = await getTenantId(user.id, user.email ?? null, requestedPlan);
-    const orgPlan = await getOrganizationAccountPlan(orgId);
-    return requestedPlan === "family" || orgPlan === "family" ? "family" : "school";
-}
-
 // GET: List all students
 export async function GET(request: Request) {
     const session = await getServerSession(authOptions);
     if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     try {
-        const plan = await resolveEffectivePlan(request, session.user as SessionUser);
+        const requestedPlan = getRequestedPlanFromRequest(request);
+        await getTenantId((session.user as SessionUser).id, (session.user as SessionUser).email ?? null, requestedPlan);
         let result;
-        if (plan === "family") {
+        if (requestedPlan === "family") {
             result = await query(
                 "SELECT * FROM students WHERE user_id = $1 ORDER BY created_at ASC LIMIT 1",
                 [session.user.id]
@@ -57,8 +51,9 @@ export async function POST(request: Request) {
     if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     try {
-        const plan = await resolveEffectivePlan(request, session.user as SessionUser);
-        if (plan === "family") {
+        const requestedPlan = getRequestedPlanFromRequest(request);
+        await getTenantId((session.user as SessionUser).id, (session.user as SessionUser).email ?? null, requestedPlan);
+        if (requestedPlan === "family") {
             return NextResponse.json(
                 { error: "Family plan does not support student registration" },
                 { status: 403 }
