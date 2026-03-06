@@ -103,6 +103,7 @@ export default function Dashboard() {
     const [students, setStudents] = useState<Student[]>([]);
     const [selectedStudentId, setSelectedStudentId] = useState<string>("");
     const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
+    const [isEditStudentModalOpen, setIsEditStudentModalOpen] = useState(false);
     const [isFamilyHost, setIsFamilyHost] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
     const [editingField, setEditingField] = useState<null | "student" | "subject" | "score" | "testDate">(null);
@@ -292,10 +293,18 @@ export default function Dashboard() {
     }, [isFamilyHost, students, selectedStudentId]);
 
     const handleStudentAdded = useCallback((newStudent: Student) => {
-        setStudents([newStudent, ...students]); // Prepend new student
+        setStudents((prev) => [newStudent, ...prev]); // Prepend new student
         setSelectedStudentId(newStudent.id); // Auto select
         setIsStudentModalOpen(false);
-    }, [students]);
+    }, []);
+
+    const handleStudentUpdated = useCallback((updatedStudent: Student) => {
+        setStudents((prev) => prev.map((student) => (
+            student.id === updatedStudent.id ? updatedStudent : student
+        )));
+        setSelectedStudentId(updatedStudent.id);
+        setIsEditStudentModalOpen(false);
+    }, []);
 
     const startEditField = (field: "student" | "subject" | "score" | "testDate", value: string) => {
         setFieldError("");
@@ -608,6 +617,7 @@ export default function Dashboard() {
         && (subscriptionStatus === "trialing" || subscriptionStatus === "trial")
         && !!trialEndsAt
         && Date.now() > Date.parse(trialEndsAt as string);
+    const selectedStudent = students.find((s) => s.id === selectedStudentId) ?? (isFamilyHost ? students[0] : undefined);
     const effectiveStudentId = selectedStudentId || (isFamilyHost ? (students[0]?.id || "") : "");
     const canOpenHistory = isFamilyHost ? !!effectiveStudentId : !!selectedStudentId;
 
@@ -664,26 +674,19 @@ export default function Dashboard() {
                 </p>
             </header>
 
-            {isFamilyHost ? (
-                <div className="mb-6 p-4 bg-white rounded-xl border border-gray-100 shadow-sm animate-in fade-in slide-in-from-bottom-2">
-                    <p className="text-xs text-gray-500 font-bold mb-2 uppercase tracking-wider">ご利用中の対象</p>
-                    <p className="text-base font-semibold text-gray-800">
-                        {students.find(s => s.id === selectedStudentId)?.name || students[0]?.name || "お子さま"}
-                    </p>
-                </div>
-            ) : (
-                <StudentSelector
-                    selectedStudentId={selectedStudentId}
-                    onSelect={setSelectedStudentId}
-                    onOpenModal={() => {
-                        if (!isFamilyHost) {
-                            setIsStudentModalOpen(true);
-                        }
-                    }}
-                    students={students}
-                    canAddStudent={!isFamilyHost}
-                />
-            )}
+            <StudentSelector
+                selectedStudentId={selectedStudentId}
+                onSelect={setSelectedStudentId}
+                onOpenModal={() => {
+                    if (!isFamilyHost) {
+                        setIsStudentModalOpen(true);
+                    }
+                }}
+                onOpenEditModal={() => setIsEditStudentModalOpen(true)}
+                students={students}
+                canAddStudent={!isFamilyHost}
+                canEditStudent={!!selectedStudent}
+            />
 
             {/* History Toggle & Timeline */}
             <div className="mb-8 animate-in fade-in slide-in-from-top-1 duration-300">
@@ -728,6 +731,14 @@ export default function Dashboard() {
                     onAdded={handleStudentAdded}
                 />
             )}
+            <AddStudentModal
+                isOpen={isEditStudentModalOpen}
+                onClose={() => setIsEditStudentModalOpen(false)}
+                onAdded={handleStudentAdded}
+                mode="edit"
+                initialStudent={selectedStudent ?? null}
+                onUpdated={handleStudentUpdated}
+            />
 
             {/* Main Upload / Results Area */}
             {(status === "idle" || status === "uploading" || status === "analyzing" || status === "error") && (

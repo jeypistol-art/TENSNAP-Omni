@@ -78,20 +78,40 @@ export async function POST(request: Request) {
     }
 }
 
-// PATCH: Update a student name (inline edit)
+// PATCH: Update a student profile
 export async function PATCH(request: Request) {
     const session = await getServerSession(authOptions);
     if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     try {
-        const { id, name } = await request.json();
-        if (!id || typeof name !== "string") {
+        const { id, name, name_kana, grade, target_school, notes } = await request.json();
+        if (!id || typeof name !== "string" || !name.trim()) {
             return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
         }
+        const optionalTextOrNull = (value: unknown) => {
+            if (typeof value !== "string") return null;
+            const trimmed = value.trim();
+            return trimmed.length > 0 ? trimmed : null;
+        };
 
         const result = await query(
-            `UPDATE students SET name = $1 WHERE id = $2 AND user_id = $3 RETURNING *`,
-            [name.trim(), id, session.user.id]
+            `UPDATE students
+             SET name = $1,
+                 name_kana = $2,
+                 grade = $3,
+                 target_school = $4,
+                 notes = $5
+             WHERE id = $6 AND user_id = $7
+             RETURNING *`,
+            [
+                name.trim(),
+                optionalTextOrNull(name_kana),
+                optionalTextOrNull(grade),
+                optionalTextOrNull(target_school),
+                optionalTextOrNull(notes),
+                id,
+                session.user.id
+            ]
         );
         if (result.rows.length === 0) {
             return NextResponse.json({ error: "Student not found" }, { status: 404 });

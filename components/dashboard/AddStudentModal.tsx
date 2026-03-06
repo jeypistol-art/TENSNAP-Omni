@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Student = {
     id: string;
@@ -23,9 +23,27 @@ type Props = {
     isOpen: boolean;
     onClose: () => void;
     onAdded: (newStudent: Student) => void;
+    mode?: "create" | "edit";
+    initialStudent?: Student | null;
+    onUpdated?: (updatedStudent: Student) => void;
 };
 
-export default function AddStudentModal({ isOpen, onClose, onAdded }: Props) {
+const emptyFormData: StudentForm = {
+    name: "",
+    name_kana: "",
+    grade: "",
+    target_school: "",
+    notes: ""
+};
+
+export default function AddStudentModal({
+    isOpen,
+    onClose,
+    onAdded,
+    mode = "create",
+    initialStudent = null,
+    onUpdated
+}: Props) {
     const [formData, setFormData] = useState<StudentForm>({
         name: "",
         name_kana: "",
@@ -34,6 +52,21 @@ export default function AddStudentModal({ isOpen, onClose, onAdded }: Props) {
         notes: ""
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        if (mode === "edit" && initialStudent) {
+            setFormData({
+                name: initialStudent.name ?? "",
+                name_kana: initialStudent.name_kana ?? "",
+                grade: initialStudent.grade ?? "",
+                target_school: initialStudent.target_school ?? "",
+                notes: initialStudent.notes ?? ""
+            });
+            return;
+        }
+        setFormData(emptyFormData);
+    }, [isOpen, mode, initialStudent]);
 
     if (!isOpen) return null;
 
@@ -44,24 +77,30 @@ export default function AddStudentModal({ isOpen, onClose, onAdded }: Props) {
 
         try {
             const res = await fetch("/api/students", {
-                method: "POST",
+                method: mode === "edit" ? "PATCH" : "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(formData),
+                body: JSON.stringify(
+                    mode === "edit"
+                        ? { id: initialStudent?.id, ...formData }
+                        : formData
+                ),
             });
 
             if (res.ok) {
                 const data = await res.json();
-                // API returns { student: ... } wrapper in my route implementation
-                onAdded(data.student);
+                if (mode === "edit") {
+                    onUpdated?.(data.student);
+                } else {
+                    onAdded(data.student);
+                }
                 onClose();
-                // Reset form
-                setFormData({ name: "", name_kana: "", grade: "", target_school: "", notes: "" });
+                setFormData(emptyFormData);
             } else {
-                alert("Failed to create student");
+                alert(mode === "edit" ? "Failed to update student" : "Failed to create student");
             }
         } catch (e) {
             console.error(e);
-            alert("Error creating student");
+            alert(mode === "edit" ? "Error updating student" : "Error creating student");
         } finally {
             setIsSubmitting(false);
         }
@@ -70,7 +109,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdded }: Props) {
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-in fade-in duration-200">
             <div className="bg-white p-8 rounded-2xl w-full max-w-md shadow-2xl scale-100 animate-in zoom-in-95 duration-200">
-                <h2 className="text-2xl font-bold mb-6 text-gray-800">新規生徒登録</h2>
+                <h2 className="text-2xl font-bold mb-6 text-gray-800">{mode === "edit" ? "生徒情報を編集" : "新規生徒登録"}</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label className="block text-sm font-semibold mb-1 text-gray-700">氏名 <span className="text-red-500">*</span></label>
@@ -134,7 +173,9 @@ export default function AddStudentModal({ isOpen, onClose, onAdded }: Props) {
                             disabled={!formData.name.trim() || isSubmitting}
                             className="flex-1 py-3 bg-blue-600 rounded-lg font-bold text-white shadow-lg hover:bg-blue-700 hover:shadow-xl transition-all disabled:opacity-50 disabled:shadow-none"
                         >
-                            {isSubmitting ? "登録中..." : "登録する"}
+                            {isSubmitting
+                                ? (mode === "edit" ? "保存中..." : "登録中...")
+                                : (mode === "edit" ? "保存する" : "登録する")}
                         </button>
                     </div>
                 </form>

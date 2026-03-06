@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PlusCircle } from "lucide-react";
+import { Pencil, PlusCircle } from "lucide-react";
 
 type Student = {
     id: string;
@@ -15,7 +15,9 @@ type Props = {
     selectedStudentId: string;
     onSelect: (studentId: string) => void;
     onOpenModal: () => void;
+    onOpenEditModal?: () => void;
     canAddStudent?: boolean;
+    canEditStudent?: boolean;
     // Passing 'students' prop from parent (Dashboard) to avoid re-fetching or control refreshing
     students: Student[];
 };
@@ -24,7 +26,9 @@ export default function StudentSelector({
     selectedStudentId,
     onSelect,
     onOpenModal,
+    onOpenEditModal,
     canAddStudent = true,
+    canEditStudent = true,
     students
 }: Props) {
 
@@ -106,6 +110,18 @@ export default function StudentSelector({
                         </button>
                     )}
                 </div>
+
+                {canEditStudent && (
+                    <button
+                        type="button"
+                        onClick={onOpenEditModal}
+                        disabled={!selectedStudentId || students.length === 0}
+                        className="w-full mt-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-gray-700 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-sm font-bold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <Pencil size={16} />
+                        選択中の生徒を編集
+                    </button>
+                )}
             </div>
         </div>
     );
