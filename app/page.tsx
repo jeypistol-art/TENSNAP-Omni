@@ -267,12 +267,13 @@ function SchoolLanding() {
                 <Sparkles className="h-4 w-4" />
                 小1から高3まで。12年間の学習ログを一元管理
               </p>
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-foreground mb-8 text-balance">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-foreground mb-8 text-balance leading-tight">
                 <span className="block text-mizuho">小1から高3まで。</span>
-                <span className="block mt-2">12年間のつまずきを、AIが一本の線でつなぐ。</span>
+                <span className="block mt-4 sm:mt-6">12年間のつまずきを、AIが一本の線でつなぐ。</span>
               </h1>
               <p className="mt-4 text-lg sm:text-xl text-muted-foreground max-w-3xl mx-auto mb-10 text-balance leading-relaxed">
-                小・中・高の全学年、主要5教科を完全カバー。個別指導の学習管理をこれ一端に。<br className="hidden sm:block" />
+                小・中・高の全学年、主要5教科を完全カバー。<br />
+                個別指導の学習管理をこれ一端に。<br />
                 AIつまずき特定・AI苦手単元診断・AI学習進捗可視化を、答案スキャンだけで実現します。
               </p>
               <div className="flex flex-col sm:flex-row justify-center gap-4">
