@@ -438,7 +438,7 @@ function SchoolLanding() {
               <div className="aspect-video relative w-full h-full">
                 <iframe
                   className="absolute top-0 left-0 w-full h-full"
-                  src="https://www.youtube.com/embed/n85xb4WF7QQ?si=FPYVnYe-ZGX9L1i0&rel=0&modestbranding=1"
+                  src="https://www.youtube.com/embed/hRYwl51uGNc?si=jg5uwFwbOAk1FhFL"
                   title="使い方動画 | TENsNAP・Omni"
                   frameBorder="0"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
