@@ -189,6 +189,14 @@ function splitDomainTopic(topic: string): { domain: string | null; unit: string 
     return { domain: null, unit: normalizeTopicLabel(normalized) };
 }
 
+function isPlaceholderUnit(unit: string): boolean {
+    const u = normalizeTopicLabel(unit);
+    if (!u) return true;
+    return /^(誤答設問|誤答問題|設問|問題)\s*\d+([\-ー]\d+)?$/.test(u)
+        || /^誤答設問から抽出した語句\d*$/.test(u)
+        || /^wrong\s*(question|item)\s*\d+$/i.test(u);
+}
+
 type DomainHint = { domain: string; keywords: string[] };
 
 function detectDomainByHints(unit: string, hints: DomainHint[]): string | null {
@@ -320,12 +328,46 @@ function inferDomainByCategory(unit: string, category: SubjectCategory): string 
     }
 }
 
+function toEnglishDomainTopic(topic: string): string {
+    const { unit } = splitDomainTopic(topic);
+    const u = normalizeTopicLabel(unit || topic);
+    if (!u || isLowValueUnit(u, "english")) return "";
+
+    if (/(リスニング|聞き取り|放送|listening)/i.test(u)) return "リスニング";
+    if (/(英作文|和文英訳|自由英作文|作文|日本語記述|ライティング|writing)/i.test(u)) return "英作文";
+    if (/(英文の完成|適語補充|空所補充|語句補充)/.test(u)) return "英文の完成：適語補充";
+
+    if (/(会話文|対話文|dialog|conversation)/i.test(u)) {
+        if (/(適語補充|空所補充)/.test(u)) return "会話文読解：適語補充";
+        if (/(日本語記述|和訳|英訳)/.test(u)) return "会話文読解：日本語記述";
+        return "会話文読解：内容理解";
+    }
+
+    if (/(読解|長文|本文|内容理解|英問英答|適切選択|並べかえ|要旨|reading)/i.test(u)) {
+        if (/(適語補充|空所補充)/.test(u)) return "文章読解：適語補充";
+        if (/(英問英答)/.test(u)) return "文章読解：英問英答";
+        if (/(適切選択)/.test(u)) return "文章読解：適切選択";
+        if (/(並べかえ)/.test(u)) return "文章読解：並べかえ";
+        return "文章読解：内容理解";
+    }
+
+    if (/(語順)/.test(u)) return "文法：語順";
+    if (/(文法|時制|助動詞|不定詞|動名詞|関係代名詞|関係副詞|比較|受動態|現在完了|前置詞|接続詞|品詞)/.test(u)) return "文法：文法";
+    if (/(語彙|単語|熟語|イディオム|vocabulary|idiom)/i.test(u)) return "語彙：語彙";
+
+    const resolved = inferDomainByCategory(u, "english") || "英語";
+    return resolved === "英語" ? `英語：${u}` : `${resolved}：${u}`;
+}
+
 function formatTopicWithDomain(topic: string, category: SubjectCategory): string {
     const { domain, unit } = splitDomainTopic(topic);
     if (!unit) return "";
 
     if (category === "social") {
         return toSocialDomainTopic(topic);
+    }
+    if (category === "english") {
+        return toEnglishDomainTopic(topic);
     }
 
     const resolved = domain || inferDomainByCategory(unit, category);
@@ -335,15 +377,17 @@ function formatTopicWithDomain(topic: string, category: SubjectCategory): string
 function isLowValueUnit(unit: string, category: SubjectCategory): boolean {
     const u = normalizeTopicLabel(unit);
     if (!u) return true;
+    if (isPlaceholderUnit(u)) return true;
     if (category === "japanese") {
         if (/^(設問|問)\s*\d+\s*(の内容|への理解|の理解)?$/.test(u)) return true;
         if (/^(本文|文章)\s*(の内容|理解)?$/.test(u)) return true;
         if (/^内容理解$/.test(u)) return true;
     }
+    if (category === "english") {
+        if (/^(英語|英文|文法|語彙|読解|表現|内容理解)$/.test(u)) return true;
+    }
     if (category === "social") {
         if (/^(社会|社会分野|社会科|地理|歴史|公民|知識|理解|基礎|復習|内容理解|地理的知識|歴史的出来事|歴史の出来事|国際関係|日本の歴史)$/.test(u)) return true;
-        if (/^(誤答設問|誤答問題|設問|問題)\s*\d+$/.test(u)) return true;
-        if (/^誤答設問から抽出した語句\d*$/.test(u)) return true;
     }
     return false;
 }
@@ -361,7 +405,8 @@ function toSocialDomainTopic(topic: string): string {
 }
 
 function isGenericWeaknessTopic(topic: string): boolean {
-    return /(基礎知識が足りない|応用知識が必要|知識不足|理解不足|基礎の欠如|基礎理解が不十分|課題がある|理解が浅い|誤答設問|誤答問題)/.test(topic);
+    return /(基礎知識が足りない|応用知識が必要|知識不足|理解不足|基礎の欠如|基礎理解が不十分|課題がある|理解が浅い|誤答設問|誤答問題)/.test(topic)
+        || isPlaceholderUnit(topic);
 }
 
 function findCoveredTopicMatch(topic: string, coveredTopics: string[]): string | null {
