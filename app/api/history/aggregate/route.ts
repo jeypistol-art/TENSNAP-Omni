@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { query } from "@/lib/db";
 import { getOpenAIClient, runOpenAIWithRetry, serializeOpenAIError } from "@/lib/openai_client";
-import { getOrganizationAccountPlan, getRequestedPlanFromRequest } from "@/lib/accountPlan";
+import { getRequestedPlanFromRequest } from "@/lib/accountPlan";
 import { getTenantId } from "@/lib/tenant";
 import { normalizeSubjectLabel, subjectAliasesForFilter } from "@/lib/subjects";
 
@@ -61,9 +61,8 @@ export async function GET(request: Request) {
         }
 
         const requestedPlan = getRequestedPlanFromRequest(request);
-        const orgId = await getTenantId(session.user.id, session.user.email, requestedPlan);
-        const orgPlan = await getOrganizationAccountPlan(orgId);
-        const isFamilyPlan = requestedPlan === "family" || orgPlan === "family";
+        await getTenantId(session.user.id, session.user.email, requestedPlan);
+        const isFamilyPlan = requestedPlan === "family";
         if (isFamilyPlan) {
             const primaryStudent = await query<{ id: string }>(
                 `SELECT id FROM students WHERE user_id = $1 ORDER BY created_at ASC LIMIT 1`,
