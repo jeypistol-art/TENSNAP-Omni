@@ -331,7 +331,13 @@ function inferDomainByCategory(unit: string, category: SubjectCategory): string 
 function toEnglishDomainTopic(topic: string): string {
     const { unit } = splitDomainTopic(topic);
     const u = normalizeTopicLabel(unit || topic);
-    if (!u || isLowValueUnit(u, "english")) return "";
+    if (!u) return "";
+    if (isPlaceholderUnit(u)) return "";
+    if (/^(英語|英文)$/.test(u)) return "";
+    if (/^文法$/.test(u)) return "文法：文法";
+    if (/^語彙$/.test(u)) return "語彙：語彙";
+    if (/^(読解|内容理解)$/.test(u)) return "文章読解：内容理解";
+    if (/^表現$/.test(u)) return "英作文";
 
     if (/(リスニング|聞き取り|放送|listening)/i.test(u)) return "リスニング";
     if (/(英作文|和文英訳|自由英作文|作文|日本語記述|ライティング|writing)/i.test(u)) return "英作文";
@@ -384,7 +390,7 @@ function isLowValueUnit(unit: string, category: SubjectCategory): boolean {
         if (/^内容理解$/.test(u)) return true;
     }
     if (category === "english") {
-        if (/^(英語|英文|文法|語彙|読解|表現|内容理解)$/.test(u)) return true;
+        if (/^(英語|英文)$/.test(u)) return true;
     }
     if (category === "social") {
         if (/^(社会|社会分野|社会科|地理|歴史|公民|知識|理解|基礎|復習|内容理解|地理的知識|歴史的出来事|歴史の出来事|国際関係|日本の歴史)$/.test(u)) return true;
@@ -689,6 +695,24 @@ function sanitizeWeaknessAreas(
         ).values()
     );
 
+    const finalCoveredTopics = formattedCoveredTopics.length > 0
+        ? formattedCoveredTopics
+        : Array.from(
+            new Map(
+                formattedWeaknesses
+                    .map((w) => w.topic)
+                    .filter((t) => !!t && !isLowValueTopic(t, subjectCategory))
+                    .map((t) => [canonicalTopic(t), t] as const)
+            ).values()
+        );
+
+    if (subjectCategory === "english" && finalCoveredTopics.length === 0) {
+        return {
+            coveredTopics: ["文章読解：内容理解", "文法：文法"],
+            weaknessAreas: formattedWeaknesses
+        };
+    }
+
     if (isSocial && preferCivics) {
         const civicsWeaknesses = formattedWeaknesses.filter((w) => isCivicsKeyword(w.topic) || w.topic.startsWith("公民："));
         if (civicsWeaknesses.length > 0) {
@@ -696,13 +720,13 @@ function sanitizeWeaknessAreas(
             const primaryFirst = { topic: first.topic, level: "Primary" as const };
             const secondaryRest = rest.map((w) => ({ topic: w.topic, level: "Secondary" as const }));
             return {
-                coveredTopics: formattedCoveredTopics,
+                coveredTopics: finalCoveredTopics,
                 weaknessAreas: [primaryFirst, ...secondaryRest].slice(0, 3),
             };
         }
     }
 
-    return { coveredTopics: formattedCoveredTopics, weaknessAreas: formattedWeaknesses };
+    return { coveredTopics: finalCoveredTopics, weaknessAreas: formattedWeaknesses };
 }
 
 function limitWeaknessByMistakeDensity(
