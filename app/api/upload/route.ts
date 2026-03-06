@@ -8,6 +8,20 @@ import { getR2AssetsBucket, R2_ASSETS_BUCKET_NAME, uploadPreparedFilesToR2 } fro
 import { getRequestedPlanFromRequest } from "@/lib/accountPlan";
 import { DEFAULT_SUBJECT, normalizeSubjectLabel } from "@/lib/subjects";
 
+function normalizeTopicText(topic: unknown): string {
+    if (typeof topic !== "string") return "";
+    return topic.trim().replace(/\s+/g, " ");
+}
+
+function isGenericTopic(topic: string): boolean {
+    if (!topic) return true;
+    return /^(general|unknown|その他|不明|未分類|単元|分野)$/i.test(topic);
+}
+
+function dedupeTopics(topics: string[]): string[] {
+    return Array.from(new Map(topics.map((t) => [t.toLowerCase(), t] as const)).values());
+}
+
 export async function POST(request: Request) {
     try {
         const session = await getServerSession(authOptions);
@@ -135,19 +149,27 @@ export async function POST(request: Request) {
             if (parts.length > 1) maxScoreInt = parseInt(parts[1]) || 100;
         }
 
-        // Defensive: Ensure array for topics
-        const topics = Array.isArray(analysis.covered_topics)
-            ? analysis.covered_topics
-            : [];
+        const weaknessAreas = Array.isArray(analysis.weakness_areas) ? analysis.weakness_areas : [];
 
-        // Ensure array for weakness_areas
-        const weaknessAreas = Array.isArray(analysis.weakness_areas)
-            ? analysis.weakness_areas
-            : [];
+        // Normalize covered topics and replace generic placeholders (e.g. "General").
+        const cleanedCoveredTopics = dedupeTopics(
+            (Array.isArray(analysis.covered_topics) ? analysis.covered_topics : [])
+                .map(normalizeTopicText)
+                .filter((t) => !isGenericTopic(t))
+        );
+        const weaknessTopicFallback = dedupeTopics(
+            weaknessAreas
+                .map((w) => normalizeTopicText(w?.topic))
+                .filter((t) => !isGenericTopic(t))
+        );
+        const topics = cleanedCoveredTopics.length > 0
+            ? cleanedCoveredTopics
+            : weaknessTopicFallback.slice(0, 3);
+        analysis.covered_topics = topics;
 
         // Determine Unit Name and Subject
         // Priority: Form Input > AI Detected Topic > Fallback
-        const derivedUnitName = formUnitName || (topics.length > 0 ? topics[0] : "General");
+        const derivedUnitName = formUnitName || (topics.length > 0 ? topics[0] : normalizeSubjectLabel(subject));
         const testDate = (formData.get("testDate") as string) || new Date().toISOString().split('T')[0];
 
         const analysisDetailsForStorage = {
