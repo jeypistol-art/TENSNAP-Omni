@@ -97,6 +97,7 @@ Instructions:
 4.2 **全教科共通の誤答トピック抽出 (Wrong-Question Priority)**:
    - 全教科で wrong_question_topics を出力せよ。
    - wrong_question_topics には、誤答（×/斜線）または部分点（△）の設問から抽出した語句のみを入れること。
+   - 「誤答設問1」「誤答問題2」「設問3」などのプレースホルダ表現は出力禁止。必ず内容語（用語・地名・制度名など）で出力すること。
    - covered_topics や weakness_areas より、wrong_question_topics の語句を優先して選ぶこと。
 
 5. **責任ある表明 (Professional Tone)**:
@@ -253,6 +254,8 @@ function isLowValueUnit(unit: string, category: SubjectCategory): boolean {
     }
     if (category === "social") {
         if (/^(社会|社会分野|社会科|地理|歴史|公民|知識|理解|基礎|復習|内容理解|地理的知識|歴史的出来事|歴史の出来事|国際関係|日本の歴史)$/.test(u)) return true;
+        if (/^(誤答設問|誤答問題|設問|問題)\s*\d+$/.test(u)) return true;
+        if (/^誤答設問から抽出した語句\d*$/.test(u)) return true;
     }
     return false;
 }
@@ -270,7 +273,7 @@ function toSocialDomainTopic(topic: string): string {
 }
 
 function isGenericWeaknessTopic(topic: string): boolean {
-    return /(基礎知識が足りない|応用知識が必要|知識不足|理解不足|基礎の欠如|基礎理解が不十分|課題がある|理解が浅い)/.test(topic);
+    return /(基礎知識が足りない|応用知識が必要|知識不足|理解不足|基礎の欠如|基礎理解が不十分|課題がある|理解が浅い|誤答設問|誤答問題)/.test(topic);
 }
 
 function findCoveredTopicMatch(topic: string, coveredTopics: string[]): string | null {
@@ -452,6 +455,7 @@ function sanitizeWeaknessAreas(
             const matchedCovered = findCoveredTopicMatch(rawTopic, coveredTopics);
             let topic = rawTopic;
             const level = normalizeWeaknessLevel(w?.level);
+            const isPlaceholderTopic = isSocial && isLowValueUnit(rawTopic, "social");
 
             if (isScience) {
                 // Science-family: prioritize wrong-question topics first, then covered topics.
@@ -464,6 +468,17 @@ function sanitizeWeaknessAreas(
                     return null;
                 }
             } else if (isSocial) {
+                if (isPlaceholderTopic) {
+                    if (socialBaseTopics.length > 0) {
+                        topic = toSocialDetailedWeakness(
+                            socialBaseTopics[Math.min(index, socialBaseTopics.length - 1)],
+                            socialBaseTopics,
+                            index
+                        );
+                    } else {
+                        return null;
+                    }
+                } else {
                 const matchedSocial = findCoveredTopicMatch(rawTopic, socialBaseTopics);
                 if (matchedSocial) {
                     topic = toSocialDetailedWeakness(matchedSocial, socialBaseTopics, index);
@@ -471,6 +486,7 @@ function sanitizeWeaknessAreas(
                     topic = toSocialSpecificWeakness(rawTopic, socialBaseTopics, index);
                 } else {
                     topic = toSocialDetailedWeakness(rawTopic, socialBaseTopics, index);
+                }
                 }
             } else {
                 const matchedNonSocial = findCoveredTopicMatch(rawTopic, nonSocialBaseTopics);
