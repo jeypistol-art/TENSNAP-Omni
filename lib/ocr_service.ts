@@ -1,6 +1,7 @@
 import type OpenAI from "openai";
 import { getOpenAIClient, runOpenAIWithRetry, serializeOpenAIError } from "@/lib/openai_client";
 import { detectSubjectCategory, type SubjectCategory } from "@/lib/subjects";
+import mathCurriculumElem from "@/lib/dictionaries/math_curriculum_elem.json";
 
 const openai = getOpenAIClient();
 
@@ -198,6 +199,8 @@ function isPlaceholderUnit(unit: string): boolean {
 }
 
 type DomainHint = { domain: string; keywords: string[] };
+type MathCurriculumEntry = { domain?: string; unit?: string; keywords?: string[]; aliases?: string[] };
+type MathCurriculumDictionary = { grades?: Record<string, MathCurriculumEntry[]> };
 
 function detectDomainByHints(unit: string, hints: DomainHint[]): string | null {
     const normalized = normalizeTopicLabel(unit).toLowerCase();
@@ -227,6 +230,46 @@ const MATH_DOMAIN_HINTS: DomainHint[] = [
         keywords: ["場合の数", "確率", "標本", "統計", "度数分布", "中央値", "平均値", "代表値", "箱ひげ図", "分散", "標準偏差", "相関", "データの活用", "期待値"]
     },
 ];
+
+function buildMathHintsFromCurriculumDictionary(dict: MathCurriculumDictionary): DomainHint[] {
+    const domainKeywords = new Map<string, Set<string>>();
+    const grades = dict?.grades || {};
+    for (const entries of Object.values(grades)) {
+        if (!Array.isArray(entries)) continue;
+        for (const entry of entries) {
+            const domain = normalizeTopicLabel(String(entry?.domain || ""));
+            if (!domain) continue;
+            if (!domainKeywords.has(domain)) {
+                domainKeywords.set(domain, new Set<string>());
+            }
+            const bucket = domainKeywords.get(domain)!;
+            const unit = normalizeTopicLabel(String(entry?.unit || ""));
+            if (unit) bucket.add(unit);
+            if (Array.isArray(entry?.keywords)) {
+                for (const k of entry.keywords) {
+                    const kw = normalizeTopicLabel(String(k || ""));
+                    if (kw) bucket.add(kw);
+                }
+            }
+            if (Array.isArray(entry?.aliases)) {
+                for (const a of entry.aliases) {
+                    const al = normalizeTopicLabel(String(a || ""));
+                    if (al) bucket.add(al);
+                }
+            }
+        }
+    }
+
+    return Array.from(domainKeywords.entries()).map(([domain, keywords]) => ({
+        domain,
+        keywords: Array.from(keywords),
+    }));
+}
+
+const MATH_CURRICULUM_HINTS = buildMathHintsFromCurriculumDictionary(
+    mathCurriculumElem as MathCurriculumDictionary
+);
+const MATH_ALL_HINTS: DomainHint[] = [...MATH_CURRICULUM_HINTS, ...MATH_DOMAIN_HINTS];
 
 const ENGLISH_DOMAIN_HINTS: DomainHint[] = [
     {
@@ -314,7 +357,7 @@ function inferDomainByCategory(unit: string, category: SubjectCategory): string 
     if (!unit) return null;
     switch (category) {
         case "math":
-            return detectDomainByHints(unit, MATH_DOMAIN_HINTS) ?? "数学";
+            return detectDomainByHints(unit, MATH_ALL_HINTS) ?? "数学";
         case "english":
             return detectDomainByHints(unit, ENGLISH_DOMAIN_HINTS) ?? "英語";
         case "japanese":
