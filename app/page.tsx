@@ -218,12 +218,12 @@ function SchoolLanding() {
     {
       icon: <LineChart className="h-6 w-6 text-blue-700" />,
       title: "データの資産化",
-      desc: "担当講師が変わっても、学年が上がっても、AI学習進捗可視化ツールとして学習文脈を継承。小1から高3までのつまずきを一本の線でつなぎます。",
+      desc: "生徒名を登録するだけで、学習可視化ツールとしてデータベースを作成。小1から高3までのつまずきを一本の線でつなぎます。",
     },
     {
       icon: <FileText className="h-6 w-6 text-blue-700" />,
-      title: "面談の武器",
-      desc: "期間成長レポートとPDF出力で「中学に入って苦労しないために、今どこを固めるか」を根拠提示。保護者面談の説得力を強化します。",
+      title: "面談の武器も一発",
+      desc: "生成される期間成長レポートは、そのまま印刷して保護者への面談資料に使えるクオリティ。面談に必要な資料作成の時間を97.5％削減！",
     },
     {
       icon: <Layout className="h-6 w-6 text-blue-700" />,
@@ -390,6 +390,60 @@ function SchoolLanding() {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="py-24 bg-muted/30 border-b border-border">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl font-extrabold text-foreground sm:text-4xl mb-4">
+                期間成長レポートの例
+              </h2>
+              <p className="text-xl text-muted-foreground">
+                各科目の実際の出力レポート（PDF）をご覧いただけます。
+              </p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+              {[
+                { name: "算数/数学", file: "sugaku_result.pdf", color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-200" },
+                { name: "英語/外国語", file: "eigo_result.pdf", color: "text-rose-600", bg: "bg-rose-50", border: "border-rose-200" },
+                { name: "国語", file: "kokugo_result.pdf", color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-200" },
+                { name: "理科/科学/理数", file: "rika_result.pdf", color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-200" },
+                { name: "社会/地理/歴史", file: "syakai_result.pdf", color: "text-purple-600", bg: "bg-purple-50", border: "border-purple-200" },
+              ].map((subject, i) => (
+                <a
+                  key={i}
+                  href={`/tensnap_result/${subject.file}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`flex flex-col items-center justify-center p-6 rounded-2xl border ${subject.border} ${subject.bg} hover:shadow-lg transition-all hover:-translate-y-1 bg-white`}
+                >
+                  <FileText className={`h-8 w-8 mb-3 ${subject.color}`} />
+                  <span className={`font-bold ${subject.color} text-center`}>{subject.name}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="py-24 bg-background border-b border-border">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 className="text-3xl font-extrabold text-foreground sm:text-4xl mb-12">
+              直感的な操作で、即座に分析
+            </h2>
+            <div className="w-full max-w-4xl mx-auto rounded-[2rem] overflow-hidden shadow-2xl border-[6px] border-white relative bg-slate-100">
+              <div className="aspect-video relative w-full h-full">
+                <iframe
+                  className="absolute top-0 left-0 w-full h-full"
+                  src="https://www.youtube.com/embed/n85xb4WF7QQ?si=FPYVnYe-ZGX9L1i0&rel=0&modestbranding=1"
+                  title="使い方動画 | TENsNAP・Omni"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allowFullScreen>
+                </iframe>
               </div>
             </div>
           </div>
