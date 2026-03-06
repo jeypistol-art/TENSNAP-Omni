@@ -88,7 +88,7 @@ Instructions:
 4.1 **社会/地理/歴史の単元抽出ルール (Specific Topic Extraction)**:
    - 教科が「社会/地理/歴史」の場合、covered_topics には設問本文に登場する具体語を優先して入れよ。
    - 具体語の例: 国名、地域名、時代名、歴史用語、地理用語（例: 「ブラジル」「関東地方」「江戸時代」「三権分立」）。
-   - 「基礎知識」「地理的知識」「歴史的出来事」「地理分野」などの抽象語は禁止。
+   - 「基礎知識」「地理的知識」「歴史的出来事」「地理分野」「国際関係」「日本の歴史」などの抽象語は禁止。
    - 3〜6件程度、短い名詞句で出力せよ（長文説明は不要）。
    - 特に、誤答（×/斜線）または部分点（△）が付いた設問の内容から語句を優先して抽出せよ。
    - weakness_areas.topic も同様に、誤答・部分点設問の「内容語句」をそのまま短句で記載せよ。
@@ -252,7 +252,7 @@ function isLowValueUnit(unit: string, category: SubjectCategory): boolean {
         if (/^内容理解$/.test(u)) return true;
     }
     if (category === "social") {
-        if (/^(社会|社会分野|社会科|地理|歴史|公民|知識|理解|基礎|復習|内容理解)$/.test(u)) return true;
+        if (/^(社会|社会分野|社会科|地理|歴史|公民|知識|理解|基礎|復習|内容理解|地理的知識|歴史的出来事|歴史の出来事|国際関係|日本の歴史)$/.test(u)) return true;
     }
     return false;
 }
@@ -344,14 +344,16 @@ function extractSocialKeywordSeed(text: string): string {
 }
 
 function isSpecificSocialKeyword(topic: string): boolean {
-    const t = normalizeTopicLabel(topic);
+    const { unit } = splitSocialDomainTopic(topic);
+    const t = normalizeTopicLabel(unit || topic);
     if (!t || t.length < 2) return false;
 
     const abstractOnly = /(基礎知識|応用知識|地理的知識|歴史的出来事|歴史的事件|知識|理解|課題|分野|読み取り|復習|応用力|基礎力|思考力|判断力|表現力)/;
     const properHint = /(時代|条約|改革|戦争|内閣|幕府|憲法|地方|地域|都道府県|地形|気候|産業|貿易|平野|盆地|海流|モンスーン|EU|ASEAN|NATO|北海道|東北|関東|中部|近畿|中国|四国|九州|日本|世界|アジア|ヨーロッパ|アフリカ|オセアニア|北アメリカ|南アメリカ|ブラジル|アメリカ|中国|ロシア|インド|江戸|明治|大正|昭和|平成|令和)/;
 
-    if (properHint.test(t)) return true;
     if (abstractOnly.test(t)) return false;
+    if (isLowValueUnit(t, "social")) return false;
+    if (properHint.test(t)) return true;
     // Keep short noun-like Japanese terms as fallback when not abstract.
     return /^[\p{sc=Han}\p{sc=Hiragana}\p{sc=Katakana}A-Za-z0-9・\-]{2,20}$/u.test(t);
 }
