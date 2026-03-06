@@ -84,12 +84,12 @@ export async function GET(request: Request) {
         let paramIndex = 3;
 
         if (startDate) {
-            dateCondition += ` AND test_date >= $${paramIndex}`;
+            dateCondition += ` AND COALESCE(test_date, created_at::date) >= $${paramIndex}`;
             params.push(startDate);
             paramIndex++;
         }
         if (endDate) {
-            dateCondition += ` AND test_date <= $${paramIndex}`;
+            dateCondition += ` AND COALESCE(test_date, created_at::date) <= $${paramIndex}`;
             params.push(endDate);
             paramIndex++;
         }
@@ -102,7 +102,7 @@ export async function GET(request: Request) {
                 details 
              FROM analyses 
              WHERE student_id = $1 AND user_id = $2 ${dateCondition}
-             ORDER BY test_date ASC, created_at ASC`,
+             ORDER BY COALESCE(test_date, created_at::date) ASC, created_at ASC`,
             params
         );
 

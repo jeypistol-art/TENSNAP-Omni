@@ -91,9 +91,16 @@ export default function StudentHistory({ studentId, studentName, targetSchool }:
 
     const formatDateForInput = (value?: string) => {
         if (!value) return "";
+        const direct = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (direct) return `${direct[1]}-${direct[2]}-${direct[3]}`;
+
         const date = new Date(value);
         if (Number.isNaN(date.getTime())) return "";
-        return date.toISOString().split("T")[0];
+
+        const yyyy = date.getFullYear();
+        const mm = String(date.getMonth() + 1).padStart(2, "0");
+        const dd = String(date.getDate()).padStart(2, "0");
+        return `${yyyy}-${mm}-${dd}`;
     };
 
     const formatDateForDisplay = (value?: string) => {
