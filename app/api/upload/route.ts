@@ -5,14 +5,8 @@ import { getTenantId } from "@/lib/tenant";
 import { query } from "@/lib/db";
 import { analyzeImage } from "@/lib/ocr_service";
 import { getR2AssetsBucket, R2_ASSETS_BUCKET_NAME, uploadPreparedFilesToR2 } from "@/lib/r2_assets";
-import { getOrganizationAccountPlan, getRequestedPlanFromRequest } from "@/lib/accountPlan";
+import { getRequestedPlanFromRequest } from "@/lib/accountPlan";
 import { DEFAULT_SUBJECT, normalizeSubjectLabel } from "@/lib/subjects";
-
-async function resolveEffectivePlan(request: Request, orgId: string): Promise<"school" | "family"> {
-    const requestedPlan = getRequestedPlanFromRequest(request);
-    const orgPlan = await getOrganizationAccountPlan(orgId);
-    return requestedPlan === "family" || orgPlan === "family" ? "family" : "school";
-}
 
 export async function POST(request: Request) {
     try {
@@ -24,7 +18,7 @@ export async function POST(request: Request) {
         // 1. Resolve Tenant
         const requestedPlan = getRequestedPlanFromRequest(request);
         const tenantId = await getTenantId(session.user.id, session.user.email, requestedPlan);
-        const effectivePlan = await resolveEffectivePlan(request, tenantId);
+        const effectivePlan = requestedPlan;
 
         // 2. Process File & Context
         const formData = await request.formData();
