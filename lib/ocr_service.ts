@@ -189,11 +189,116 @@ function splitDomainTopic(topic: string): { domain: string | null; unit: string 
     return { domain: null, unit: normalizeTopicLabel(normalized) };
 }
 
+type DomainHint = { domain: string; keywords: string[] };
+
+function detectDomainByHints(unit: string, hints: DomainHint[]): string | null {
+    const normalized = normalizeTopicLabel(unit).toLowerCase();
+    for (const hint of hints) {
+        if (hint.keywords.some((k) => normalized.includes(k.toLowerCase()))) {
+            return hint.domain;
+        }
+    }
+    return null;
+}
+
+const MATH_DOMAIN_HINTS: DomainHint[] = [
+    {
+        domain: "計算・数",
+        keywords: ["整数", "正の数", "負の数", "四則", "分数", "小数", "約数", "倍数", "素数", "割合", "比", "速さ", "単位量", "小数計算", "暗算"]
+    },
+    {
+        domain: "代数",
+        keywords: ["文字式", "方程式", "連立方程式", "不等式", "一次関数", "二次関数", "関数", "比例", "反比例", "因数分解", "展開", "平方根", "式の計算", "ベクトル", "数列", "指数", "対数", "三角関数", "微分", "積分"]
+    },
+    {
+        domain: "図形",
+        keywords: ["平面図形", "空間図形", "角度", "合同", "相似", "円", "円周角", "三平方", "面積", "体積", "作図", "証明", "座標平面", "三角形", "四角形", "多角形", "立体"]
+    },
+    {
+        domain: "確率・統計",
+        keywords: ["場合の数", "確率", "標本", "統計", "度数分布", "中央値", "平均値", "代表値", "箱ひげ図", "分散", "標準偏差", "相関", "データの活用", "期待値"]
+    },
+];
+
+const ENGLISH_DOMAIN_HINTS: DomainHint[] = [
+    {
+        domain: "語彙",
+        keywords: ["語彙", "単語", "熟語", "イディオム", "連語", "派生語", "接頭辞", "接尾辞", "英単語", "vocabulary", "idiom"]
+    },
+    {
+        domain: "文法",
+        keywords: ["文法", "語順", "時制", "be動詞", "一般動詞", "助動詞", "不定詞", "動名詞", "分詞", "分詞構文", "受動態", "関係代名詞", "関係副詞", "比較", "仮定法", "現在完了", "品詞", "前置詞", "接続詞", "英文法"]
+    },
+    {
+        domain: "読解",
+        keywords: ["読解", "長文", "本文", "内容一致", "要旨", "段落", "指示語", "空所補充", "summary", "reading"]
+    },
+    {
+        domain: "英作文・表現",
+        keywords: ["英作文", "自由英作文", "和文英訳", "英訳", "和訳", "会話表現", "スピーチ", "ライティング", "writing", "expression"]
+    },
+];
+
+const JAPANESE_DOMAIN_HINTS: DomainHint[] = [
+    {
+        domain: "語彙・漢字",
+        keywords: ["漢字", "語彙", "語句", "同音異義語", "同訓異字", "四字熟語", "ことわざ", "慣用句", "類義語", "対義語", "熟字訓"]
+    },
+    {
+        domain: "文法",
+        keywords: ["文法", "品詞", "活用", "敬語", "助詞", "助動詞", "連用形", "連体形", "文節", "単語", "修飾語"]
+    },
+    {
+        domain: "読解",
+        keywords: ["読解", "説明文", "論説文", "随筆", "物語", "小説", "文学的文章", "要旨", "段落", "主題", "心情", "表現技法", "詩"]
+    },
+    {
+        domain: "古文・漢文",
+        keywords: ["古文", "古典", "漢文", "返り点", "レ点", "訓読", "歴史的仮名遣い", "枕草子", "徒然草", "論語"]
+    },
+];
+
+const SCIENCE_DOMAIN_HINTS: DomainHint[] = [
+    {
+        domain: "物理",
+        keywords: ["力", "運動", "仕事", "エネルギー", "電流", "電圧", "電力", "回路", "抵抗", "磁界", "光", "音", "波", "圧力", "浮力", "運動方程式", "熱量"]
+    },
+    {
+        domain: "化学",
+        keywords: ["化学", "原子", "分子", "イオン", "中和", "酸", "アルカリ", "気体", "水溶液", "化学反応", "質量保存", "モル", "電池", "酸化", "還元", "金属", "無機", "有機"]
+    },
+    {
+        domain: "生物",
+        keywords: ["生物", "細胞", "遺伝", "dna", "染色体", "生態系", "光合成", "呼吸", "植物", "動物", "恒常性", "神経", "感覚器", "酵素", "進化"]
+    },
+    {
+        domain: "地学",
+        keywords: ["地層", "地震", "火山", "天気", "気象", "前線", "気圧", "天体", "星", "月", "太陽", "惑星", "地球", "プレート", "岩石", "海流", "季節風"]
+    },
+];
+
+const SOCIAL_CIVICS_HINTS = [
+    "憲法", "国会", "内閣", "裁判所", "三権分立", "人権", "社会権", "自由権", "参政権", "地方自治", "条例", "請願", "選挙", "政党",
+    "財政", "税", "租税", "金融", "日銀", "市場経済", "需要", "供給", "独占", "労働", "社会保障", "国際連合", "国連", "安全保障",
+    "PKO", "条約", "ASEAN", "EU", "NATO", "WTO", "SDGs", "主権", "民主主義"
+];
+
+const SOCIAL_HISTORY_HINTS = [
+    "縄文", "弥生", "古墳", "飛鳥", "奈良", "平安", "鎌倉", "室町", "安土桃山", "江戸", "明治", "大正", "昭和", "平成", "令和",
+    "幕府", "将軍", "大化の改新", "承久", "応仁", "黒船", "明治維新", "日清", "日露", "第一次世界大戦", "第二次世界大戦", "冷戦",
+    "戦後改革", "条約改正", "殖産興業", "文明開化", "太平洋戦争", "年号", "歴史"
+];
+
+const SOCIAL_GEOGRAPHY_HINTS = [
+    "地図", "地形", "緯度", "経度", "時差", "気候", "地域", "地方", "都道府県", "平野", "盆地", "山脈", "河川", "海流", "季節風",
+    "人口", "都市", "貿易", "輸出", "輸入", "産業", "農業", "工業", "漁業", "資源", "エネルギー", "雨温図", "統計", "地理"
+];
+
 function inferSocialDomain(unit: string): "地理" | "歴史" | "公民" | null {
     if (!unit) return null;
-    if (isCivicsKeyword(unit)) return "公民";
-    if (/(時代|戦争|幕府|改革|明治|大正|昭和|平成|令和|縄文|弥生|古墳|飛鳥|奈良|平安|鎌倉|室町|安土桃山|江戸|日清|日露|第一次世界大戦|第二次世界大戦)/.test(unit)) return "歴史";
-    if (/(地図|地形|気候|都道府県|地域|地方|平野|盆地|山脈|海流|統計|雨温図|人口|都市|貿易|産業|農業|工業|三大洋|サンフランシスコ|ヒマラヤ|オーストラリア)/.test(unit)) return "地理";
+    if (isCivicsKeyword(unit) || SOCIAL_CIVICS_HINTS.some((k) => unit.includes(k))) return "公民";
+    if (SOCIAL_HISTORY_HINTS.some((k) => unit.includes(k))) return "歴史";
+    if (SOCIAL_GEOGRAPHY_HINTS.some((k) => unit.includes(k))) return "地理";
     return null;
 }
 
@@ -201,30 +306,13 @@ function inferDomainByCategory(unit: string, category: SubjectCategory): string 
     if (!unit) return null;
     switch (category) {
         case "math":
-            if (/(方程式|連立方程式|関数|一次関数|二次関数|比例|反比例|式|計算|展開|因数分解|代数|確率|場合の数|図形|合同|相似|三平方|円|角度|面積|体積|整数)/.test(unit)) {
-                if (/(図形|合同|相似|三平方|円|角度|面積|体積)/.test(unit)) return "図形";
-                if (/(確率|場合の数|データ|統計)/.test(unit)) return "確率・統計";
-                return "代数";
-            }
-            return "数学";
+            return detectDomainByHints(unit, MATH_DOMAIN_HINTS) ?? "数学";
         case "english":
-            if (/(文法|時制|受動態|助動詞|不定詞|動名詞|関係代名詞|比較|語順)/.test(unit)) return "文法";
-            if (/(読解|長文|本文|内容一致)/.test(unit)) return "読解";
-            if (/(語彙|単語|熟語|イディオム)/.test(unit)) return "語彙";
-            if (/(英作文|作文|和訳|英訳)/.test(unit)) return "英作文";
-            return "英語";
+            return detectDomainByHints(unit, ENGLISH_DOMAIN_HINTS) ?? "英語";
         case "japanese":
-            if (/(漢字|語句|語彙|ことわざ|慣用句)/.test(unit)) return "語彙・漢字";
-            if (/(文法|品詞|敬語|活用)/.test(unit)) return "文法";
-            if (/(読解|説明文|論説文|小説|文学的文章)/.test(unit)) return "読解";
-            if (/(古文|漢文)/.test(unit)) return "古文・漢文";
-            return "国語";
+            return detectDomainByHints(unit, JAPANESE_DOMAIN_HINTS) ?? "国語";
         case "science":
-            if (/(力|運動|電流|電圧|回路|光|音|仕事|エネルギー|圧力)/.test(unit)) return "物理";
-            if (/(化学|原子|分子|イオン|中和|酸|アルカリ|気体|水溶液|金属)/.test(unit)) return "化学";
-            if (/(生物|細胞|遺伝|生態系|光合成|呼吸|植物|動物)/.test(unit)) return "生物";
-            if (/(地層|天気|気象|地震|火山|天体|星|月|地球)/.test(unit)) return "地学";
-            return "理科";
+            return detectDomainByHints(unit, SCIENCE_DOMAIN_HINTS) ?? "理科";
         case "social":
             return inferSocialDomain(unit) ?? "社会";
         default:
