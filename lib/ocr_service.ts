@@ -3,6 +3,7 @@ import { getOpenAIClient, runOpenAIWithRetry, serializeOpenAIError } from "@/lib
 import { detectSubjectCategory, type SubjectCategory } from "@/lib/subjects";
 import mathCurriculumElem from "@/lib/dictionaries/math_curriculum_elem.json";
 import mathCurriculumK12 from "@/lib/dictionaries/math_curriculum_k12.json";
+import scienceCurriculumK12 from "@/lib/dictionaries/science_curriculum_k12.json";
 
 const openai = getOpenAIClient();
 
@@ -330,6 +331,11 @@ const SCIENCE_DOMAIN_HINTS: DomainHint[] = [
     },
 ];
 
+const SCIENCE_CURRICULUM_HINTS = buildMathHintsFromCurriculumDictionary(
+    scienceCurriculumK12 as MathCurriculumDictionary
+);
+const SCIENCE_ALL_HINTS: DomainHint[] = [...SCIENCE_CURRICULUM_HINTS, ...SCIENCE_DOMAIN_HINTS];
+
 const SOCIAL_CIVICS_HINTS = [
     "憲法", "国会", "内閣", "裁判所", "三権分立", "人権", "社会権", "自由権", "参政権", "地方自治", "条例", "請願", "選挙", "政党",
     "財政", "税", "租税", "金融", "日銀", "市場経済", "需要", "供給", "独占", "労働", "社会保障", "国際連合", "国連", "安全保障",
@@ -365,7 +371,7 @@ function inferDomainByCategory(unit: string, category: SubjectCategory): string 
         case "japanese":
             return detectDomainByHints(unit, JAPANESE_DOMAIN_HINTS) ?? "国語";
         case "science":
-            return detectDomainByHints(unit, SCIENCE_DOMAIN_HINTS) ?? "理科";
+            return detectDomainByHints(unit, SCIENCE_ALL_HINTS) ?? "理科";
         case "social":
             return inferSocialDomain(unit) ?? "社会";
         default:
