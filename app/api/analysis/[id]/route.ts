@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { query } from "@/lib/db";
-import { getOrganizationAccountPlan, getRequestedPlanFromRequest } from "@/lib/accountPlan";
+import { getRequestedPlanFromRequest } from "@/lib/accountPlan";
 import { getTenantId } from "@/lib/tenant";
 import { normalizeSubjectLabel } from "@/lib/subjects";
 
@@ -18,9 +18,8 @@ export async function PATCH(
         const { studentId, unitName, testDate, score, subject, comprehensionScore } = await request.json();
         const normalizedSubject = subject ? normalizeSubjectLabel(subject) : null;
         const requestedPlan = getRequestedPlanFromRequest(request);
-        const orgId = await getTenantId(session.user.id, session.user.email, requestedPlan);
-        const orgPlan = await getOrganizationAccountPlan(orgId);
-        const isFamilyPlan = requestedPlan === "family" || orgPlan === "family";
+        await getTenantId(session.user.id, session.user.email, requestedPlan);
+        const isFamilyPlan = requestedPlan === "family";
 
         if (isFamilyPlan && studentId) {
             const primaryStudent = await query<{ id: string }>(
