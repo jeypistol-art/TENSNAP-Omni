@@ -5,7 +5,7 @@ import { query } from "@/lib/db";
 import { getOpenAIClient, runOpenAIWithRetry, serializeOpenAIError } from "@/lib/openai_client";
 import { getRequestedPlanFromRequest } from "@/lib/accountPlan";
 import { getTenantId } from "@/lib/tenant";
-import { normalizeSubjectLabel, subjectAliasesForFilter } from "@/lib/subjects";
+import { isSubjectMatch, normalizeSubjectLabel } from "@/lib/subjects";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -24,6 +24,7 @@ type Details = {
 };
 type AnalysisRecord = {
     unit_name: string | null;
+    subject: string | null;
     details: Details | string | null;
 };
 
@@ -92,17 +93,12 @@ export async function GET(request: Request) {
             params.push(endDate);
             paramIndex++;
         }
-        if (subject && subject !== "all") {
-            dateCondition += ` AND subject = ANY($${paramIndex})`;
-            params.push(subjectAliasesForFilter(subject));
-            paramIndex++;
-        }
-
         // Fetch Data
         // Order by test_date ASC to determine "Start" vs "Current"
         const result = await query<AnalysisRecord>(
             `SELECT 
                 unit_name,
+                subject,
                 details 
              FROM analyses 
              WHERE student_id = $1 AND user_id = $2 ${dateCondition}
@@ -110,10 +106,12 @@ export async function GET(request: Request) {
             params
         );
 
-        const records = result.rows.map((r) => ({
-            ...r,
-            details: safeParseJson<Details>(r.details, {}),
-        }));
+        const records = result.rows
+            .map((r) => ({
+                ...r,
+                details: safeParseJson<Details>(r.details, {}),
+            }))
+            .filter((r) => !subject || subject === "all" || isSubjectMatch(r.subject ?? undefined, subject));
 
         if (records.length === 0) {
             return NextResponse.json({
