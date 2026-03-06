@@ -2,6 +2,7 @@ import type OpenAI from "openai";
 import { getOpenAIClient, runOpenAIWithRetry, serializeOpenAIError } from "@/lib/openai_client";
 import { detectSubjectCategory, type SubjectCategory } from "@/lib/subjects";
 import mathCurriculumElem from "@/lib/dictionaries/math_curriculum_elem.json";
+import mathCurriculumK12 from "@/lib/dictionaries/math_curriculum_k12.json";
 
 const openai = getOpenAIClient();
 
@@ -266,9 +267,10 @@ function buildMathHintsFromCurriculumDictionary(dict: MathCurriculumDictionary):
     }));
 }
 
-const MATH_CURRICULUM_HINTS = buildMathHintsFromCurriculumDictionary(
-    mathCurriculumElem as MathCurriculumDictionary
-);
+const MATH_CURRICULUM_HINTS = [
+    ...buildMathHintsFromCurriculumDictionary(mathCurriculumElem as MathCurriculumDictionary),
+    ...buildMathHintsFromCurriculumDictionary(mathCurriculumK12 as MathCurriculumDictionary),
+];
 const MATH_ALL_HINTS: DomainHint[] = [...MATH_CURRICULUM_HINTS, ...MATH_DOMAIN_HINTS];
 
 const ENGLISH_DOMAIN_HINTS: DomainHint[] = [
