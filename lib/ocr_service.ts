@@ -165,13 +165,20 @@ function isCivicsKeyword(text: string): boolean {
 }
 
 function splitSocialDomainTopic(topic: string): { domain: "地理" | "歴史" | "公民" | null; unit: string } {
-    const normalized = normalizeTopicLabel(topic).replace(/：/g, ":");
-    const m = normalized.match(/^(地理|歴史|公民)\s*:\s*(.+)$/);
-    if (m?.[1] && m?.[2]) {
-        const domain = m[1] as "地理" | "歴史" | "公民";
-        return { domain, unit: normalizeTopicLabel(m[2]) };
+    let normalized = normalizeTopicLabel(topic).replace(/：/g, ":");
+    let domain: "地理" | "歴史" | "公民" | null = null;
+
+    // Strip chained prefixes like "社会:社会:国際関係" while preserving specific domains.
+    while (true) {
+        const m = normalized.match(/^(地理|歴史|公民|社会)\s*:\s*(.+)$/);
+        if (!m?.[1] || !m?.[2]) break;
+        if (m[1] !== "社会") {
+            domain = m[1] as "地理" | "歴史" | "公民";
+        }
+        normalized = normalizeTopicLabel(m[2]);
     }
-    return { domain: null, unit: normalizeTopicLabel(normalized) };
+
+    return { domain, unit: normalizeTopicLabel(normalized) };
 }
 
 function splitDomainTopic(topic: string): { domain: string | null; unit: string } {
@@ -244,6 +251,9 @@ function isLowValueUnit(unit: string, category: SubjectCategory): boolean {
         if (/^(本文|文章)\s*(の内容|理解)?$/.test(u)) return true;
         if (/^内容理解$/.test(u)) return true;
     }
+    if (category === "social") {
+        if (/^(社会|社会分野|社会科|地理|歴史|公民|知識|理解|基礎|復習|内容理解)$/.test(u)) return true;
+    }
     return false;
 }
 
@@ -254,7 +264,7 @@ function isLowValueTopic(topic: string, category: SubjectCategory): boolean {
 
 function toSocialDomainTopic(topic: string): string {
     const { domain, unit } = splitSocialDomainTopic(topic);
-    if (!unit) return "";
+    if (!unit || isLowValueUnit(unit, "social")) return "";
     const resolvedDomain = domain ?? inferSocialDomain(unit);
     return resolvedDomain ? `${resolvedDomain}：${unit}` : `社会：${unit}`;
 }
@@ -317,7 +327,9 @@ function toSocialDetailedWeakness(baseTopic: string, coveredTopics: string[], in
 
     const fallback = coveredTopics[index % Math.max(coveredTopics.length, 1)];
     if (fallback) return toSocialDomainTopic(fallback) || fallback;
-    return toSocialDomainTopic(baseTopic) || baseTopic;
+    const lastResort = toSocialDomainTopic(baseTopic);
+    if (lastResort) return lastResort;
+    return "";
 }
 
 function toSocialSpecificWeakness(topic: string, coveredTopics: string[], index: number): string {
