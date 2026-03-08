@@ -461,10 +461,27 @@ function isUsableSocialCurriculumUnit(entry: SocialCurriculumUnitIndexEntry): bo
     return !/(学習単元|学習活動|典型的な活動|よく取り上げられる事柄例|変更になる場合)/.test(unit);
 }
 
+function isShadowedSocialCurriculumUnit(
+    entry: SocialCurriculumUnitIndexEntry,
+    entries: SocialCurriculumUnitIndexEntry[]
+): boolean {
+    const unit = normalizeTopicLabel(entry.unit);
+    if (!unit) return false;
+
+    return entries.some((other) => {
+        if (other === entry) return false;
+        if (other.domain !== entry.domain) return false;
+        const otherUnit = normalizeTopicLabel(other.unit);
+        if (!otherUnit || otherUnit.length <= unit.length) return false;
+        return otherUnit.startsWith(unit);
+    });
+}
+
 function getEligibleSocialCurriculumUnits(schoolStage?: SchoolStage | null): SocialCurriculumUnitIndexEntry[] {
-    return SOCIAL_CURRICULUM_UNITS.filter((entry) =>
+    const eligible = SOCIAL_CURRICULUM_UNITS.filter((entry) =>
         (!schoolStage || entry.stage === schoolStage) && isUsableSocialCurriculumUnit(entry)
     );
+    return eligible.filter((entry) => !isShadowedSocialCurriculumUnit(entry, eligible));
 }
 
 function collectTopicBigrams(value: string): string[] {
@@ -516,7 +533,7 @@ function findSocialCurriculumMatches(topic: string, schoolStage?: SchoolStage | 
     return getEligibleSocialCurriculumUnits(schoolStage)
         .map((entry) => ({ entry, score: scoreSocialCurriculumEntry(candidate, entry) }))
         .filter(({ score }) => score >= 5)
-        .sort((left, right) => right.score - left.score || left.entry.unit.length - right.entry.unit.length)
+        .sort((left, right) => right.score - left.score || right.entry.unit.length - left.entry.unit.length)
         .map(({ entry }) => entry);
 }
 
