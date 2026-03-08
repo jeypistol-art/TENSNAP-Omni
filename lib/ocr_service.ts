@@ -975,6 +975,65 @@ function limitWeaknessByMistakeDensity(
     return weaknessAreas;
 }
 
+async function extractEnglishSpecificTopics(
+    answerSheets: { buffer: Buffer; mimeType: string }[],
+    problemSheets?: { buffer: Buffer; mimeType: string }[]
+): Promise<string[]> {
+    const prompt = [
+        "あなたは中学英語の単元抽出器です。",
+        "答案用紙と問題用紙を見て、誤答または部分点に関係する具体的な単元名を3〜6件だけ JSON で返してください。",
+        "抽象語は禁止です。『文法』『語彙』『読解』『表現』だけで終わる出力は禁止。",
+        "本文の話題語は禁止です。『スポーツ』『祖母』『京都』『バディベンチ』のような内容語は出力しないでください。",
+        "単元名の例: 『三人称単数現在形（肯定文）』『SVOC（C=形容詞）』『want / try / need など + to』『接続詞 because』『疑問詞 + to』『現在完了形（継続用法）』『関係代名詞 who』",
+        "出力形式: {\"topics\":[\"単元1\",\"単元2\"]}",
+    ].join("\n");
+
+    const userContent: OpenAI.Chat.ChatCompletionContentPart[] = [{ type: "text", text: prompt }];
+    for (const sheet of answerSheets) {
+        userContent.push({
+            type: "image_url",
+            image_url: { url: `data:${sheet.mimeType};base64,${sheet.buffer.toString("base64")}` }
+        });
+    }
+    for (const sheet of problemSheets || []) {
+        userContent.push({
+            type: "image_url",
+            image_url: { url: `data:${sheet.mimeType};base64,${sheet.buffer.toString("base64")}` }
+        });
+    }
+
+    try {
+        const response = await runOpenAIWithRetry(() =>
+            openai.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages: [
+                    { role: "system", content: "中学英語の具体単元のみを抽出する。JSON以外は返さない。" },
+                    { role: "user", content: userContent }
+                ],
+                response_format: { type: "json_object" },
+                temperature: 0.1,
+                top_p: 0.1,
+            }, {
+                timeout: 120000,
+            })
+        );
+        const content = response.choices[0].message.content;
+        if (!content) return [];
+        const parsed = JSON.parse(content) as { topics?: string[] };
+        return Array.from(
+            new Map(
+                (Array.isArray(parsed.topics) ? parsed.topics : [])
+                    .map((t) => inferEnglishTopicFromText(String(t || "")) || resolveEnglishCurriculumUnit(String(t || "")) || toEnglishDomainTopic(String(t || "")))
+                    .filter(Boolean)
+                    .filter(isSpecificEnglishTopic)
+                    .map((t) => [canonicalTopic(t), t] as const)
+            ).values()
+        ).slice(0, 6);
+    } catch {
+        return [];
+    }
+}
+
 export async function analyzeImage(
     answerSheets: { buffer: Buffer; mimeType: string }[],
     context?: {
@@ -1065,6 +1124,14 @@ export async function analyzeImage(
         }
         if (parsed.insight_conclusion) {
             parsed.insight_conclusion = replaceForbidden(parsed.insight_conclusion);
+        }
+
+        if (isEnglish) {
+            const extractedEnglishTopics = await extractEnglishSpecificTopics(answerSheets, context?.problemSheets);
+            if (extractedEnglishTopics.length > 0) {
+                parsed.covered_topics = Array.from(new Set([...(parsed.covered_topics || []), ...extractedEnglishTopics]));
+                parsed.wrong_question_topics = Array.from(new Set([...(parsed.wrong_question_topics || []), ...extractedEnglishTopics]));
+            }
         }
 
         const finalizeTopicAndWeakness = () => {
