@@ -457,8 +457,9 @@ function isUsableSocialCurriculumUnit(entry: SocialCurriculumUnitIndexEntry): bo
     if (!unit) return false;
     if (unit.length > 24) return false;
     if (/^(社会|社会科|社会分野|社会 \d年|小学単元リスト|高校単元リスト)$/.test(unit)) return false;
-    if (/(人権尊重の社会形成|世界平和の実現と人類の福祉の増大|人間の尊重と基本|人間の尊重と$|屋台村方式|個人と社会の関わり活|高度経済成長期以降の社会の現)/.test(unit)) return false;
+    if (/(人権尊重の社会形成|世界平和の実現と人類の福祉の増大|人間の尊重と基本|人間の尊重と$|屋台村方式|個人と社会の関わり活|高度経済成長期以降の社会の現|時事問題に興味・関心を持ち、|江戸幕府の政策が、政治の安定にとってどのよ|政策作り、投票等のロールプレ)/.test(unit)) return false;
     if (/[。]/.test(unit)) return false;
+    if (/[、,]$/.test(unit)) return false;
     if (/[、,]/.test(unit) && /(発表する|まとめる|設定する|調べる|考える|行う|知る)$/.test(unit)) return false;
     if (/(発表する|まとめる|設定する|調べる|考える|行う|知る)\.?$/.test(unit)) return false;
     return !/(学習単元|学習活動|典型的な活動|よく取り上げられる事柄例|変更になる場合)/.test(unit);
