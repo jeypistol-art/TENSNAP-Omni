@@ -1168,6 +1168,10 @@ function filterJapaneseTopicsByEvidence(topics: string[], evidenceTexts: string[
     });
 }
 
+function isJapaneseTopicAllowedByEvidence(topic: string, evidenceTexts: string[]): boolean {
+    return filterJapaneseTopicsByEvidence([topic], evidenceTexts).length > 0;
+}
+
 function buildSpecificEnglishTopics(
     wrongTopics: string[],
     coveredTopics: string[],
@@ -1289,6 +1293,13 @@ function sanitizeWeaknessAreas(
     const japaneseBaseTopics = isJapanese && japaneseSpecificTopics.length > 0
         ? japaneseSpecificTopics
         : nonSocialBaseTopics;
+    const japaneseEvidencePool = isJapanese
+        ? [
+            ...wrongTopics,
+            ...coveredTopics,
+            ...rawWeaknesses.map((w) => normalizeTopicLabel(String(w?.topic || ""))),
+        ].filter(Boolean)
+        : [];
 
     const sanitized = rawWeaknesses
         .map((w, index) => {
@@ -1358,6 +1369,13 @@ function sanitizeWeaknessAreas(
                         topic = currentBaseTopics[Math.min(index, currentBaseTopics.length - 1)];
                     } else if (matchedCovered) {
                         topic = formatTopicWithDomain(matchedCovered, subjectCategory, schoolStage);
+                    }
+                    if (topic && !isJapaneseTopicAllowedByEvidence(topic, japaneseEvidencePool)) {
+                        if (currentBaseTopics.length > 0) {
+                            topic = currentBaseTopics[Math.min(index, currentBaseTopics.length - 1)];
+                        } else {
+                            return null;
+                        }
                     }
                 } else if (isGenericWeaknessTopic(rawTopic) && nonSocialBaseTopics.length > 0) {
                     topic = nonSocialBaseTopics[Math.min(index, nonSocialBaseTopics.length - 1)];
