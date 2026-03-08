@@ -461,6 +461,65 @@ function isUsableSocialCurriculumUnit(entry: SocialCurriculumUnitIndexEntry): bo
     return !/(学習単元|学習活動|典型的な活動|よく取り上げられる事柄例|変更になる場合)/.test(unit);
 }
 
+function getEligibleSocialCurriculumUnits(schoolStage?: SchoolStage | null): SocialCurriculumUnitIndexEntry[] {
+    return SOCIAL_CURRICULUM_UNITS.filter((entry) =>
+        (!schoolStage || entry.stage === schoolStage) && isUsableSocialCurriculumUnit(entry)
+    );
+}
+
+function collectTopicBigrams(value: string): string[] {
+    const normalized = canonicalTopic(value);
+    if (normalized.length < 2) return normalized ? [normalized] : [];
+    const grams: string[] = [];
+    for (let index = 0; index < normalized.length - 1; index += 1) {
+        grams.push(normalized.slice(index, index + 2));
+    }
+    return grams;
+}
+
+function scoreSocialCurriculumEntry(topic: string, entry: SocialCurriculumUnitIndexEntry): number {
+    const candidate = canonicalTopic(topic);
+    if (!candidate) return 0;
+
+    let best = 0;
+    const candidateBigrams = collectTopicBigrams(topic);
+    for (const token of entry.tokens) {
+        const current = canonicalTopic(token);
+        if (!current) continue;
+        if (current === candidate) return 100;
+        if (current.includes(candidate) || candidate.includes(current)) {
+            best = Math.max(best, 80);
+            continue;
+        }
+
+        const tokenBigrams = new Set(collectTopicBigrams(token));
+        let overlap = 0;
+        for (const gram of candidateBigrams) {
+            if (tokenBigrams.has(gram)) overlap += 1;
+        }
+        best = Math.max(best, overlap * 5);
+    }
+
+    const inferredDomain = inferSocialDomain(topic);
+    if (inferredDomain && inferredDomain === entry.domain) best += 3;
+    return best;
+}
+
+function findSocialCurriculumMatches(topic: string, schoolStage?: SchoolStage | null): SocialCurriculumUnitIndexEntry[] {
+    const normalized = normalizeTopicLabel(topic);
+    if (!normalized) return [];
+
+    const { unit } = splitSocialDomainTopic(normalized);
+    const candidate = normalizeTopicLabel(unit || normalized);
+    if (!candidate) return [];
+
+    return getEligibleSocialCurriculumUnits(schoolStage)
+        .map((entry) => ({ entry, score: scoreSocialCurriculumEntry(candidate, entry) }))
+        .filter(({ score }) => score >= 5)
+        .sort((left, right) => right.score - left.score || left.entry.unit.length - right.entry.unit.length)
+        .map(({ entry }) => entry);
+}
+
 function resolveSocialCurriculumUnit(topic: string, schoolStage?: SchoolStage | null): string | null {
     const normalized = normalizeTopicLabel(topic);
     if (!normalized) return null;
@@ -469,22 +528,8 @@ function resolveSocialCurriculumUnit(topic: string, schoolStage?: SchoolStage | 
     const candidate = normalizeTopicLabel(unit || normalized);
     if (!candidate) return null;
 
-    const eligible = SOCIAL_CURRICULUM_UNITS.filter((entry) =>
-        (!schoolStage || entry.stage === schoolStage) && isUsableSocialCurriculumUnit(entry)
-    );
-    const exact = eligible.find((entry) =>
-        entry.tokens.some((token) => canonicalTopic(token) === canonicalTopic(candidate))
-    );
-    if (exact) return `${exact.domain}：${exact.unit}`;
-
-    const partial = eligible.find((entry) =>
-        entry.tokens.some((token) => {
-            const left = canonicalTopic(token);
-            const right = canonicalTopic(candidate);
-            return !!left && !!right && (left.includes(right) || right.includes(left));
-        })
-    );
-    return partial ? `${partial.domain}：${partial.unit}` : null;
+    const [bestMatch] = findSocialCurriculumMatches(candidate, schoolStage);
+    return bestMatch ? `${bestMatch.domain}：${bestMatch.unit}` : null;
 }
 
 function inferSocialDomain(unit: string): "地理" | "歴史" | "公民" | null {
@@ -857,6 +902,50 @@ function buildSpecificSocialTopics(coveredTopics: string[], weaknesses: Weakness
     return coveredTopics;
 }
 
+function expandSocialCoveredTopicsToMinimum(
+    topics: string[],
+    wrongTopics: string[],
+    schoolStage?: SchoolStage | null,
+    minimum = 5
+): string[] {
+    const deduped = Array.from(new Map(
+        topics
+            .map((topic) => normalizeTopicLabel(topic))
+            .filter(Boolean)
+            .map((topic) => [canonicalTopic(topic), topic] as const)
+    ).values());
+    if (deduped.length >= minimum) return deduped;
+
+    const relatedEntries = new Map<string, string>();
+    const seeds = [...wrongTopics, ...deduped];
+    for (const seed of seeds) {
+        for (const entry of findSocialCurriculumMatches(seed, schoolStage)) {
+            const topic = `${entry.domain}：${entry.unit}`;
+            relatedEntries.set(canonicalTopic(topic), topic);
+            if (deduped.length + relatedEntries.size >= minimum) break;
+        }
+        if (deduped.length + relatedEntries.size >= minimum) break;
+    }
+
+    if (deduped.length + relatedEntries.size < minimum) {
+        const domains = new Set(
+            seeds
+                .map((seed) => inferSocialDomain(seed))
+                .filter((domain): domain is "地理" | "歴史" | "公民" => !!domain)
+        );
+        for (const entry of getEligibleSocialCurriculumUnits(schoolStage)) {
+            if (domains.size > 0 && !domains.has(entry.domain as "地理" | "歴史" | "公民")) continue;
+            const topic = `${entry.domain}：${entry.unit}`;
+            const key = canonicalTopic(topic);
+            if (relatedEntries.has(key)) continue;
+            relatedEntries.set(key, topic);
+            if (deduped.length + relatedEntries.size >= minimum) break;
+        }
+    }
+
+    return [...deduped, ...relatedEntries.values()].slice(0, Math.max(minimum, 6));
+}
+
 function mergeSocialTopicPool(wrongTopics: string[], coveredTopics: string[], schoolStage?: SchoolStage | null): string[] {
     const merged = [...wrongTopics, ...coveredTopics]
         .map((t) => normalizeTopicLabel(String(t || "")))
@@ -1036,7 +1125,10 @@ function sanitizeWeaknessAreas(
         )
         : coveredTopics;
     const socialBaseTopics = isSocial && socialSpecificTopics.length > 0
-        ? prioritizeCivicsTopics(socialSpecificTopics, preferCivics)
+        ? prioritizeCivicsTopics(
+            expandSocialCoveredTopicsToMinimum(socialSpecificTopics, wrongTopics, schoolStage, 5),
+            preferCivics
+        )
         : coveredTopics;
     const englishSpecificTopics = isEnglish
         ? buildSpecificEnglishTopics(wrongTopics, coveredTopics, rawWeaknesses)
@@ -1191,6 +1283,19 @@ function sanitizeWeaknessAreas(
                 .map((w) => [`${canonicalTopic(w.topic)}::${w.level}`, w] as const)
         ).values()
     );
+    const socialSpecificWeaknesses = isSocial
+        ? Array.from(
+            new Map(
+                [...wrongTopics, ...socialBaseTopics]
+                    .map((topic, index) => ({
+                        topic: toSocialDetailedWeakness(topic, socialBaseTopics, index, schoolStage),
+                        level: index === 0 ? "Primary" as const : "Secondary" as const,
+                    }))
+                    .filter((w) => !!w.topic && !isLowValueTopic(w.topic, subjectCategory))
+                    .map((w) => [canonicalTopic(w.topic), w] as const)
+            ).values()
+        )
+        : [];
 
     const finalCoveredTopics = formattedCoveredTopics.length > 0
         ? formattedCoveredTopics
@@ -1216,6 +1321,15 @@ function sanitizeWeaknessAreas(
                 { topic: finalCoveredTopics[0], level: "Primary" },
                 ...(finalCoveredTopics[1] ? [{ topic: finalCoveredTopics[1], level: "Secondary" as const }] : [])
             ]
+        };
+    }
+
+    if (isSocial && socialSpecificWeaknesses.length > 0) {
+        const [first, ...rest] = socialSpecificWeaknesses;
+        const related = rest.slice(0, 4).map((item) => ({ topic: item.topic, level: "Secondary" as const }));
+        return {
+            coveredTopics: finalCoveredTopics,
+            weaknessAreas: [{ topic: first.topic, level: "Primary" }, ...related.slice(0, Math.max(3, related.length))],
         };
     }
 
