@@ -2,6 +2,7 @@ import type OpenAI from "openai";
 import { getOpenAIClient, runOpenAIWithRetry, serializeOpenAIError } from "@/lib/openai_client";
 import { detectSubjectCategory, type SubjectCategory } from "@/lib/subjects";
 import englishCurriculumK12 from "@/lib/dictionaries/english_curriculum_k12.json";
+import japaneseCurriculumK12 from "@/lib/dictionaries/japanese_curriculum_k12.json";
 import mathCurriculumElem from "@/lib/dictionaries/math_curriculum_elem.json";
 import mathCurriculumK12 from "@/lib/dictionaries/math_curriculum_k12.json";
 import scienceCurriculumK12 from "@/lib/dictionaries/science_curriculum_k12.json";
@@ -325,6 +326,10 @@ const ENGLISH_DOMAIN_HINTS: DomainHint[] = [
 ];
 const ENGLISH_ALL_HINTS: DomainHint[] = [...ENGLISH_CURRICULUM_HINTS, ...ENGLISH_DOMAIN_HINTS];
 
+const JAPANESE_CURRICULUM_HINTS = buildMathHintsFromCurriculumDictionary(
+    japaneseCurriculumK12 as MathCurriculumDictionary
+);
+
 const JAPANESE_DOMAIN_HINTS: DomainHint[] = [
     {
         domain: "語彙・漢字",
@@ -343,6 +348,7 @@ const JAPANESE_DOMAIN_HINTS: DomainHint[] = [
         keywords: ["古文", "古典", "漢文", "返り点", "レ点", "訓読", "歴史的仮名遣い", "枕草子", "徒然草", "論語"]
     },
 ];
+const JAPANESE_ALL_HINTS: DomainHint[] = [...JAPANESE_CURRICULUM_HINTS, ...JAPANESE_DOMAIN_HINTS];
 
 const SCIENCE_DOMAIN_HINTS: DomainHint[] = [
     {
@@ -401,7 +407,7 @@ function inferDomainByCategory(unit: string, category: SubjectCategory): string 
         case "english":
             return detectDomainByHints(unit, ENGLISH_ALL_HINTS) ?? "英語";
         case "japanese":
-            return detectDomainByHints(unit, JAPANESE_DOMAIN_HINTS) ?? "国語";
+            return detectDomainByHints(unit, JAPANESE_ALL_HINTS) ?? "国語";
         case "science":
             return detectDomainByHints(unit, SCIENCE_ALL_HINTS) ?? "理科";
         case "social":
