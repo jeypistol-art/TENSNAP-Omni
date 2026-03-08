@@ -204,6 +204,7 @@ function isPlaceholderUnit(unit: string): boolean {
 type DomainHint = { domain: string; keywords: string[] };
 type MathCurriculumEntry = { domain?: string; unit?: string; keywords?: string[]; aliases?: string[] };
 type MathCurriculumDictionary = { grades?: Record<string, MathCurriculumEntry[]> };
+type EnglishCurriculumUnitIndexEntry = { unit: string; domain: string; tokens: string[] };
 
 function detectDomainByHints(unit: string, hints: DomainHint[]): string | null {
     const normalized = normalizeTopicLabel(unit).toLowerCase();
@@ -278,6 +279,24 @@ const MATH_ALL_HINTS: DomainHint[] = [...MATH_CURRICULUM_HINTS, ...MATH_DOMAIN_H
 const ENGLISH_CURRICULUM_HINTS = buildMathHintsFromCurriculumDictionary(
     englishCurriculumK12 as MathCurriculumDictionary
 );
+const ENGLISH_CURRICULUM_UNITS: EnglishCurriculumUnitIndexEntry[] = Object.values(
+    (englishCurriculumK12 as MathCurriculumDictionary)?.grades || {}
+)
+    .flatMap((entries) => Array.isArray(entries) ? entries : [])
+    .map((entry) => {
+        const unit = normalizeTopicLabel(String(entry?.unit || ""));
+        const domain = normalizeTopicLabel(String(entry?.domain || ""));
+        const tokens = Array.from(
+            new Set(
+                [unit]
+                    .concat(Array.isArray(entry?.aliases) ? entry.aliases.map((v) => normalizeTopicLabel(String(v || ""))) : [])
+                    .concat(Array.isArray(entry?.keywords) ? entry.keywords.map((v) => normalizeTopicLabel(String(v || ""))) : [])
+                    .filter(Boolean)
+            )
+        );
+        return { unit, domain, tokens };
+    })
+    .filter((entry) => entry.unit);
 
 const ENGLISH_DOMAIN_HINTS: DomainHint[] = [
     {
@@ -396,6 +415,12 @@ function canonicalEnglishTopicLabel(topic: string): string {
     if (/^(文法:文法|文法)$/.test(t)) return "文法（基本）";
     if (/^英文の完成:適語補充$/.test(t)) return "英文の完成（適語補充）";
 
+    const grammar = t.match(/^文法:(.+)$/);
+    if (grammar?.[1] && grammar[1] !== "文法") return grammar[1];
+
+    const vocab = t.match(/^語彙:(.+)$/);
+    if (vocab?.[1] && vocab[1] !== "語彙") return vocab[1];
+
     const conversation = t.match(/^会話文読解:(.+)$/);
     if (conversation?.[1]) return `会話文読解（${conversation[1]}）`;
 
@@ -405,12 +430,39 @@ function canonicalEnglishTopicLabel(topic: string): string {
     return t;
 }
 
+function resolveEnglishCurriculumUnit(topic: string): string | null {
+    const normalized = normalizeTopicLabel(topic);
+    if (!normalized) return null;
+
+    const { unit } = splitDomainTopic(normalized);
+    const candidate = normalizeTopicLabel(unit || normalized);
+    if (!candidate) return null;
+
+    const exact = ENGLISH_CURRICULUM_UNITS.find((entry) =>
+        entry.tokens.some((token) => canonicalTopic(token) === canonicalTopic(candidate))
+    );
+    if (exact) return exact.unit;
+
+    const partial = ENGLISH_CURRICULUM_UNITS.find((entry) =>
+        entry.tokens.some((token) => {
+            const left = canonicalTopic(token);
+            const right = canonicalTopic(candidate);
+            return !!left && !!right && (left.includes(right) || right.includes(left));
+        })
+    );
+    return partial?.unit || null;
+}
+
 function toEnglishDomainTopic(topic: string): string {
     const { unit } = splitDomainTopic(topic);
     const u = normalizeTopicLabel(unit || topic);
     if (!u) return "";
     if (isPlaceholderUnit(u)) return "";
     if (/^(英語|英文)$/.test(u)) return "";
+
+    const curriculumUnit = resolveEnglishCurriculumUnit(u);
+    if (curriculumUnit) return curriculumUnit;
+
     if (/^文法$/.test(u)) return canonicalEnglishTopicLabel("文法:文法");
     if (/^語彙$/.test(u)) return canonicalEnglishTopicLabel("語彙:語彙");
     if (/^(読解|内容理解)$/.test(u)) return canonicalEnglishTopicLabel("文章読解:内容理解");
