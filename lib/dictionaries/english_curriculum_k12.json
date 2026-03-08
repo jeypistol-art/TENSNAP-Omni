@@ -1,0 +1,1272 @@
+{
+  "schema_version": 1,
+  "source": {
+    "pdf": "C:\\Users\\use\\Desktop\\TENsNAP\\中学英語新旧単元一覧-.pdf",
+    "text": "C:\\Users\\use\\Desktop\\TENsNAP\\高校英語_単元一覧.txt"
+  },
+  "grades": {
+    "中1": [
+      {
+        "domain": "基本文",
+        "unit": "I am ...",
+        "keywords": [
+          "am",
+          "be動詞",
+          "I am"
+        ],
+        "aliases": [
+          "be動詞の文"
+        ]
+      },
+      {
+        "domain": "基本文",
+        "unit": "I like ...",
+        "keywords": [
+          "like",
+          "好き",
+          "一般動詞"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "基本文",
+        "unit": "Are you ...?",
+        "keywords": [
+          "are you",
+          "be動詞",
+          "疑問文"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "基本文",
+        "unit": "Do you ...?",
+        "keywords": [
+          "do you",
+          "一般動詞",
+          "疑問文"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "助動詞",
+        "unit": "can の文",
+        "keywords": [
+          "can",
+          "できる",
+          "助動詞"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "基本文",
+        "unit": "This [That, He, She] is ...",
+        "keywords": [
+          "this",
+          "that",
+          "he",
+          "she"
+        ],
+        "aliases": [
+          "指示語とbe動詞"
+        ]
+      },
+      {
+        "domain": "基本文",
+        "unit": "Is that [this] ...?",
+        "keywords": [
+          "is that",
+          "is this",
+          "be動詞"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "疑問詞",
+        "unit": "What ...?",
+        "keywords": [
+          "what",
+          "何"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "疑問詞",
+        "unit": "Who ...?",
+        "keywords": [
+          "who",
+          "だれ"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "疑問詞",
+        "unit": "How do you ...?",
+        "keywords": [
+          "how",
+          "do you"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "疑問詞",
+        "unit": "What do you ...?",
+        "keywords": [
+          "what do you"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "疑問詞",
+        "unit": "Where ...?",
+        "keywords": [
+          "where",
+          "どこ"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "疑問詞",
+        "unit": "When ...?",
+        "keywords": [
+          "when",
+          "いつ"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "疑問詞",
+        "unit": "How many ...?",
+        "keywords": [
+          "how many",
+          "数"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "命令文",
+        "unit": "命令文（Come [Be, Don’t] ...）",
+        "keywords": [
+          "come",
+          "be",
+          "don't",
+          "命令文"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "疑問詞",
+        "unit": "What time ...?",
+        "keywords": [
+          "what time",
+          "時刻"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "疑問詞",
+        "unit": "What + 名詞 ...?",
+        "keywords": [
+          "what",
+          "名詞"
+        ],
+        "aliases": [
+          "What＋名詞 ...?"
+        ]
+      },
+      {
+        "domain": "前置詞",
+        "unit": "前置詞",
+        "keywords": [
+          "in",
+          "on",
+          "at",
+          "under"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "動詞",
+        "unit": "一般動詞の過去形",
+        "keywords": [
+          "過去形",
+          "一般動詞",
+          "did"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "動詞",
+        "unit": "規則動詞の過去形（肯定文）",
+        "keywords": [
+          "規則動詞",
+          "ed",
+          "過去形"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "動詞",
+        "unit": "不規則動詞の過去形（肯定文）",
+        "keywords": [
+          "went",
+          "ate",
+          "saw",
+          "had"
+        ],
+        "aliases": [
+          "enjoyed, went, ate, saw, had, was"
+        ]
+      },
+      {
+        "domain": "動詞",
+        "unit": "一般動詞の過去形（疑問文・否定文）",
+        "keywords": [
+          "did",
+          "didn't",
+          "過去形"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "三人称単数現在",
+        "unit": "三人称単数現在形（肯定文）",
+        "keywords": [
+          "三単現",
+          "s",
+          "es"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "三人称単数現在",
+        "unit": "三人称単数現在形（否定文）",
+        "keywords": [
+          "doesn't",
+          "三単現"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "三人称単数現在",
+        "unit": "三人称単数現在形（疑問文）",
+        "keywords": [
+          "does",
+          "三単現"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "代名詞",
+        "unit": "人称代名詞の目的格",
+        "keywords": [
+          "me",
+          "you",
+          "him",
+          "her",
+          "them"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "疑問詞",
+        "unit": "Which ... (A or B)?",
+        "keywords": [
+          "which",
+          "A or B",
+          "選択"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "疑問詞",
+        "unit": "Whose ...?",
+        "keywords": [
+          "whose",
+          "だれの"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "進行形",
+        "unit": "現在進行形（肯定文）",
+        "keywords": [
+          "be動詞",
+          "ing",
+          "現在進行形"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "進行形",
+        "unit": "現在進行形（疑問文）",
+        "keywords": [
+          "are you",
+          "is he",
+          "現在進行形"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "感嘆文",
+        "unit": "感嘆文（How ...! / What ...!）",
+        "keywords": [
+          "how",
+          "what",
+          "感嘆文"
+        ],
+        "aliases": []
+      }
+    ],
+    "中2": [
+      {
+        "domain": "未来表現",
+        "unit": "be going to",
+        "keywords": [
+          "be going to",
+          "未来"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "助動詞",
+        "unit": "助動詞 will",
+        "keywords": [
+          "will",
+          "未来"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "文型",
+        "unit": "SVOO",
+        "keywords": [
+          "SVOO",
+          "第4文型"
+        ],
+        "aliases": [
+          "第4文型"
+        ]
+      },
+      {
+        "domain": "文型",
+        "unit": "SVOC（C=名詞）",
+        "keywords": [
+          "SVOC",
+          "補語",
+          "名詞"
+        ],
+        "aliases": [
+          "第5文型（名詞補語）"
+        ]
+      },
+      {
+        "domain": "接続詞",
+        "unit": "接続詞 when",
+        "keywords": [
+          "when",
+          "接続詞"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "接続詞",
+        "unit": "接続詞 if",
+        "keywords": [
+          "if",
+          "接続詞"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "接続詞",
+        "unit": "接続詞 that",
+        "keywords": [
+          "that",
+          "接続詞"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "接続詞",
+        "unit": "接続詞 because",
+        "keywords": [
+          "because",
+          "理由"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "不定詞",
+        "unit": "不定詞（目的を表す副詞的用法）",
+        "keywords": [
+          "to",
+          "目的",
+          "不定詞"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "不定詞",
+        "unit": "不定詞（形容詞的用法）",
+        "keywords": [
+          "to",
+          "名詞を修飾",
+          "不定詞"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "助動詞",
+        "unit": "have to / do not have to",
+        "keywords": [
+          "have to",
+          "don't have to",
+          "義務"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "助動詞",
+        "unit": "must / must not",
+        "keywords": [
+          "must",
+          "mustn't",
+          "助動詞"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "動名詞",
+        "unit": "動名詞（目的語）",
+        "keywords": [
+          "動名詞",
+          "目的語",
+          "ing"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "動名詞",
+        "unit": "動名詞（主語）",
+        "keywords": [
+          "動名詞",
+          "主語",
+          "ing"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "動名詞",
+        "unit": "like ...ing",
+        "keywords": [
+          "like",
+          "ing",
+          "動名詞"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "動名詞",
+        "unit": "be good at ...ing",
+        "keywords": [
+          "be good at",
+          "ing",
+          "前置詞"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "比較",
+        "unit": "比較級",
+        "keywords": [
+          "比較級",
+          "more",
+          "-er"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "比較",
+        "unit": "最上級",
+        "keywords": [
+          "最上級",
+          "most",
+          "-est"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "比較",
+        "unit": "as ... as ~",
+        "keywords": [
+          "as",
+          "as",
+          "比較"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "不定詞",
+        "unit": "want / try / need など + to",
+        "keywords": [
+          "want to",
+          "try to",
+          "need to"
+        ],
+        "aliases": [
+          "I want to ..."
+        ]
+      },
+      {
+        "domain": "補語表現",
+        "unit": "look + 形容詞",
+        "keywords": [
+          "look",
+          "形容詞",
+          "補語"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "be動詞過去",
+        "unit": "be動詞過去形（肯定文）",
+        "keywords": [
+          "was",
+          "were",
+          "過去形"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "be動詞過去",
+        "unit": "be動詞過去形（疑問文）",
+        "keywords": [
+          "was",
+          "were",
+          "疑問文"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "there 構文",
+        "unit": "There is [are] ...",
+        "keywords": [
+          "there is",
+          "there are"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "進行形",
+        "unit": "過去進行形",
+        "keywords": [
+          "was",
+          "were",
+          "ing",
+          "過去進行形"
+        ],
+        "aliases": []
+      }
+    ],
+    "中3": [
+      {
+        "domain": "現在完了",
+        "unit": "現在完了形（経験用法・平叙文）",
+        "keywords": [
+          "have",
+          "has",
+          "pp",
+          "経験"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "現在完了",
+        "unit": "現在完了形（経験用法・疑問文）",
+        "keywords": [
+          "have you ever",
+          "経験",
+          "疑問文"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "文型",
+        "unit": "SVOC（C=形容詞）",
+        "keywords": [
+          "SVOC",
+          "形容詞",
+          "補語"
+        ],
+        "aliases": [
+          "第5文型（形容詞補語）"
+        ]
+      },
+      {
+        "domain": "文型",
+        "unit": "SVOO（that 節）",
+        "keywords": [
+          "SVOO",
+          "that節"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "現在完了",
+        "unit": "現在完了形（完了用法）",
+        "keywords": [
+          "already",
+          "just",
+          "yet",
+          "完了"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "現在完了",
+        "unit": "現在完了形（継続用法）",
+        "keywords": [
+          "for",
+          "since",
+          "継続"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "現在完了",
+        "unit": "現在完了進行形",
+        "keywords": [
+          "have been",
+          "ing",
+          "現在完了進行形"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "不定詞",
+        "unit": "It is ... (for + 人) + to",
+        "keywords": [
+          "it is",
+          "for",
+          "to不定詞"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "不定詞",
+        "unit": "want + 人 + to",
+        "keywords": [
+          "want",
+          "人",
+          "to"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "原形不定詞",
+        "unit": "let / help + 人 + 動詞の原形",
+        "keywords": [
+          "let",
+          "help",
+          "原形不定詞"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "疑問詞",
+        "unit": "間接疑問文",
+        "keywords": [
+          "間接疑問文",
+          "what",
+          "how",
+          "if"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "文型",
+        "unit": "SVOO（what 節）",
+        "keywords": [
+          "SVOO",
+          "what節"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "分詞",
+        "unit": "現在分詞",
+        "keywords": [
+          "現在分詞",
+          "ing",
+          "分詞"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "分詞",
+        "unit": "過去分詞",
+        "keywords": [
+          "過去分詞",
+          "pp",
+          "分詞"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "分詞",
+        "unit": "名詞を修飾する文（接触節）",
+        "keywords": [
+          "接触節",
+          "名詞修飾"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "関係代名詞",
+        "unit": "関係代名詞 who",
+        "keywords": [
+          "who",
+          "関係代名詞"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "関係代名詞",
+        "unit": "関係代名詞（主格 that / which）",
+        "keywords": [
+          "that",
+          "which",
+          "主格"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "関係代名詞",
+        "unit": "関係代名詞（目的格 that / which）",
+        "keywords": [
+          "that",
+          "which",
+          "目的格"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "仮定法",
+        "unit": "仮定法（I wish I could / had ...）",
+        "keywords": [
+          "I wish",
+          "could",
+          "had",
+          "仮定法"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "仮定法",
+        "unit": "仮定法（If + 主語 + were ..., ~）",
+        "keywords": [
+          "if",
+          "were",
+          "仮定法"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "仮定法",
+        "unit": "仮定法（If + 主語 + 動詞の過去形）",
+        "keywords": [
+          "if",
+          "過去形",
+          "仮定法"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "関係代名詞",
+        "unit": "主語を説明する関係代名詞",
+        "keywords": [
+          "関係代名詞",
+          "主語を説明"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "受け身",
+        "unit": "受け身（平叙文）",
+        "keywords": [
+          "be",
+          "pp",
+          "受け身"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "受け身",
+        "unit": "受け身（疑問文）",
+        "keywords": [
+          "be",
+          "pp",
+          "疑問文"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "受け身",
+        "unit": "受け身（by ... つき）",
+        "keywords": [
+          "by",
+          "受け身"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "受け身",
+        "unit": "受け身（助動詞つき）",
+        "keywords": [
+          "will be",
+          "can be",
+          "受け身"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "疑問詞",
+        "unit": "疑問詞 + to",
+        "keywords": [
+          "what to",
+          "how to",
+          "where to"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "疑問詞",
+        "unit": "主語 + 動詞 + 人 + 疑問詞 + to",
+        "keywords": [
+          "tell",
+          "ask",
+          "疑問詞 + to"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "接続詞",
+        "unit": "be sure that ~",
+        "keywords": [
+          "be sure that",
+          "that節"
+        ],
+        "aliases": []
+      }
+    ],
+    "高校": [
+      {
+        "domain": "文型",
+        "unit": "第1文型：SV",
+        "keywords": [
+          "SV",
+          "第1文型"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "文型",
+        "unit": "第2文型：SVC",
+        "keywords": [
+          "SVC",
+          "第2文型"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "文型",
+        "unit": "第3文型：SVO",
+        "keywords": [
+          "SVO",
+          "第3文型"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "文型",
+        "unit": "第4文型：SVOO",
+        "keywords": [
+          "SVOO",
+          "第4文型"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "文型",
+        "unit": "第5文型：SVOC",
+        "keywords": [
+          "SVOC",
+          "第5文型"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "時制",
+        "unit": "現在形",
+        "keywords": [
+          "現在形",
+          "時制"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "時制",
+        "unit": "過去形",
+        "keywords": [
+          "過去形",
+          "時制"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "時制",
+        "unit": "未来形",
+        "keywords": [
+          "未来形",
+          "時制"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "時制",
+        "unit": "進行形",
+        "keywords": [
+          "進行形",
+          "be + ing"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "時制",
+        "unit": "現在進行形",
+        "keywords": [
+          "現在進行形"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "時制",
+        "unit": "過去進行形",
+        "keywords": [
+          "過去進行形"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "時制",
+        "unit": "未来進行形",
+        "keywords": [
+          "未来進行形"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "時制",
+        "unit": "現在完了形",
+        "keywords": [
+          "現在完了形",
+          "have + pp"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "時制",
+        "unit": "経験用法",
+        "keywords": [
+          "経験用法",
+          "ever",
+          "never"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "時制",
+        "unit": "継続用法",
+        "keywords": [
+          "継続用法",
+          "for",
+          "since"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "時制",
+        "unit": "完了・結果",
+        "keywords": [
+          "完了",
+          "結果",
+          "already",
+          "yet"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "仮定法",
+        "unit": "仮定法過去",
+        "keywords": [
+          "仮定法過去",
+          "would"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "仮定法",
+        "unit": "仮定法過去完了",
+        "keywords": [
+          "仮定法過去完了",
+          "would have",
+          "had + pp"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "過去完了",
+        "unit": "過去完了：継続用法",
+        "keywords": [
+          "過去完了",
+          "継続",
+          "had + pp"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "過去完了",
+        "unit": "過去完了：経験用法",
+        "keywords": [
+          "過去完了",
+          "経験",
+          "had + pp"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "過去完了",
+        "unit": "過去完了：完了・結果用法",
+        "keywords": [
+          "過去完了",
+          "完了",
+          "結果"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "関係代名詞",
+        "unit": "関係代名詞：主格",
+        "keywords": [
+          "関係代名詞",
+          "主格"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "関係代名詞",
+        "unit": "関係代名詞：目的格",
+        "keywords": [
+          "関係代名詞",
+          "目的格"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "関係代名詞",
+        "unit": "関係代名詞：所有格",
+        "keywords": [
+          "関係代名詞",
+          "所有格"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "関係副詞",
+        "unit": "関係副詞：where",
+        "keywords": [
+          "関係副詞",
+          "where"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "関係副詞",
+        "unit": "関係副詞：when",
+        "keywords": [
+          "関係副詞",
+          "when"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "関係副詞",
+        "unit": "関係副詞：why",
+        "keywords": [
+          "関係副詞",
+          "why"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "関係副詞",
+        "unit": "関係副詞：how",
+        "keywords": [
+          "関係副詞",
+          "how"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "複合関係代名詞",
+        "unit": "複合関係代名詞：whoever",
+        "keywords": [
+          "whoever",
+          "複合関係代名詞"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "複合関係代名詞",
+        "unit": "複合関係代名詞：whichever",
+        "keywords": [
+          "whichever",
+          "複合関係代名詞"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "複合関係代名詞",
+        "unit": "複合関係代名詞：whatever",
+        "keywords": [
+          "whatever",
+          "複合関係代名詞"
+        ],
+        "aliases": [
+          "複合関係代名詞：whateverr"
+        ]
+      },
+      {
+        "domain": "複合関係副詞",
+        "unit": "複合関係副詞：whenever",
+        "keywords": [
+          "whenever",
+          "複合関係副詞"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "複合関係副詞",
+        "unit": "複合関係副詞：wherever",
+        "keywords": [
+          "wherever",
+          "複合関係副詞"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "複合関係副詞",
+        "unit": "複合関係副詞：however",
+        "keywords": [
+          "however",
+          "複合関係副詞"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "原形不定詞",
+        "unit": "原形不定詞：知覚動詞",
+        "keywords": [
+          "see",
+          "hear",
+          "feel",
+          "原形不定詞"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "原形不定詞",
+        "unit": "原形不定詞：使役動詞",
+        "keywords": [
+          "make",
+          "have",
+          "let",
+          "原形不定詞"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "名詞",
+        "unit": "可算名詞：単数形",
+        "keywords": [
+          "可算名詞",
+          "単数形"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "名詞",
+        "unit": "可算名詞：複数形",
+        "keywords": [
+          "可算名詞",
+          "複数形"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "名詞",
+        "unit": "不可算名詞",
+        "keywords": [
+          "不可算名詞"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "分詞",
+        "unit": "分詞：現在分詞",
+        "keywords": [
+          "現在分詞",
+          "分詞"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "分詞",
+        "unit": "分詞：過去分詞",
+        "keywords": [
+          "過去分詞",
+          "分詞"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "分詞",
+        "unit": "分詞：分詞構文",
+        "keywords": [
+          "分詞構文",
+          "分詞"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "話法",
+        "unit": "話法：直接話法",
+        "keywords": [
+          "直接話法",
+          "話法"
+        ],
+        "aliases": []
+      },
+      {
+        "domain": "話法",
+        "unit": "話法：間接話法",
+        "keywords": [
+          "間接話法",
+          "話法"
+        ],
+        "aliases": []
+      }
+    ]
+  }
+}
