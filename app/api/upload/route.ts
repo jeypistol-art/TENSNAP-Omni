@@ -113,6 +113,14 @@ export async function POST(request: Request) {
             }
             studentId = primaryStudentId;
         }
+        let studentGrade: string | null = null;
+        if (studentId) {
+            const studentResult = await query<{ grade: string | null }>(
+                `SELECT grade FROM students WHERE id = $1 AND user_id = $2 LIMIT 1`,
+                [studentId, session.user.id]
+            );
+            studentGrade = studentResult.rows[0]?.grade || null;
+        }
 
         // 3. Save Upload Record (with Student ID)
         // Insert into uploads table
@@ -128,6 +136,7 @@ export async function POST(request: Request) {
         const analysis = await analyzeImage(answerSheets, {
             unitName: formUnitName, // Use the unitName from the form data
             subject: subject || undefined,
+            grade: studentGrade || undefined,
             problemSheets,
             examPhase,
         });

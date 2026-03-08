@@ -43,6 +43,8 @@ export type AnalysisResult = {
     };
 };
 
+type SchoolStage = "elementary" | "middle" | "high";
+
 const SYSTEM_PROMPT = `
 Role:
 あなたは学習塾の「厳格な採点官」だ。
@@ -213,7 +215,23 @@ type DomainHint = { domain: string; keywords: string[] };
 type MathCurriculumEntry = { domain?: string; unit?: string; keywords?: string[]; aliases?: string[] };
 type MathCurriculumDictionary = { grades?: Record<string, MathCurriculumEntry[]> };
 type EnglishCurriculumUnitIndexEntry = { unit: string; domain: string; tokens: string[] };
-type JapaneseCurriculumUnitIndexEntry = { unit: string; domain: string; tokens: string[] };
+type JapaneseCurriculumUnitIndexEntry = { unit: string; domain: string; grade: string; stage: SchoolStage | null; tokens: string[] };
+
+function inferSchoolStageFromGradeLabel(grade?: string | null): SchoolStage | null {
+    const g = normalizeTopicLabel(String(grade || ""));
+    if (!g) return null;
+    if (/(小|小学|elementary)/i.test(g)) return "elementary";
+    if (/(中|中学|junior|middle)/i.test(g)) return "middle";
+    if (/(高|高校|high)/i.test(g)) return "high";
+    return null;
+}
+
+function inferSchoolStageFromCurriculumGrade(grade: string): SchoolStage | null {
+    if (grade.startsWith("小")) return "elementary";
+    if (grade.startsWith("中")) return "middle";
+    if (grade.startsWith("高")) return "high";
+    return null;
+}
 
 function detectDomainByHints(unit: string, hints: DomainHint[]): string | null {
     const normalized = normalizeTopicLabel(unit).toLowerCase();
@@ -330,11 +348,11 @@ const ENGLISH_ALL_HINTS: DomainHint[] = [...ENGLISH_CURRICULUM_HINTS, ...ENGLISH
 const JAPANESE_CURRICULUM_HINTS = buildMathHintsFromCurriculumDictionary(
     japaneseCurriculumK12 as MathCurriculumDictionary
 );
-const JAPANESE_CURRICULUM_UNITS: JapaneseCurriculumUnitIndexEntry[] = Object.values(
+const JAPANESE_CURRICULUM_UNITS: JapaneseCurriculumUnitIndexEntry[] = Object.entries(
     (japaneseCurriculumK12 as MathCurriculumDictionary)?.grades || {}
 )
-    .flatMap((entries) => Array.isArray(entries) ? entries : [])
-    .map((entry) => {
+    .flatMap(([grade, entries]) => (Array.isArray(entries) ? entries : []).map((entry) => ({ grade, entry })))
+    .map(({ grade, entry }) => {
         const unit = normalizeTopicLabel(String(entry?.unit || ""));
         const domain = normalizeTopicLabel(String(entry?.domain || ""));
         const tokens = Array.from(
@@ -345,7 +363,7 @@ const JAPANESE_CURRICULUM_UNITS: JapaneseCurriculumUnitIndexEntry[] = Object.val
                     .filter(Boolean)
             )
         );
-        return { unit, domain, tokens };
+        return { unit, domain, grade, stage: inferSchoolStageFromCurriculumGrade(grade), tokens };
     })
     .filter((entry) => entry.unit);
 
@@ -524,20 +542,34 @@ function toEnglishDomainTopic(topic: string): string {
     return "";
 }
 
-function resolveJapaneseCurriculumUnit(topic: string): string | null {
+function resolveJapaneseCurriculumUnit(topic: string, schoolStage?: SchoolStage | null): string | null {
     const normalized = normalizeTopicLabel(topic);
     if (!normalized) return null;
 
     const { unit } = splitDomainTopic(normalized);
     const candidate = normalizeTopicLabel(unit || normalized);
     if (!candidate) return null;
+    const blockedUnits = new Set([
+        "ことばのつかいかた",
+        "ことばの意味",
+        "ひらがな",
+        "カタカナ",
+        "小さい文字",
+        "のばす音",
+        "漢字の読み",
+        "漢字の書き取り",
+    ]);
 
     const exact = JAPANESE_CURRICULUM_UNITS.find((entry) =>
+        (!schoolStage || entry.stage === schoolStage) &&
+        !blockedUnits.has(entry.unit) &&
         entry.tokens.some((token) => canonicalTopic(token) === canonicalTopic(candidate))
     );
     if (exact) return exact.unit;
 
     const partial = JAPANESE_CURRICULUM_UNITS.find((entry) =>
+        (!schoolStage || entry.stage === schoolStage) &&
+        !blockedUnits.has(entry.unit) &&
         entry.tokens.some((token) => {
             const left = canonicalTopic(token);
             const right = canonicalTopic(candidate);
@@ -547,14 +579,19 @@ function resolveJapaneseCurriculumUnit(topic: string): string | null {
     return partial?.unit || null;
 }
 
-function toJapaneseDomainTopic(topic: string): string {
+function toJapaneseDomainTopic(topic: string, schoolStage?: SchoolStage | null): string {
     const { unit } = splitDomainTopic(topic);
     const u = normalizeTopicLabel(unit || topic);
     if (!u) return "";
     if (isPlaceholderUnit(u)) return "";
-    if (/^(国語|本文|文章|論理性|表現力|読解力)$/.test(u)) return "";
+    if (/^(国語|本文|文章|論理性|表現力|読解力|ことばのつかいかた|ことばの意味)$/.test(u)) return "";
 
-    const curriculumUnit = resolveJapaneseCurriculumUnit(u);
+    if (/(を|に|で|て|は|が|の|へ|と|から|より|まで|だけ|ほど|など)/
+        .test(u) && /(助詞|文法|ことば|使い方|使いかた|格助詞|係助詞|接続助詞)?/.test(u)) {
+        return "助詞";
+    }
+
+    const curriculumUnit = resolveJapaneseCurriculumUnit(u, schoolStage);
     if (curriculumUnit) return curriculumUnit;
 
     if (/(指示語)/.test(u)) return "指示語";
@@ -603,7 +640,7 @@ function toJapaneseDomainTopic(topic: string): string {
     return "";
 }
 
-function formatTopicWithDomain(topic: string, category: SubjectCategory): string {
+function formatTopicWithDomain(topic: string, category: SubjectCategory, schoolStage?: SchoolStage | null): string {
     const { domain, unit } = splitDomainTopic(topic);
     if (!unit) return "";
 
@@ -614,7 +651,7 @@ function formatTopicWithDomain(topic: string, category: SubjectCategory): string
         return toEnglishDomainTopic(topic);
     }
     if (category === "japanese") {
-        return toJapaneseDomainTopic(topic);
+        return toJapaneseDomainTopic(topic, schoolStage);
     }
 
     const resolved = domain || inferDomainByCategory(unit, category);
@@ -818,13 +855,13 @@ function inferEnglishTopicFromText(text: string): string | null {
     return null;
 }
 
-function inferJapaneseTopicFromText(text: string): string | null {
+function inferJapaneseTopicFromText(text: string, schoolStage?: SchoolStage | null): string | null {
     const t = normalizeTopicLabel(text);
     if (!t) return null;
 
-    const curriculumUnit = resolveJapaneseCurriculumUnit(t);
+    const curriculumUnit = resolveJapaneseCurriculumUnit(t, schoolStage);
     if (curriculumUnit) return curriculumUnit;
-    return toJapaneseDomainTopic(t) || null;
+    return toJapaneseDomainTopic(t, schoolStage) || null;
 }
 
 function buildSpecificEnglishTopics(
@@ -851,7 +888,8 @@ function buildSpecificEnglishTopics(
 function buildSpecificJapaneseTopics(
     wrongTopics: string[],
     coveredTopics: string[],
-    weaknesses: WeaknessArea[]
+    weaknesses: WeaknessArea[],
+    schoolStage?: SchoolStage | null
 ): string[] {
     const pool = [
         ...wrongTopics,
@@ -862,7 +900,7 @@ function buildSpecificJapaneseTopics(
         .filter(Boolean);
 
     const specific = pool
-        .map((t) => inferJapaneseTopicFromText(t) || toJapaneseDomainTopic(t))
+        .map((t) => inferJapaneseTopicFromText(t, schoolStage) || toJapaneseDomainTopic(t, schoolStage))
         .filter(Boolean)
         .filter(isSpecificJapaneseTopic);
 
@@ -873,7 +911,8 @@ function sanitizeWeaknessAreas(
     inputWeaknesses: WeaknessArea[] | undefined,
     inputCoveredTopics: string[] | undefined,
     subject: string,
-    wrongQuestionTopics?: string[] | undefined
+    wrongQuestionTopics?: string[] | undefined,
+    schoolStage?: SchoolStage | null
 ): { coveredTopics: string[]; weaknessAreas: { topic: string; level: "Primary" | "Secondary" }[] } {
     const coveredTopics = Array.from(
         new Set(
@@ -893,7 +932,7 @@ function sanitizeWeaknessAreas(
     const coveredDomainTopics = Array.from(
         new Map(
             coveredTopics
-                .map((t) => formatTopicWithDomain(t, subjectCategory))
+                .map((t) => formatTopicWithDomain(t, subjectCategory, schoolStage))
                 .filter(Boolean)
                 .map((t) => [canonicalTopic(t), t] as const)
         ).values()
@@ -905,8 +944,8 @@ function sanitizeWeaknessAreas(
                 .map((t) => {
                     if (isSocial) return toSocialDomainTopic(t);
                     if (isEnglish) return inferEnglishTopicFromText(t) || resolveEnglishCurriculumUnit(t) || "";
-                    if (isJapanese) return inferJapaneseTopicFromText(t) || resolveJapaneseCurriculumUnit(t) || "";
-                    return formatTopicWithDomain(t, subjectCategory);
+                    if (isJapanese) return inferJapaneseTopicFromText(t, schoolStage) || resolveJapaneseCurriculumUnit(t, schoolStage) || "";
+                    return formatTopicWithDomain(t, subjectCategory, schoolStage);
                 })
                 .filter(Boolean)
         )
@@ -937,7 +976,7 @@ function sanitizeWeaknessAreas(
         ? englishSpecificTopics
         : nonSocialBaseTopics;
     const japaneseSpecificTopics = isJapanese
-        ? buildSpecificJapaneseTopics(wrongTopics, coveredTopics, rawWeaknesses)
+        ? buildSpecificJapaneseTopics(wrongTopics, coveredTopics, rawWeaknesses, schoolStage)
         : [];
     const japaneseBaseTopics = isJapanese && japaneseSpecificTopics.length > 0
         ? japaneseSpecificTopics
@@ -1000,21 +1039,21 @@ function sanitizeWeaknessAreas(
                     } else if ((isGenericWeaknessTopic(rawTopic) || !isSpecificEnglishTopic(rawTopic)) && currentBaseTopics.length > 0) {
                         topic = currentBaseTopics[Math.min(index, currentBaseTopics.length - 1)];
                     } else if (matchedCovered) {
-                        topic = formatTopicWithDomain(matchedCovered, subjectCategory);
+                        topic = formatTopicWithDomain(matchedCovered, subjectCategory, schoolStage);
                     }
                 } else if (isJapanese) {
-                    const inferred = inferJapaneseTopicFromText(rawTopic);
+                    const inferred = inferJapaneseTopicFromText(rawTopic, schoolStage);
                     if (inferred) {
                         topic = inferred;
                     } else if ((isGenericWeaknessTopic(rawTopic) || !isSpecificJapaneseTopic(rawTopic)) && currentBaseTopics.length > 0) {
                         topic = currentBaseTopics[Math.min(index, currentBaseTopics.length - 1)];
                     } else if (matchedCovered) {
-                        topic = formatTopicWithDomain(matchedCovered, subjectCategory);
+                        topic = formatTopicWithDomain(matchedCovered, subjectCategory, schoolStage);
                     }
                 } else if (isGenericWeaknessTopic(rawTopic) && nonSocialBaseTopics.length > 0) {
                     topic = nonSocialBaseTopics[Math.min(index, nonSocialBaseTopics.length - 1)];
                 } else if (matchedCovered) {
-                    topic = formatTopicWithDomain(matchedCovered, subjectCategory);
+                    topic = formatTopicWithDomain(matchedCovered, subjectCategory, schoolStage);
                 }
             }
 
@@ -1065,7 +1104,7 @@ function sanitizeWeaknessAreas(
                             ? (japaneseBaseTopics.length > 0 ? japaneseBaseTopics : coveredDomainTopics)
                         : (nonSocialBaseTopics.length > 0 ? nonSocialBaseTopics : coveredDomainTopics)
             )
-                .map((t) => (isSocial ? t : formatTopicWithDomain(t, subjectCategory)))
+                .map((t) => (isSocial ? t : formatTopicWithDomain(t, subjectCategory, schoolStage)))
                 .filter((t) => !isLowValueTopic(t, subjectCategory))
                 .filter(Boolean)
                 .map((t) => [canonicalTopic(t), t] as const)
@@ -1075,7 +1114,7 @@ function sanitizeWeaknessAreas(
         new Map(
             deduped
                 .map((w) => ({
-                    topic: formatTopicWithDomain(w.topic, subjectCategory),
+                    topic: formatTopicWithDomain(w.topic, subjectCategory, schoolStage),
                     level: w.level
                 }))
                 .filter((w) => !!w.topic && !isLowValueTopic(w.topic, subjectCategory))
@@ -1234,7 +1273,8 @@ async function extractEnglishSpecificTopics(
 
 async function extractJapaneseSpecificTopics(
     answerSheets: { buffer: Buffer; mimeType: string }[],
-    problemSheets?: { buffer: Buffer; mimeType: string }[]
+    problemSheets?: { buffer: Buffer; mimeType: string }[],
+    schoolStage?: SchoolStage | null
 ): Promise<string[]> {
     const prompt = [
         "あなたは国語の単元抽出器です。",
@@ -1280,7 +1320,7 @@ async function extractJapaneseSpecificTopics(
         return Array.from(
             new Map(
                 (Array.isArray(parsed.topics) ? parsed.topics : [])
-                    .map((t) => inferJapaneseTopicFromText(String(t || "")) || resolveJapaneseCurriculumUnit(String(t || "")) || toJapaneseDomainTopic(String(t || "")))
+                    .map((t) => inferJapaneseTopicFromText(String(t || ""), schoolStage) || resolveJapaneseCurriculumUnit(String(t || ""), schoolStage) || toJapaneseDomainTopic(String(t || ""), schoolStage))
                     .filter(Boolean)
                     .filter(isSpecificJapaneseTopic)
                     .map((t) => [canonicalTopic(t), t] as const)
@@ -1296,6 +1336,7 @@ export async function analyzeImage(
     context?: {
         unitName?: string;
         subject?: string;
+        grade?: string;
         problemSheets?: { buffer: Buffer; mimeType: string }[];
         examPhase?: boolean;
     }
@@ -1382,6 +1423,7 @@ export async function analyzeImage(
         if (parsed.insight_conclusion) {
             parsed.insight_conclusion = replaceForbidden(parsed.insight_conclusion);
         }
+        const schoolStage = inferSchoolStageFromGradeLabel(context?.grade);
 
         if (isEnglish) {
             const extractedEnglishTopics = await extractEnglishSpecificTopics(answerSheets, context?.problemSheets);
@@ -1391,7 +1433,7 @@ export async function analyzeImage(
             }
         }
         if (isJapanese) {
-            const extractedJapaneseTopics = await extractJapaneseSpecificTopics(answerSheets, context?.problemSheets);
+            const extractedJapaneseTopics = await extractJapaneseSpecificTopics(answerSheets, context?.problemSheets, schoolStage);
             if (extractedJapaneseTopics.length > 0) {
                 parsed.covered_topics = Array.from(new Set([...(parsed.covered_topics || []), ...extractedJapaneseTopics]));
                 parsed.wrong_question_topics = Array.from(new Set([...(parsed.wrong_question_topics || []), ...extractedJapaneseTopics]));
@@ -1404,7 +1446,8 @@ export async function analyzeImage(
                 parsed.weakness_areas as WeaknessArea[] | undefined,
                 parsed.covered_topics,
                 subject,
-                parsed.wrong_question_topics
+                parsed.wrong_question_topics,
+                schoolStage
             );
             parsed.covered_topics = normalized.coveredTopics;
             parsed.weakness_areas = expandWeaknessAreasForLowMastery(
