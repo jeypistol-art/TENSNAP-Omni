@@ -175,7 +175,7 @@ export async function POST(request: Request) {
             ? cleanedCoveredTopics
             : weaknessTopicFallback.slice(0, 3);
         analysis.covered_topics = topics.slice(0, 5);
-        analysis.weakness_areas = weaknessAreas.slice(0, 3);
+        analysis.weakness_areas = weaknessAreas.slice(0, 5);
 
         // Determine Unit Name and Subject
         // Priority: Form Input > AI Detected Topic > Fallback

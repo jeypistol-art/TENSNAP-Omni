@@ -1195,7 +1195,7 @@ function expandWeaknessAreasForLowMastery(
     category: SubjectCategory,
     markCounts?: AnalysisResult["mark_counts"]
 ): { topic: string; level: "Primary" | "Secondary" }[] {
-    if (category !== "english") return weaknessAreas;
+    if (category !== "english" && category !== "japanese") return weaknessAreas;
 
     const crosses = Number(markCounts?.crosses || 0);
     const slashes = Number(markCounts?.slashes || 0);
