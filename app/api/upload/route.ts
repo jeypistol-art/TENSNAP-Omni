@@ -165,11 +165,12 @@ export async function POST(request: Request) {
         const topics = cleanedCoveredTopics.length > 0
             ? cleanedCoveredTopics
             : weaknessTopicFallback.slice(0, 3);
-        analysis.covered_topics = topics;
+        analysis.covered_topics = topics.slice(0, 5);
+        analysis.weakness_areas = weaknessAreas.slice(0, 3);
 
         // Determine Unit Name and Subject
         // Priority: Form Input > AI Detected Topic > Fallback
-        const derivedUnitName = formUnitName || (topics.length > 0 ? topics[0] : normalizeSubjectLabel(subject));
+        const derivedUnitName = formUnitName || (analysis.covered_topics.length > 0 ? analysis.covered_topics[0] : normalizeSubjectLabel(subject));
         const testDate = (formData.get("testDate") as string) || new Date().toISOString().split('T')[0];
 
         const analysisDetailsForStorage = {
