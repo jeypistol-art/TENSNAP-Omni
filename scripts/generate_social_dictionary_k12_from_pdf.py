@@ -25,6 +25,43 @@ VALID_GRADES = [
     "中1", "中2", "中3",
     "高1", "高2", "高3",
 ]
+PARTIAL_END_RE = re.compile(r"[とのはをにでが]$")
+REBUILD_HINT_RE = re.compile(r"([とのはをにでが]|結|見|び)$")
+NOISY_UNIT_RE = re.compile(
+    r"(学習単元|学習活動|典型的な活動|よく取り上げられる事柄例|変更になる場合|を理解する|について、|について|着目し|を基に|をもとに|報告書|ワークシート|住んでいる|どのような影響が|を具体的に|から.+までの|よりよく生きること|^社会 [５６65]年$|^世界平和の実現と人類の福祉の増大$|を知る。$|について考える。$|をまとめる。$)"
+)
+NOISY_KEYWORD_RE = re.compile(
+    r"(学習単元|よく取り上げられる事柄例|典型的な活動|変更になる場合|ラーニング|チャレンジ|チェックテスト|☆印)"
+)
+UNIT_FIXES = {
+    "人間の尊重と": "人間の尊重と基本的人権の尊重の精神",
+    "政治、経済の": "政治、経済の国際化",
+    "租税の意義と": "租税の意義と役割",
+    "日本の位置と": "日本の位置と領土・領海・領空",
+    "日本語との": "日本語との関わりが深い国",
+    "幕府の政治改革と": "幕府の政治改革と政治の行き詰まり",
+    "明治政府の成立と": "明治政府の成立と維新",
+    "武家政治の展開と": "武家政治の展開と社会",
+    "江戸幕府の成立と": "江戸幕府の成立と鎖国政策",
+    "土地利用図を見て地形と土地利用を": "土地利用図と地形・土地利用",
+    "個人と社会におけるルールのあン(屋台村方式)": "個人と社会におけるルールのあり方",
+    "個人と社会の関わり活": "個人と社会の関わり",
+    "高度経済成長期以降の社会の現": "高度経済成長期以降の社会の変化",
+    "今まで学習した内容から課題を設定る。": "多面的に見た日本",
+    "地域間の結び": "地域間の結び付きから見た日本",
+    "産業交通の発達と": "産業交通の発達と国民生活の変化",
+    "享保の改革、田沼意次の政治、寛政の改革、天": "幕府の政治改革と政治の行き詰まり",
+}
+DROP_UNITS = {
+    "地球儀と世界地図から大陸と海洋の",
+    "旅行計画にそって、地域の特色を発表する。",
+    "調べたことをポスターにまとめ、報告会を行う。",
+    "第二次世界大戦への道を歩んだ日本や世界の様とめる。",
+    "第二次世界大戦への道を歩んだ日本や世界の様",
+    "鎌倉文化、室町文化の特徴を調べ、２つの文化",
+    "世界の国々と日本にある世界遺産を",
+    "都市の機能、昼夜人口の変化を資料で",
+}
 
 
 def normalize_text(value: str) -> str:
@@ -48,6 +85,145 @@ def dedupe(values: list[str]) -> list[str]:
         if key and key not in seen:
             seen[key] = text
     return list(seen.values())
+
+
+def squash_repeated_suffix(value: str) -> str:
+    text = normalize_text(value)
+    dup = re.search(r"(.{1,8})\1$", text)
+    if dup:
+        return text[: -len(dup.group(1))]
+    return text
+
+
+def normalize_unit_by_keywords(unit: str, keywords: list[str]) -> str:
+    text = squash_repeated_suffix(unit)
+    if text in DROP_UNITS:
+        return ""
+    if text in UNIT_FIXES:
+        return UNIT_FIXES[text]
+    normalized_keywords = [normalize_text(keyword) for keyword in keywords if normalize_text(keyword)]
+    if not text or not normalized_keywords:
+        return text
+
+    first = normalized_keywords[0]
+    if first and text == first * 2:
+        return first
+
+    if first and first in text and not text.startswith(first) and REBUILD_HINT_RE.search(text):
+        prefix = normalize_text(text.split(first, 1)[0])
+        if 2 <= len(prefix) <= 16:
+            return prefix
+
+    return text
+
+
+def clean_keywords(values: list[str]) -> list[str]:
+    cleaned: list[str] = []
+    seen: set[str] = set()
+    for raw in values:
+        keyword = normalize_text(str(raw))
+        if not keyword or len(keyword) > 24 or NOISY_KEYWORD_RE.search(keyword):
+            continue
+        if "屋台村方式" in keyword or "様とめる" in keyword:
+            continue
+        if "ロールプレイ" in keyword or "報告書" in keyword:
+            continue
+        if "資料で" in keyword or "世界遺産を" in keyword:
+            continue
+        if re.search(r"[。]", keyword):
+            continue
+        if re.search(r"(発表|まとめ|設定|調べ|考え|行う|知る|演じ|つかむ)$", keyword):
+            continue
+        key = canonical(keyword)
+        if key and key not in seen:
+            seen.add(key)
+            cleaned.append(keyword)
+    return cleaned
+
+
+def is_noisy_unit(unit: str) -> bool:
+    text = normalize_text(unit)
+    if not text:
+        return True
+    if len(text) > 36:
+        return True
+    if NOISY_UNIT_RE.search(text):
+        return True
+    return False
+
+
+def reconstruct_unit(unit: str, keywords: list[str]) -> str:
+    rebuilt = normalize_unit_by_keywords(unit, keywords)
+    if not rebuilt or len(rebuilt) >= 24 or not REBUILD_HINT_RE.search(rebuilt):
+        return rebuilt
+
+    for keyword in keywords[:3]:
+        fragment = normalize_text(keyword)
+        if not fragment or len(fragment) > 16:
+            continue
+        rebuilt += fragment
+        if len(rebuilt) >= 36:
+            break
+        if not PARTIAL_END_RE.search(rebuilt) and not re.search(r"[ぁ-ん]$", rebuilt):
+            break
+    return normalize_unit_by_keywords(rebuilt, keywords)
+
+
+def has_longer_prefix_match(entry: dict[str, object], entries: list[dict[str, object]]) -> bool:
+    unit = normalize_text(str(entry["unit"]))
+    for other in entries:
+        if other is entry:
+            continue
+        if normalize_text(str(other["domain"])) != normalize_text(str(entry["domain"])):
+            continue
+        other_unit = normalize_text(str(other["unit"]))
+        if len(other_unit) <= len(unit):
+            continue
+        if other_unit.startswith(unit):
+            return True
+    return False
+
+
+def clean_grade_entries(entries: list[dict[str, object]]) -> list[dict[str, object]]:
+    prepared: list[dict[str, object]] = []
+    for entry in entries:
+        domain = normalize_text(str(entry.get("domain", "")))
+        keywords = clean_keywords([str(v) for v in (entry.get("keywords") or [])])
+        unit = normalize_unit_by_keywords(str(entry.get("unit", "")), keywords)
+        aliases = clean_keywords([str(v) for v in (entry.get("aliases") or [])])
+        if not domain or not unit or is_noisy_unit(unit):
+            continue
+
+        rebuilt = reconstruct_unit(unit, keywords)
+        if len(keywords) > 20:
+            continue
+        prepared.append({
+            "domain": domain,
+            "unit": rebuilt,
+            "keywords": keywords,
+            "aliases": aliases,
+        })
+
+    merged: OrderedDict[tuple[str, str], dict[str, object]] = OrderedDict()
+    for entry in prepared:
+        key = (normalize_text(str(entry["domain"])), normalize_text(str(entry["unit"])))
+        if key not in merged:
+            merged[key] = {
+                "domain": normalize_text(str(entry["domain"])),
+                "unit": normalize_text(str(entry["unit"])),
+                "keywords": clean_keywords([str(v) for v in (entry.get("keywords") or [])]),
+                "aliases": clean_keywords([str(v) for v in (entry.get("aliases") or [])]),
+            }
+            continue
+        merged[key]["keywords"] = clean_keywords(
+            [*merged[key]["keywords"], *entry.get("keywords", [])]  # type: ignore[index]
+        )
+        merged[key]["aliases"] = clean_keywords(
+            [*merged[key]["aliases"], *entry.get("aliases", [])]  # type: ignore[index]
+        )
+
+    filtered = [entry for entry in merged.values() if not has_longer_prefix_match(entry, list(merged.values()))]
+    return sorted(filtered, key=lambda row: (str(row["domain"]), str(row["unit"])))
 
 
 def read_pdf_lines(pdf_path: Path) -> list[str]:
@@ -95,13 +271,13 @@ def finalize_grade_entries(entries: list[dict[str, object]]) -> list[dict[str, o
             merged[key] = {
                 "domain": domain,
                 "unit": unit,
-                "keywords": dedupe(keywords),
-                "aliases": dedupe(aliases),
+                "keywords": clean_keywords(keywords),
+                "aliases": clean_keywords(aliases),
             }
         else:
-            merged[key]["keywords"] = dedupe([*merged[key]["keywords"], *keywords])  # type: ignore[index]
-            merged[key]["aliases"] = dedupe([*merged[key]["aliases"], *aliases])  # type: ignore[index]
-    return sorted(merged.values(), key=lambda row: (str(row["domain"]), str(row["unit"])))
+            merged[key]["keywords"] = clean_keywords([*merged[key]["keywords"], *keywords])  # type: ignore[index]
+            merged[key]["aliases"] = clean_keywords([*merged[key]["aliases"], *aliases])  # type: ignore[index]
+    return clean_grade_entries(list(merged.values()))
 
 
 def parse_elementary(pdf_path: Path, bucket: dict[str, list[dict[str, object]]]) -> None:

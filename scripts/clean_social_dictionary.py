@@ -63,7 +63,7 @@ def normalize_unit_by_keywords(unit: str, keywords: list[str]) -> str:
     if first and text == first * 2:
         return first
 
-    if first and first in text and not text.startswith(first):
+    if first and first in text and not text.startswith(first) and REBUILD_HINT_RE.search(text):
         prefix = text.split(first, 1)[0]
         prefix = normalize(prefix)
         if 2 <= len(prefix) <= 16:

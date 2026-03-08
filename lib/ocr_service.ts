@@ -966,6 +966,55 @@ function expandSocialCoveredTopicsToMinimum(
     return [...deduped, ...relatedEntries.values()].slice(0, Math.max(minimum, 6));
 }
 
+function buildPrioritizedSocialWeaknesses(
+    wrongTopics: string[],
+    socialBaseTopics: string[],
+    schoolStage?: SchoolStage | null
+): { topic: string; level: "Primary" | "Secondary" }[] {
+    const normalizedWrongTopics = wrongTopics
+        .map((topic) => toSocialDomainTopic(topic, schoolStage))
+        .filter(Boolean);
+    const seedTopics = normalizedWrongTopics.length > 0 ? normalizedWrongTopics : socialBaseTopics;
+    if (seedTopics.length === 0) return [];
+
+    const primaryTopic = seedTopics[0];
+    const primaryDomain = splitSocialDomainTopic(primaryTopic).domain;
+    const prioritized = new Map<string, { topic: string; level: "Primary" | "Secondary" }>();
+    prioritized.set(canonicalTopic(primaryTopic), { topic: primaryTopic, level: "Primary" });
+
+    const pushSecondary = (topic: string) => {
+        const formatted = toSocialDetailedWeakness(topic, socialBaseTopics, prioritized.size, schoolStage);
+        if (!formatted || isLowValueTopic(formatted, "social")) return;
+        const key = canonicalTopic(formatted);
+        if (prioritized.has(key)) return;
+        prioritized.set(key, { topic: formatted, level: "Secondary" });
+    };
+
+    for (const topic of normalizedWrongTopics.slice(1)) {
+        const domain = splitSocialDomainTopic(topic).domain;
+        if (!primaryDomain || domain === primaryDomain) {
+            pushSecondary(topic);
+        }
+    }
+
+    for (const seed of normalizedWrongTopics) {
+        for (const match of findSocialCurriculumMatches(seed, schoolStage)) {
+            if (!primaryDomain || match.domain === primaryDomain) {
+                pushSecondary(`${match.domain}：${match.unit}`);
+            }
+            if (prioritized.size >= 5) break;
+        }
+        if (prioritized.size >= 5) break;
+    }
+
+    for (const topic of [...socialBaseTopics, ...normalizedWrongTopics]) {
+        pushSecondary(topic);
+        if (prioritized.size >= 5) break;
+    }
+
+    return Array.from(prioritized.values()).slice(0, 5);
+}
+
 function mergeSocialTopicPool(wrongTopics: string[], coveredTopics: string[], schoolStage?: SchoolStage | null): string[] {
     const merged = [...wrongTopics, ...coveredTopics]
         .map((t) => normalizeTopicLabel(String(t || "")))
@@ -1304,17 +1353,7 @@ function sanitizeWeaknessAreas(
         ).values()
     );
     const socialSpecificWeaknesses = isSocial
-        ? Array.from(
-            new Map(
-                [...wrongTopics, ...socialBaseTopics]
-                    .map((topic, index) => ({
-                        topic: toSocialDetailedWeakness(topic, socialBaseTopics, index, schoolStage),
-                        level: index === 0 ? "Primary" as const : "Secondary" as const,
-                    }))
-                    .filter((w) => !!w.topic && !isLowValueTopic(w.topic, subjectCategory))
-                    .map((w) => [canonicalTopic(w.topic), w] as const)
-            ).values()
-        )
+        ? buildPrioritizedSocialWeaknesses(wrongTopics, socialBaseTopics, schoolStage)
         : [];
 
     const finalCoveredTopics = formattedCoveredTopics.length > 0
