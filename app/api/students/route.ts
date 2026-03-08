@@ -117,3 +117,42 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ error: "Failed to update student" }, { status: 500 });
     }
 }
+
+// DELETE: Delete a student profile and related student data
+export async function DELETE(request: Request) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    try {
+        const requestedPlan = getRequestedPlanFromRequest(request);
+        await getTenantId((session.user as SessionUser).id, (session.user as SessionUser).email ?? null, requestedPlan);
+        if (requestedPlan === "family") {
+            return NextResponse.json(
+                { error: "Family plan does not support student deletion" },
+                { status: 403 }
+            );
+        }
+
+        const { id } = await request.json();
+        if (!id) {
+            return NextResponse.json({ error: "Student ID is required" }, { status: 400 });
+        }
+
+        const ownedStudent = await query<{ id: string }>(
+            `SELECT id FROM students WHERE id = $1 AND user_id = $2 LIMIT 1`,
+            [id, session.user.id]
+        );
+        if (ownedStudent.rows.length === 0) {
+            return NextResponse.json({ error: "Student not found" }, { status: 404 });
+        }
+
+        await query(`DELETE FROM analyses WHERE student_id = $1 AND user_id = $2`, [id, session.user.id]);
+        await query(`DELETE FROM uploads WHERE student_id = $1 AND user_id = $2`, [id, session.user.id]);
+        await query(`DELETE FROM students WHERE id = $1 AND user_id = $2`, [id, session.user.id]);
+
+        return NextResponse.json({ success: true, deletedStudentId: id });
+    } catch (error) {
+        console.error("Delete Student Error:", error);
+        return NextResponse.json({ error: "Failed to delete student" }, { status: 500 });
+    }
+}

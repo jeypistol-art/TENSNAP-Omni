@@ -306,6 +306,16 @@ export default function Dashboard() {
         setIsEditStudentModalOpen(false);
     }, []);
 
+    const handleStudentDeleted = useCallback((deletedStudentId: string) => {
+        setStudents((prev) => {
+            const nextStudents = prev.filter((student) => student.id !== deletedStudentId);
+            const nextSelected = nextStudents[0]?.id || "";
+            setSelectedStudentId((current) => current === deletedStudentId ? nextSelected : current);
+            return nextStudents;
+        });
+        setIsEditStudentModalOpen(false);
+    }, []);
+
     const startEditField = (field: "student" | "subject" | "score" | "testDate", value: string) => {
         setFieldError("");
         setEditingField(field);
@@ -738,6 +748,7 @@ export default function Dashboard() {
                 mode="edit"
                 initialStudent={selectedStudent ?? null}
                 onUpdated={handleStudentUpdated}
+                onDeleted={!isFamilyHost ? handleStudentDeleted : undefined}
             />
 
             {/* Main Upload / Results Area */}

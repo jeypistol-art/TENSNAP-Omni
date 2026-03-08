@@ -26,6 +26,7 @@ type Props = {
     mode?: "create" | "edit";
     initialStudent?: Student | null;
     onUpdated?: (updatedStudent: Student) => void;
+    onDeleted?: (deletedStudentId: string) => void;
 };
 
 const emptyFormData: StudentForm = {
@@ -42,7 +43,8 @@ export default function AddStudentModal({
     onAdded,
     mode = "create",
     initialStudent = null,
-    onUpdated
+    onUpdated,
+    onDeleted
 }: Props) {
     const [formData, setFormData] = useState<StudentForm>({
         name: "",
@@ -52,9 +54,12 @@ export default function AddStudentModal({
         notes: ""
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     useEffect(() => {
         if (!isOpen) return;
+        setShowDeleteConfirm(false);
         if (mode === "edit" && initialStudent) {
             setFormData({
                 name: initialStudent.name ?? "",
@@ -103,6 +108,32 @@ export default function AddStudentModal({
             alert(mode === "edit" ? "Error updating student" : "Error creating student");
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (mode !== "edit" || !initialStudent?.id || isDeleting) return;
+        setIsDeleting(true);
+        try {
+            const res = await fetch("/api/students", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: initialStudent.id }),
+            });
+
+            if (res.ok) {
+                onDeleted?.(initialStudent.id);
+                setShowDeleteConfirm(false);
+                onClose();
+                setFormData(emptyFormData);
+            } else {
+                alert("Failed to delete student");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Error deleting student");
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -178,6 +209,41 @@ export default function AddStudentModal({
                                 : (mode === "edit" ? "保存する" : "登録する")}
                         </button>
                     </div>
+                    {mode === "edit" && onDeleted && (
+                        <div className="pt-5">
+                            {!showDeleteConfirm ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowDeleteConfirm(true)}
+                                    className="text-sm text-red-500 hover:text-red-600 transition-colors"
+                                >
+                                    この生徒の情報を削除
+                                </button>
+                            ) : (
+                                <div className="mt-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+                                    <p className="text-sm text-red-700">この生徒の情報を削除しますか？</p>
+                                    <div className="mt-3 flex justify-end gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowDeleteConfirm(false)}
+                                            className="px-3 py-1.5 text-sm font-semibold text-gray-600 hover:text-gray-800"
+                                            disabled={isDeleting}
+                                        >
+                                            いいえ
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleDelete}
+                                            className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                                            disabled={isDeleting}
+                                        >
+                                            {isDeleting ? "削除中..." : "はい"}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </form>
             </div>
         </div>
