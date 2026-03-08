@@ -1139,7 +1139,7 @@ function inferJapaneseTopicFromText(text: string, schoolStage?: SchoolStage | nu
 function hasKanbunEvidence(text: string): boolean {
     const t = normalizeTopicLabel(text);
     if (!t) return false;
-    return /(漢文|返り点|レ点|一二点|上下点|再読文字|書き下し|白文|句法|訓点|置き字|漢詩)/.test(t);
+    return /(返り点|レ点|一二点|上下点|再読文字|書き下し|白文|句法|訓点|置き字|漢詩|論語)/.test(t);
 }
 
 function hasKobunEvidence(text: string): boolean {
@@ -1724,13 +1724,15 @@ async function extractJapaneseSpecificTopics(
         const content = response.choices[0].message.content;
         if (!content) return [];
         const parsed = JSON.parse(content) as { topics?: string[] };
+        const rawTopics = (Array.isArray(parsed.topics) ? parsed.topics : []).map((t) => normalizeTopicLabel(String(t || "")));
+        const resolved = rawTopics
+            .map((t) => inferJapaneseTopicFromText(String(t || ""), schoolStage) || resolveJapaneseCurriculumUnit(String(t || ""), schoolStage) || toJapaneseDomainTopic(String(t || ""), schoolStage))
+            .filter(Boolean)
+            .filter(isSpecificJapaneseTopic);
+        const filtered = filterJapaneseTopicsByEvidence(resolved, rawTopics);
         return Array.from(
             new Map(
-                (Array.isArray(parsed.topics) ? parsed.topics : [])
-                    .map((t) => inferJapaneseTopicFromText(String(t || ""), schoolStage) || resolveJapaneseCurriculumUnit(String(t || ""), schoolStage) || toJapaneseDomainTopic(String(t || ""), schoolStage))
-                    .filter(Boolean)
-                    .filter(isSpecificJapaneseTopic)
-                    .map((t) => [canonicalTopic(t), t] as const)
+                filtered.map((t) => [canonicalTopic(t), t] as const)
             ).values()
         ).slice(0, 6);
     } catch {
