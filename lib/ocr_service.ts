@@ -104,6 +104,13 @@ Instructions:
    - 「誤答設問1」「誤答問題2」「設問3」などのプレースホルダ表現は出力禁止。必ず内容語（用語・地名・制度名など）で出力すること。
    - covered_topics や weakness_areas より、wrong_question_topics の語句を優先して選ぶこと。
 
+4.3 **英語の単元抽出ルール (English Unit Specificity)**:
+   - 教科が「英語」の場合、covered_topics と weakness_areas.topic には「文法」「語彙」「読解」「表現」などの抽象語を単独で出力してはならない。
+   - 代わりに、中学英語の具体単元名を優先して出力せよ。
+   - 例: 「三人称単数現在形」「接続詞 because」「SVOC（C=形容詞）」「疑問詞 + to」「現在完了形（継続用法）」「関係代名詞 who」「受け身（助動詞つき）」「want / try / need など + to」。
+   - 英作文設問でも、内容面ではなく文法単元に分解して出力せよ。たとえば "I want go..." は「want / try / need など + to」を優先する。
+   - 語順の誤りは、可能なら「語順」だけでなく関連する文型・構文（例: 「SVOC（C=形容詞）」）まで具体化せよ。
+
 5. **責任ある表明 (Professional Tone)**:
    - 逃げの言葉ではなく、厳密な事実に基づいて課題を指摘する。
    - 「本分析は複数の設問傾向から推定した学習状態です」という文言を必ず添えろ。
@@ -489,9 +496,7 @@ function toEnglishDomainTopic(topic: string): string {
     if (/(語順)/.test(u)) return canonicalEnglishTopicLabel("文法:語順");
     if (/(文法|時制|助動詞|不定詞|動名詞|関係代名詞|関係副詞|比較|受動態|現在完了|前置詞|接続詞|品詞)/.test(u)) return canonicalEnglishTopicLabel("文法:文法");
     if (/(語彙|単語|熟語|イディオム|vocabulary|idiom)/i.test(u)) return canonicalEnglishTopicLabel("語彙:語彙");
-
-    const resolved = inferDomainByCategory(u, "english") || "英語";
-    return canonicalEnglishTopicLabel(resolved === "英語" ? `英語:${u}` : `${resolved}:${u}`);
+    return "";
 }
 
 function formatTopicWithDomain(topic: string, category: SubjectCategory): string {
@@ -660,6 +665,67 @@ function prioritizeCivicsTopics(topics: string[], preferCivics: boolean): string
     return [...civics, ...others];
 }
 
+function isSpecificEnglishTopic(topic: string): boolean {
+    const t = normalizeTopicLabel(topic);
+    if (!t) return false;
+    return !/^(英語|英文|語彙|文法|文法（基本）|文法（語順）|英作文|英語:表現力|英語:英語|読解|内容理解|文章読解（内容理解）|会話文読解（内容理解）)$/.test(t);
+}
+
+function inferEnglishTopicFromText(text: string): string | null {
+    const t = normalizeTopicLabel(text);
+    if (!t) return null;
+
+    const curriculumUnit = resolveEnglishCurriculumUnit(t);
+    if (curriculumUnit) return curriculumUnit;
+
+    if (/(anything interesting|something interesting|interesting anything|find .* interesting)/i.test(t)) return "SVOC（C=形容詞）";
+    if (/(he|she|it)\s+[a-z]+s\b/i.test(t) || /三人称単数|三単現|doesn'?t|does\s/i.test(t)) return "三人称単数現在形（肯定文）";
+    if (/\bwant to\b/i.test(t) || /want\s+[a-z]+\s+to/i.test(t)) return "want / try / need など + to";
+    if (/\bhow to\b|\bwhat to\b|\bwhere to\b|\bwhen to\b/i.test(t) || /疑問詞\s*\+\s*to/.test(t)) return "疑問詞 + to";
+    if (/\bbecause\b|接続詞 because/i.test(t)) return "接続詞 because";
+    if (/\bif\b|接続詞 if/i.test(t)) return "接続詞 if";
+    if (/\bwhen\b|接続詞 when/i.test(t)) return "接続詞 when";
+    if (/\bthat\b|that節|接続詞 that/i.test(t)) return "接続詞 that";
+    if (/\bhave been\b.+ing/i.test(t) || /現在完了進行形/.test(t)) return "現在完了進行形";
+    if (/\bfor\b|\bsince\b|継続用法/.test(t)) return "現在完了形（継続用法）";
+    if (/\bever\b|\bnever\b|経験用法/.test(t)) return "現在完了形（経験用法・平叙文）";
+    if (/\balready\b|\byet\b|\bjust\b|完了用法|結果用法/.test(t)) return "現在完了形（完了用法）";
+    if (/\bhave\b|\bhas\b|現在完了/.test(t)) return "現在完了形（経験用法・平叙文）";
+    if (/who/.test(t) && /関係代名詞/.test(t)) return "関係代名詞 who";
+    if (/that|which/.test(t) && /関係代名詞|主格|目的格/.test(t)) return "関係代名詞（主格 that / which）";
+    if (/受け身|受動態|\bbe\b.+\bby\b/i.test(t)) return "受け身（平叙文）";
+    if (/be going to/i.test(t)) return "be going to";
+    if (/will|未来形/.test(t)) return "助動詞 will";
+    if (/there is|there are/i.test(t)) return "There is [are] ...";
+    if (/look\s+\w+/i.test(t) || /look \+ 形容詞/.test(t)) return "look + 形容詞";
+    if (/how many/i.test(t)) return "How many ...?";
+    if (/what time/i.test(t)) return "What time ...?";
+    if (/whose/i.test(t)) return "Whose ...?";
+    if (/which/i.test(t)) return "Which ... (A or B)?";
+    return null;
+}
+
+function buildSpecificEnglishTopics(
+    wrongTopics: string[],
+    coveredTopics: string[],
+    weaknesses: WeaknessArea[]
+): string[] {
+    const pool = [
+        ...wrongTopics,
+        ...coveredTopics,
+        ...weaknesses.map((w) => String(w?.topic || "")),
+    ]
+        .map((t) => normalizeTopicLabel(String(t || "")))
+        .filter(Boolean);
+
+    const specific = pool
+        .map((t) => inferEnglishTopicFromText(t) || toEnglishDomainTopic(t))
+        .filter(Boolean)
+        .filter(isSpecificEnglishTopic);
+
+    return Array.from(new Map(specific.map((t) => [canonicalTopic(t), t] as const)).values()).slice(0, 6);
+}
+
 function sanitizeWeaknessAreas(
     inputWeaknesses: WeaknessArea[] | undefined,
     inputCoveredTopics: string[] | undefined,
@@ -678,6 +744,7 @@ function sanitizeWeaknessAreas(
     const isScience = /理科|科学|理数|science|stem/.test(lowerSubject);
     const isSocial = /社会|地理|歴史|social|geography|history/.test(lowerSubject);
     const subjectCategory = detectSubjectCategory(subject);
+    const isEnglish = subjectCategory === "english";
     const rawWeaknesses = Array.isArray(inputWeaknesses) ? inputWeaknesses : [];
     const coveredDomainTopics = Array.from(
         new Map(
@@ -691,7 +758,11 @@ function sanitizeWeaknessAreas(
         new Set(
             (Array.isArray(wrongQuestionTopics) ? wrongQuestionTopics : [])
                 .map((t) => normalizeTopicLabel(String(t || "")))
-                .map((t) => (isSocial ? toSocialDomainTopic(t) : formatTopicWithDomain(t, subjectCategory)))
+                .map((t) => {
+                    if (isSocial) return toSocialDomainTopic(t);
+                    if (isEnglish) return inferEnglishTopicFromText(t) || resolveEnglishCurriculumUnit(t) || "";
+                    return formatTopicWithDomain(t, subjectCategory);
+                })
                 .filter(Boolean)
         )
     );
@@ -714,6 +785,12 @@ function sanitizeWeaknessAreas(
     const socialBaseTopics = isSocial && socialSpecificTopics.length > 0
         ? prioritizeCivicsTopics(socialSpecificTopics, preferCivics)
         : coveredTopics;
+    const englishSpecificTopics = isEnglish
+        ? buildSpecificEnglishTopics(wrongTopics, coveredTopics, rawWeaknesses)
+        : [];
+    const englishBaseTopics = isEnglish && englishSpecificTopics.length > 0
+        ? englishSpecificTopics
+        : nonSocialBaseTopics;
 
     const sanitized = rawWeaknesses
         .map((w, index) => {
@@ -757,9 +834,19 @@ function sanitizeWeaknessAreas(
                 }
                 }
             } else {
-                const matchedNonSocial = findCoveredTopicMatch(rawTopic, nonSocialBaseTopics);
+                const currentBaseTopics = isEnglish ? englishBaseTopics : nonSocialBaseTopics;
+                const matchedNonSocial = findCoveredTopicMatch(rawTopic, currentBaseTopics);
                 if (matchedNonSocial) {
                     topic = matchedNonSocial;
+                } else if (isEnglish) {
+                    const inferred = inferEnglishTopicFromText(rawTopic);
+                    if (inferred) {
+                        topic = inferred;
+                    } else if ((isGenericWeaknessTopic(rawTopic) || !isSpecificEnglishTopic(rawTopic)) && currentBaseTopics.length > 0) {
+                        topic = currentBaseTopics[Math.min(index, currentBaseTopics.length - 1)];
+                    } else if (matchedCovered) {
+                        topic = formatTopicWithDomain(matchedCovered, subjectCategory);
+                    }
                 } else if (isGenericWeaknessTopic(rawTopic) && nonSocialBaseTopics.length > 0) {
                     topic = nonSocialBaseTopics[Math.min(index, nonSocialBaseTopics.length - 1)];
                 } else if (matchedCovered) {
@@ -805,7 +892,13 @@ function sanitizeWeaknessAreas(
 
     const formattedCoveredTopics = Array.from(
         new Map(
-            (isSocial ? socialBaseTopics : (nonSocialBaseTopics.length > 0 ? nonSocialBaseTopics : coveredDomainTopics))
+            (
+                isSocial
+                    ? socialBaseTopics
+                    : isEnglish
+                        ? (englishBaseTopics.length > 0 ? englishBaseTopics : coveredDomainTopics)
+                        : (nonSocialBaseTopics.length > 0 ? nonSocialBaseTopics : coveredDomainTopics)
+            )
                 .map((t) => (isSocial ? t : formatTopicWithDomain(t, subjectCategory)))
                 .filter((t) => !isLowValueTopic(t, subjectCategory))
                 .filter(Boolean)
