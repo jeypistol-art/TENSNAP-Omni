@@ -213,6 +213,7 @@ type DomainHint = { domain: string; keywords: string[] };
 type MathCurriculumEntry = { domain?: string; unit?: string; keywords?: string[]; aliases?: string[] };
 type MathCurriculumDictionary = { grades?: Record<string, MathCurriculumEntry[]> };
 type EnglishCurriculumUnitIndexEntry = { unit: string; domain: string; tokens: string[] };
+type JapaneseCurriculumUnitIndexEntry = { unit: string; domain: string; tokens: string[] };
 
 function detectDomainByHints(unit: string, hints: DomainHint[]): string | null {
     const normalized = normalizeTopicLabel(unit).toLowerCase();
@@ -329,6 +330,24 @@ const ENGLISH_ALL_HINTS: DomainHint[] = [...ENGLISH_CURRICULUM_HINTS, ...ENGLISH
 const JAPANESE_CURRICULUM_HINTS = buildMathHintsFromCurriculumDictionary(
     japaneseCurriculumK12 as MathCurriculumDictionary
 );
+const JAPANESE_CURRICULUM_UNITS: JapaneseCurriculumUnitIndexEntry[] = Object.values(
+    (japaneseCurriculumK12 as MathCurriculumDictionary)?.grades || {}
+)
+    .flatMap((entries) => Array.isArray(entries) ? entries : [])
+    .map((entry) => {
+        const unit = normalizeTopicLabel(String(entry?.unit || ""));
+        const domain = normalizeTopicLabel(String(entry?.domain || ""));
+        const tokens = Array.from(
+            new Set(
+                [unit]
+                    .concat(Array.isArray(entry?.aliases) ? entry.aliases.map((v) => normalizeTopicLabel(String(v || ""))) : [])
+                    .concat(Array.isArray(entry?.keywords) ? entry.keywords.map((v) => normalizeTopicLabel(String(v || ""))) : [])
+                    .filter(Boolean)
+            )
+        );
+        return { unit, domain, tokens };
+    })
+    .filter((entry) => entry.unit);
 
 const JAPANESE_DOMAIN_HINTS: DomainHint[] = [
     {
@@ -505,6 +524,85 @@ function toEnglishDomainTopic(topic: string): string {
     return "";
 }
 
+function resolveJapaneseCurriculumUnit(topic: string): string | null {
+    const normalized = normalizeTopicLabel(topic);
+    if (!normalized) return null;
+
+    const { unit } = splitDomainTopic(normalized);
+    const candidate = normalizeTopicLabel(unit || normalized);
+    if (!candidate) return null;
+
+    const exact = JAPANESE_CURRICULUM_UNITS.find((entry) =>
+        entry.tokens.some((token) => canonicalTopic(token) === canonicalTopic(candidate))
+    );
+    if (exact) return exact.unit;
+
+    const partial = JAPANESE_CURRICULUM_UNITS.find((entry) =>
+        entry.tokens.some((token) => {
+            const left = canonicalTopic(token);
+            const right = canonicalTopic(candidate);
+            return !!left && !!right && (left.includes(right) || right.includes(left));
+        })
+    );
+    return partial?.unit || null;
+}
+
+function toJapaneseDomainTopic(topic: string): string {
+    const { unit } = splitDomainTopic(topic);
+    const u = normalizeTopicLabel(unit || topic);
+    if (!u) return "";
+    if (isPlaceholderUnit(u)) return "";
+    if (/^(国語|本文|文章|論理性|表現力|読解力)$/.test(u)) return "";
+
+    const curriculumUnit = resolveJapaneseCurriculumUnit(u);
+    if (curriculumUnit) return curriculumUnit;
+
+    if (/(指示語)/.test(u)) return "指示語";
+    if (/(接続語|接続詞)/.test(u)) return "接続語";
+    if (/(主語|述語)/.test(u)) return "主語・述語の関係";
+    if (/(修飾語|被修飾)/.test(u)) return "修飾・被修飾の関係";
+    if (/(文の組み立て|文の成分)/.test(u)) return "文の組み立て";
+    if (/(言葉の単位|文節|単語)/.test(u)) return "言葉の単位";
+    if (/(助詞)/.test(u)) return "助詞";
+    if (/(助動詞)/.test(u)) return "助動詞";
+    if (/(敬語)/.test(u)) return "敬語";
+    if (/(対義語)/.test(u)) return "対義語";
+    if (/(類義語)/.test(u)) return "類義語";
+    if (/(慣用句)/.test(u)) return "慣用句";
+    if (/(四字熟語)/.test(u)) return "四字熟語";
+    if (/(故事成語)/.test(u)) return "故事成語";
+    if (/(熟字訓)/.test(u)) return "熟字訓";
+    if (/(同音異義|同音異字)/.test(u)) return "同音異義語";
+    if (/(同訓異字)/.test(u)) return "同訓異字";
+    if (/(送り仮名)/.test(u)) return "送りがな";
+    if (/(音読訓読)/.test(u)) return "音読訓読";
+    if (/(返り点|レ点|一二点|上下点)/.test(u)) return "返り点";
+    if (/(再読文字)/.test(u)) return "再読文字";
+    if (/(受身形)/.test(u)) return "受身形";
+    if (/(使役形)/.test(u)) return "使役形";
+    if (/(疑問形)/.test(u)) return "疑問形";
+    if (/(反語形)/.test(u)) return "反語形";
+    if (/(仮定形)/.test(u)) return "仮定形";
+    if (/(漢文の読み方|訓読)/.test(u)) return "漢文の読み方";
+    if (/(漢詩)/.test(u)) return "漢詩";
+    if (/(竹取物語)/.test(u)) return "竹取物語";
+    if (/(枕草子)/.test(u)) return "枕草子";
+    if (/(徒然草)/.test(u)) return "徒然草";
+    if (/(平家物語)/.test(u)) return "平家物語";
+    if (/(論語)/.test(u)) return "論語";
+    if (/(古今和歌集|仮名序)/.test(u)) return "古今和歌集";
+    if (/(万葉集)/.test(u)) return "万葉集";
+    if (/(新古今和歌集)/.test(u)) return "新古今和歌集";
+    if (/(奥の細道|夏草)/.test(u)) return "奥の細道";
+    if (/(高瀬舟)/.test(u)) return "高瀬舟";
+    if (/(故郷)/.test(u)) return "故郷";
+    if (/(俳句)/.test(u)) return "俳句";
+    if (/(短歌)/.test(u)) return "短歌";
+    if (/(詩)/.test(u)) return "詩";
+    if (/(要旨)/.test(u)) return "要旨";
+    return "";
+}
+
 function formatTopicWithDomain(topic: string, category: SubjectCategory): string {
     const { domain, unit } = splitDomainTopic(topic);
     if (!unit) return "";
@@ -514,6 +612,9 @@ function formatTopicWithDomain(topic: string, category: SubjectCategory): string
     }
     if (category === "english") {
         return toEnglishDomainTopic(topic);
+    }
+    if (category === "japanese") {
+        return toJapaneseDomainTopic(topic);
     }
 
     const resolved = domain || inferDomainByCategory(unit, category);
@@ -677,6 +778,12 @@ function isSpecificEnglishTopic(topic: string): boolean {
     return !/^(英語|英文|語彙|文法|文法（基本）|文法（語順）|英作文|英語:表現力|英語:英語|読解|内容理解|文章読解（内容理解）|会話文読解（内容理解）)$/.test(t);
 }
 
+function isSpecificJapaneseTopic(topic: string): boolean {
+    const t = normalizeTopicLabel(topic);
+    if (!t) return false;
+    return !/^(国語|読解|内容理解|論理性|表現力|国語:論理性|国語:表現力|古文・漢文:表現力|古文・漢文:読解|語彙・漢字|文法|古文・漢文)$/.test(t);
+}
+
 function inferEnglishTopicFromText(text: string): string | null {
     const t = normalizeTopicLabel(text);
     if (!t) return null;
@@ -711,6 +818,15 @@ function inferEnglishTopicFromText(text: string): string | null {
     return null;
 }
 
+function inferJapaneseTopicFromText(text: string): string | null {
+    const t = normalizeTopicLabel(text);
+    if (!t) return null;
+
+    const curriculumUnit = resolveJapaneseCurriculumUnit(t);
+    if (curriculumUnit) return curriculumUnit;
+    return toJapaneseDomainTopic(t) || null;
+}
+
 function buildSpecificEnglishTopics(
     wrongTopics: string[],
     coveredTopics: string[],
@@ -728,6 +844,27 @@ function buildSpecificEnglishTopics(
         .map((t) => inferEnglishTopicFromText(t) || toEnglishDomainTopic(t))
         .filter(Boolean)
         .filter(isSpecificEnglishTopic);
+
+    return Array.from(new Map(specific.map((t) => [canonicalTopic(t), t] as const)).values()).slice(0, 6);
+}
+
+function buildSpecificJapaneseTopics(
+    wrongTopics: string[],
+    coveredTopics: string[],
+    weaknesses: WeaknessArea[]
+): string[] {
+    const pool = [
+        ...wrongTopics,
+        ...coveredTopics,
+        ...weaknesses.map((w) => String(w?.topic || "")),
+    ]
+        .map((t) => normalizeTopicLabel(String(t || "")))
+        .filter(Boolean);
+
+    const specific = pool
+        .map((t) => inferJapaneseTopicFromText(t) || toJapaneseDomainTopic(t))
+        .filter(Boolean)
+        .filter(isSpecificJapaneseTopic);
 
     return Array.from(new Map(specific.map((t) => [canonicalTopic(t), t] as const)).values()).slice(0, 6);
 }
@@ -751,6 +888,7 @@ function sanitizeWeaknessAreas(
     const isSocial = /社会|地理|歴史|social|geography|history/.test(lowerSubject);
     const subjectCategory = detectSubjectCategory(subject);
     const isEnglish = subjectCategory === "english";
+    const isJapanese = subjectCategory === "japanese";
     const rawWeaknesses = Array.isArray(inputWeaknesses) ? inputWeaknesses : [];
     const coveredDomainTopics = Array.from(
         new Map(
@@ -767,6 +905,7 @@ function sanitizeWeaknessAreas(
                 .map((t) => {
                     if (isSocial) return toSocialDomainTopic(t);
                     if (isEnglish) return inferEnglishTopicFromText(t) || resolveEnglishCurriculumUnit(t) || "";
+                    if (isJapanese) return inferJapaneseTopicFromText(t) || resolveJapaneseCurriculumUnit(t) || "";
                     return formatTopicWithDomain(t, subjectCategory);
                 })
                 .filter(Boolean)
@@ -796,6 +935,12 @@ function sanitizeWeaknessAreas(
         : [];
     const englishBaseTopics = isEnglish && englishSpecificTopics.length > 0
         ? englishSpecificTopics
+        : nonSocialBaseTopics;
+    const japaneseSpecificTopics = isJapanese
+        ? buildSpecificJapaneseTopics(wrongTopics, coveredTopics, rawWeaknesses)
+        : [];
+    const japaneseBaseTopics = isJapanese && japaneseSpecificTopics.length > 0
+        ? japaneseSpecificTopics
         : nonSocialBaseTopics;
 
     const sanitized = rawWeaknesses
@@ -840,7 +985,11 @@ function sanitizeWeaknessAreas(
                 }
                 }
             } else {
-                const currentBaseTopics = isEnglish ? englishBaseTopics : nonSocialBaseTopics;
+                const currentBaseTopics = isEnglish
+                    ? englishBaseTopics
+                    : isJapanese
+                        ? japaneseBaseTopics
+                        : nonSocialBaseTopics;
                 const matchedNonSocial = findCoveredTopicMatch(rawTopic, currentBaseTopics);
                 if (matchedNonSocial) {
                     topic = matchedNonSocial;
@@ -849,6 +998,15 @@ function sanitizeWeaknessAreas(
                     if (inferred) {
                         topic = inferred;
                     } else if ((isGenericWeaknessTopic(rawTopic) || !isSpecificEnglishTopic(rawTopic)) && currentBaseTopics.length > 0) {
+                        topic = currentBaseTopics[Math.min(index, currentBaseTopics.length - 1)];
+                    } else if (matchedCovered) {
+                        topic = formatTopicWithDomain(matchedCovered, subjectCategory);
+                    }
+                } else if (isJapanese) {
+                    const inferred = inferJapaneseTopicFromText(rawTopic);
+                    if (inferred) {
+                        topic = inferred;
+                    } else if ((isGenericWeaknessTopic(rawTopic) || !isSpecificJapaneseTopic(rawTopic)) && currentBaseTopics.length > 0) {
                         topic = currentBaseTopics[Math.min(index, currentBaseTopics.length - 1)];
                     } else if (matchedCovered) {
                         topic = formatTopicWithDomain(matchedCovered, subjectCategory);
@@ -903,6 +1061,8 @@ function sanitizeWeaknessAreas(
                     ? socialBaseTopics
                     : isEnglish
                         ? (englishBaseTopics.length > 0 ? englishBaseTopics : coveredDomainTopics)
+                        : isJapanese
+                            ? (japaneseBaseTopics.length > 0 ? japaneseBaseTopics : coveredDomainTopics)
                         : (nonSocialBaseTopics.length > 0 ? nonSocialBaseTopics : coveredDomainTopics)
             )
                 .map((t) => (isSocial ? t : formatTopicWithDomain(t, subjectCategory)))
@@ -1072,6 +1232,65 @@ async function extractEnglishSpecificTopics(
     }
 }
 
+async function extractJapaneseSpecificTopics(
+    answerSheets: { buffer: Buffer; mimeType: string }[],
+    problemSheets?: { buffer: Buffer; mimeType: string }[]
+): Promise<string[]> {
+    const prompt = [
+        "あなたは国語の単元抽出器です。",
+        "答案用紙と問題用紙を見て、誤答または部分点に関係する具体的な単元名を3〜6件だけ JSON で返してください。",
+        "抽象語は禁止です。『論理性』『表現力』『読解』だけで終わる出力は禁止。",
+        "単元名の例: 『指示語』『接続語』『助詞』『助動詞』『敬語』『四字熟語』『枕草子』『徒然草』『論語』『返り点』『漢文の読み方』。",
+        "作品本文が問われている場合は、作品名や古典分野名を優先してください。",
+        "出力形式: {\"topics\":[\"単元1\",\"単元2\"]}",
+    ].join("\n");
+
+    const userContent: OpenAI.Chat.ChatCompletionContentPart[] = [{ type: "text", text: prompt }];
+    for (const sheet of answerSheets) {
+        userContent.push({
+            type: "image_url",
+            image_url: { url: `data:${sheet.mimeType};base64,${sheet.buffer.toString("base64")}` }
+        });
+    }
+    for (const sheet of problemSheets || []) {
+        userContent.push({
+            type: "image_url",
+            image_url: { url: `data:${sheet.mimeType};base64,${sheet.buffer.toString("base64")}` }
+        });
+    }
+
+    try {
+        const response = await runOpenAIWithRetry(() =>
+            openai.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages: [
+                    { role: "system", content: "国語の具体単元のみを抽出する。JSON以外は返さない。" },
+                    { role: "user", content: userContent }
+                ],
+                response_format: { type: "json_object" },
+                temperature: 0.1,
+                top_p: 0.1,
+            }, {
+                timeout: 120000,
+            })
+        );
+        const content = response.choices[0].message.content;
+        if (!content) return [];
+        const parsed = JSON.parse(content) as { topics?: string[] };
+        return Array.from(
+            new Map(
+                (Array.isArray(parsed.topics) ? parsed.topics : [])
+                    .map((t) => inferJapaneseTopicFromText(String(t || "")) || resolveJapaneseCurriculumUnit(String(t || "")) || toJapaneseDomainTopic(String(t || "")))
+                    .filter(Boolean)
+                    .filter(isSpecificJapaneseTopic)
+                    .map((t) => [canonicalTopic(t), t] as const)
+            ).values()
+        ).slice(0, 6);
+    } catch {
+        return [];
+    }
+}
+
 export async function analyzeImage(
     answerSheets: { buffer: Buffer; mimeType: string }[],
     context?: {
@@ -1169,6 +1388,13 @@ export async function analyzeImage(
             if (extractedEnglishTopics.length > 0) {
                 parsed.covered_topics = Array.from(new Set([...(parsed.covered_topics || []), ...extractedEnglishTopics]));
                 parsed.wrong_question_topics = Array.from(new Set([...(parsed.wrong_question_topics || []), ...extractedEnglishTopics]));
+            }
+        }
+        if (isJapanese) {
+            const extractedJapaneseTopics = await extractJapaneseSpecificTopics(answerSheets, context?.problemSheets);
+            if (extractedJapaneseTopics.length > 0) {
+                parsed.covered_topics = Array.from(new Set([...(parsed.covered_topics || []), ...extractedJapaneseTopics]));
+                parsed.wrong_question_topics = Array.from(new Set([...(parsed.wrong_question_topics || []), ...extractedJapaneseTopics]));
             }
         }
 
