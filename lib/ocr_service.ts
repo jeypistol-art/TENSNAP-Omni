@@ -1151,7 +1151,7 @@ function sanitizeWeaknessAreas(
 
     const lowerSubject = subject.toLowerCase();
     const isScience = /理科|科学|理数|science|stem/.test(lowerSubject);
-    const isSocial = /社会|地理|歴史|social|geography|history/.test(lowerSubject);
+    const isSocial = /社会|地理|歴史|公民|social|geography|history|civics/.test(lowerSubject);
     const subjectCategory = detectSubjectCategory(subject);
     const isEnglish = subjectCategory === "english";
     const isJapanese = subjectCategory === "japanese";
@@ -1660,6 +1660,80 @@ async function extractJapaneseSpecificTopics(
     }
 }
 
+async function extractSocialSpecificTopics(
+    answerSheets: { buffer: Buffer; mimeType: string }[],
+    problemSheets?: { buffer: Buffer; mimeType: string }[],
+    schoolStage?: SchoolStage | null
+): Promise<string[]> {
+    const stageLabel = schoolStage === "elementary"
+        ? "小学校社会"
+        : schoolStage === "middle"
+            ? "中学校社会"
+            : schoolStage === "high"
+                ? "高校社会"
+                : "社会";
+    const prompt = [
+        `あなたは${stageLabel}の単元抽出器です。`,
+        "答案用紙と問題用紙を見て、誤答または部分点の設問に関係する具体単元を4〜8件だけ JSON で返してください。",
+        "抽出対象は、地理・歴史・公民の単元名だけです。",
+        "抽象語は禁止です。『経済発展』『社会問題』『日本』『歴史』『地理』だけで終わる出力は禁止。",
+        "活動文や説明文は禁止です。『年表を作る』『調べて発表する』『ポスターにまとめる』のような文は出力しないでください。",
+        "できるだけ教科書・カリキュラムの単元名に寄せてください。途中で切れた語やOCR崩れのまま返さないでください。",
+        "出力形式: {\"topics\":[\"地理：世界各地の人々の生活と環境\",\"歴史：明治政府の成立と維新\"]}",
+    ].join("\n");
+
+    const userContent: OpenAI.Chat.ChatCompletionContentPart[] = [{ type: "text", text: prompt }];
+    for (const sheet of answerSheets) {
+        userContent.push({
+            type: "image_url",
+            image_url: { url: `data:${sheet.mimeType};base64,${sheet.buffer.toString("base64")}` }
+        });
+    }
+    for (const sheet of problemSheets || []) {
+        userContent.push({
+            type: "image_url",
+            image_url: { url: `data:${sheet.mimeType};base64,${sheet.buffer.toString("base64")}` }
+        });
+    }
+
+    try {
+        const response = await runOpenAIWithRetry(() =>
+            openai.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages: [
+                    { role: "system", content: "社会の具体単元のみを抽出する。JSON以外は返さない。" },
+                    { role: "user", content: userContent }
+                ],
+                response_format: { type: "json_object" },
+                temperature: 0.1,
+                top_p: 0.1,
+            }, {
+                timeout: 120000,
+            })
+        );
+        const content = response.choices[0].message.content;
+        if (!content) return [];
+        const parsed = JSON.parse(content) as { topics?: string[] };
+        return Array.from(
+            new Map(
+                (Array.isArray(parsed.topics) ? parsed.topics : [])
+                    .map((t) => normalizeTopicLabel(String(t || "")))
+                    .filter((t) => !!t && !isPlaceholderUnit(t))
+                    .map((t) => inferSocialTopicFromText(t, schoolStage) || resolveSocialCurriculumUnit(t, schoolStage) || toSocialDomainTopic(t, schoolStage) || "")
+                    .filter(Boolean)
+                    .filter((t) => !isLowValueUnit(t, "social"))
+                    .filter((t) => {
+                        const { unit } = splitSocialDomainTopic(t);
+                        return getEligibleSocialCurriculumUnits(schoolStage).some((entry) => canonicalTopic(entry.unit) === canonicalTopic(unit));
+                    })
+                    .map((t) => [canonicalTopic(t), t] as const)
+            ).values()
+        ).slice(0, 8);
+    } catch {
+        return [];
+    }
+}
+
 export async function analyzeImage(
     answerSheets: { buffer: Buffer; mimeType: string }[],
     context?: {
@@ -1722,9 +1796,11 @@ export async function analyzeImage(
 
         // Subject-specific vocabulary guard to avoid math terms leaking into non-math subjects.
         const subject = (context?.subject || "").toLowerCase();
+        const subjectCategory = detectSubjectCategory(subject);
         const isMath = subject.includes("数学");
         const isJapanese = subject.includes("国語");
         const isEnglish = subject.includes("英語");
+        const isSocial = subjectCategory === "social" || /社会|地理|歴史|公民|social|geography|history|civics/.test(subject);
         const forbiddenTerms = isMath
             ? []
             : ["途中式", "計算", "代数", "展開", "符号", "方程式", "関数"];
@@ -1768,9 +1844,25 @@ export async function analyzeImage(
                 parsed.wrong_question_topics = Array.from(new Set([...(parsed.wrong_question_topics || []), ...extractedJapaneseTopics]));
             }
         }
+        if (isSocial) {
+            const extractedSocialTopics = await extractSocialSpecificTopics(answerSheets, context?.problemSheets, schoolStage);
+            if (extractedSocialTopics.length > 0) {
+                parsed.covered_topics = Array.from(
+                    new Map(
+                        [...extractedSocialTopics, ...(parsed.covered_topics || [])]
+                            .map((topic) => [canonicalTopic(topic), topic] as const)
+                    ).values()
+                );
+                parsed.wrong_question_topics = Array.from(
+                    new Map(
+                        [...extractedSocialTopics, ...(parsed.wrong_question_topics || [])]
+                            .map((topic) => [canonicalTopic(topic), topic] as const)
+                    ).values()
+                );
+            }
+        }
 
         const finalizeTopicAndWeakness = () => {
-            const subjectCategory = detectSubjectCategory(subject);
             const normalized = sanitizeWeaknessAreas(
                 parsed.weakness_areas as WeaknessArea[] | undefined,
                 parsed.covered_topics,
