@@ -712,8 +712,10 @@ function toJapaneseDomainTopic(topic: string, schoolStage?: SchoolStage | null):
     if (isPlaceholderUnit(u)) return "";
     if (/^(国語|本文|文章|論理性|表現力|読解力|ことばのつかいかた|ことばの意味)$/.test(u)) return "";
 
-    if (/(を|に|で|て|は|が|の|へ|と|から|より|まで|だけ|ほど|など)/
-        .test(u) && /(助詞|文法|ことば|使い方|使いかた|格助詞|係助詞|接続助詞)?/.test(u)) {
+    if (
+        /(助詞|格助詞|係助詞|接続助詞|副助詞|終助詞|文法|ことばのきまり|言葉のきまり|使い方|使いかた)/.test(u)
+        && /(を|に|で|て|は|が|の|へ|と|から|より|まで|だけ|ほど|など)/.test(u)
+    ) {
         return "助詞";
     }
 
@@ -794,7 +796,7 @@ function isLowValueUnit(unit: string, category: SubjectCategory): boolean {
         if (/^内容理解$/.test(u)) return true;
     }
     if (category === "english") {
-        if (/^(英語|英文)$/.test(u)) return true;
+        if (/^(英語|英文|文法|語彙|読解|内容理解|表現)$/.test(u)) return true;
     }
     if (category === "social") {
         if (/^(社会|社会分野|社会科|地理|歴史|公民|知識|理解|基礎|復習|内容理解|地理的知識|歴史的出来事|歴史の出来事|国際関係|日本の歴史)$/.test(u)) return true;
@@ -977,7 +979,31 @@ function buildPrioritizedSocialWeaknesses(
     const seedTopics = normalizedWrongTopics.length > 0 ? normalizedWrongTopics : socialBaseTopics;
     if (seedTopics.length === 0) return [];
 
-    const primaryTopic = seedTopics[0];
+    const wrongDomainCounts = new Map<string, number>();
+    for (const topic of normalizedWrongTopics) {
+        const domain = splitSocialDomainTopic(topic).domain;
+        if (!domain) continue;
+        wrongDomainCounts.set(domain, (wrongDomainCounts.get(domain) || 0) + 1);
+    }
+    const domainPriority: Array<"地理" | "歴史" | "公民"> = Array.from(wrongDomainCounts.entries())
+        .sort((a, b) => {
+            if (b[1] !== a[1]) return b[1] - a[1];
+            return a[0].localeCompare(b[0], "ja");
+        })
+        .map(([domain]) => domain as "地理" | "歴史" | "公民");
+
+    const prioritizedWrongTopics = normalizedWrongTopics.length > 0
+        ? [...normalizedWrongTopics].sort((a, b) => {
+            const ad = splitSocialDomainTopic(a).domain;
+            const bd = splitSocialDomainTopic(b).domain;
+            const ai = ad ? domainPriority.indexOf(ad) : 999;
+            const bi = bd ? domainPriority.indexOf(bd) : 999;
+            if (ai !== bi) return ai - bi;
+            return 0;
+        })
+        : [];
+
+    const primaryTopic = prioritizedWrongTopics[0] || seedTopics[0];
     const primaryDomain = splitSocialDomainTopic(primaryTopic).domain;
     const prioritized = new Map<string, { topic: string; level: "Primary" | "Secondary" }>();
     prioritized.set(canonicalTopic(primaryTopic), { topic: primaryTopic, level: "Primary" });
@@ -990,25 +1016,41 @@ function buildPrioritizedSocialWeaknesses(
         prioritized.set(key, { topic: formatted, level: "Secondary" });
     };
 
-    for (const topic of normalizedWrongTopics.slice(1)) {
-        const domain = splitSocialDomainTopic(topic).domain;
-        if (!primaryDomain || domain === primaryDomain) {
-            pushSecondary(topic);
-        }
+    for (const topic of prioritizedWrongTopics.slice(1)) {
+        pushSecondary(topic);
+        if (prioritized.size >= 5) break;
     }
 
-    for (const seed of normalizedWrongTopics) {
+    const representedDomains = new Set(
+        Array.from(prioritized.values())
+            .map((item) => splitSocialDomainTopic(item.topic).domain)
+            .filter((domain): domain is "地理" | "歴史" | "公民" => !!domain)
+    );
+
+    for (const domain of domainPriority) {
+        if (representedDomains.has(domain)) continue;
+        const candidate = prioritizedWrongTopics.find((topic) => splitSocialDomainTopic(topic).domain === domain);
+        if (!candidate) continue;
+        pushSecondary(candidate);
+        representedDomains.add(domain);
+        if (prioritized.size >= 5) break;
+    }
+
+    for (const seed of prioritizedWrongTopics) {
+        const seedDomain = splitSocialDomainTopic(seed).domain;
         for (const match of findSocialCurriculumMatches(seed, schoolStage)) {
-            if (!primaryDomain || match.domain === primaryDomain) {
-                pushSecondary(`${match.domain}：${match.unit}`);
-            }
+            if (seedDomain && match.domain !== seedDomain) continue;
+            pushSecondary(`${match.domain}：${match.unit}`);
             if (prioritized.size >= 5) break;
         }
         if (prioritized.size >= 5) break;
     }
 
-    for (const topic of [...socialBaseTopics, ...normalizedWrongTopics]) {
+    for (const topic of socialBaseTopics) {
+        const domain = splitSocialDomainTopic(topic).domain;
+        if (primaryDomain && domain && domain !== primaryDomain && representedDomains.has(domain)) continue;
         pushSecondary(topic);
+        if (domain) representedDomains.add(domain);
         if (prioritized.size >= 5) break;
     }
 
