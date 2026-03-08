@@ -6,6 +6,7 @@ import japaneseCurriculumK12 from "@/lib/dictionaries/japanese_curriculum_k12.js
 import mathCurriculumElem from "@/lib/dictionaries/math_curriculum_elem.json";
 import mathCurriculumK12 from "@/lib/dictionaries/math_curriculum_k12.json";
 import scienceCurriculumK12 from "@/lib/dictionaries/science_curriculum_k12.json";
+import socialCurriculumK12 from "@/lib/dictionaries/social_curriculum_k12.json";
 
 const openai = getOpenAIClient();
 
@@ -216,6 +217,7 @@ type MathCurriculumEntry = { domain?: string; unit?: string; keywords?: string[]
 type MathCurriculumDictionary = { grades?: Record<string, MathCurriculumEntry[]> };
 type EnglishCurriculumUnitIndexEntry = { unit: string; domain: string; tokens: string[] };
 type JapaneseCurriculumUnitIndexEntry = { unit: string; domain: string; grade: string; stage: SchoolStage | null; tokens: string[] };
+type SocialCurriculumUnitIndexEntry = { unit: string; domain: string; grade: string; stage: SchoolStage | null; tokens: string[] };
 
 function inferSchoolStageFromGradeLabel(grade?: string | null): SchoolStage | null {
     const g = normalizeTopicLabel(String(grade || ""));
@@ -411,6 +413,28 @@ const SCIENCE_CURRICULUM_HINTS = buildMathHintsFromCurriculumDictionary(
 );
 const SCIENCE_ALL_HINTS: DomainHint[] = [...SCIENCE_CURRICULUM_HINTS, ...SCIENCE_DOMAIN_HINTS];
 
+const SOCIAL_CURRICULUM_HINTS = buildMathHintsFromCurriculumDictionary(
+    socialCurriculumK12 as MathCurriculumDictionary
+);
+const SOCIAL_CURRICULUM_UNITS: SocialCurriculumUnitIndexEntry[] = Object.entries(
+    (socialCurriculumK12 as MathCurriculumDictionary)?.grades || {}
+)
+    .flatMap(([grade, entries]) => (Array.isArray(entries) ? entries : []).map((entry) => ({ grade, entry })))
+    .map(({ grade, entry }) => {
+        const unit = normalizeTopicLabel(String(entry?.unit || ""));
+        const domain = normalizeTopicLabel(String(entry?.domain || ""));
+        const tokens = Array.from(
+            new Set(
+                [unit]
+                    .concat(Array.isArray(entry?.aliases) ? entry.aliases.map((v) => normalizeTopicLabel(String(v || ""))) : [])
+                    .concat(Array.isArray(entry?.keywords) ? entry.keywords.map((v) => normalizeTopicLabel(String(v || ""))) : [])
+                    .filter(Boolean)
+            )
+        );
+        return { unit, domain, grade, stage: inferSchoolStageFromCurriculumGrade(grade), tokens };
+    })
+    .filter((entry) => entry.unit);
+
 const SOCIAL_CIVICS_HINTS = [
     "憲法", "国会", "内閣", "裁判所", "三権分立", "人権", "社会権", "自由権", "参政権", "地方自治", "条例", "請願", "選挙", "政党",
     "財政", "税", "租税", "金融", "日銀", "市場経済", "需要", "供給", "独占", "労働", "社会保障", "国際連合", "国連", "安全保障",
@@ -428,8 +452,45 @@ const SOCIAL_GEOGRAPHY_HINTS = [
     "人口", "都市", "貿易", "輸出", "輸入", "産業", "農業", "工業", "漁業", "資源", "エネルギー", "雨温図", "統計", "地理"
 ];
 
+function isUsableSocialCurriculumUnit(entry: SocialCurriculumUnitIndexEntry): boolean {
+    const unit = normalizeTopicLabel(entry.unit);
+    if (!unit) return false;
+    if (unit.length > 24) return false;
+    if (/^(社会|社会科|社会分野|社会 \d年|小学単元リスト|高校単元リスト)$/.test(unit)) return false;
+    if (/(人権尊重の社会形成|世界平和の実現と人類の福祉の増大|人間の尊重と基本|人間の尊重と$)/.test(unit)) return false;
+    return !/(学習単元|学習活動|典型的な活動|よく取り上げられる事柄例|変更になる場合)/.test(unit);
+}
+
+function resolveSocialCurriculumUnit(topic: string, schoolStage?: SchoolStage | null): string | null {
+    const normalized = normalizeTopicLabel(topic);
+    if (!normalized) return null;
+
+    const { unit } = splitSocialDomainTopic(normalized);
+    const candidate = normalizeTopicLabel(unit || normalized);
+    if (!candidate) return null;
+
+    const eligible = SOCIAL_CURRICULUM_UNITS.filter((entry) =>
+        (!schoolStage || entry.stage === schoolStage) && isUsableSocialCurriculumUnit(entry)
+    );
+    const exact = eligible.find((entry) =>
+        entry.tokens.some((token) => canonicalTopic(token) === canonicalTopic(candidate))
+    );
+    if (exact) return `${exact.domain}：${exact.unit}`;
+
+    const partial = eligible.find((entry) =>
+        entry.tokens.some((token) => {
+            const left = canonicalTopic(token);
+            const right = canonicalTopic(candidate);
+            return !!left && !!right && (left.includes(right) || right.includes(left));
+        })
+    );
+    return partial ? `${partial.domain}：${partial.unit}` : null;
+}
+
 function inferSocialDomain(unit: string): "地理" | "歴史" | "公民" | null {
     if (!unit) return null;
+    const dictionaryDomain = detectDomainByHints(unit, SOCIAL_CURRICULUM_HINTS);
+    if (dictionaryDomain === "地理" || dictionaryDomain === "歴史" || dictionaryDomain === "公民") return dictionaryDomain;
     if (isCivicsKeyword(unit) || SOCIAL_CIVICS_HINTS.some((k) => unit.includes(k))) return "公民";
     if (SOCIAL_HISTORY_HINTS.some((k) => unit.includes(k))) return "歴史";
     if (SOCIAL_GEOGRAPHY_HINTS.some((k) => unit.includes(k))) return "地理";
@@ -645,7 +706,7 @@ function formatTopicWithDomain(topic: string, category: SubjectCategory, schoolS
     if (!unit) return "";
 
     if (category === "social") {
-        return toSocialDomainTopic(topic);
+        return toSocialDomainTopic(topic, schoolStage);
     }
     if (category === "english") {
         return toEnglishDomainTopic(topic);
@@ -681,9 +742,11 @@ function isLowValueTopic(topic: string, category: SubjectCategory): boolean {
     return isLowValueUnit(unit, category);
 }
 
-function toSocialDomainTopic(topic: string): string {
+function toSocialDomainTopic(topic: string, schoolStage?: SchoolStage | null): string {
     const { domain, unit } = splitSocialDomainTopic(topic);
     if (!unit || isLowValueUnit(unit, "social")) return "";
+    const curriculumUnit = resolveSocialCurriculumUnit(unit, schoolStage);
+    if (curriculumUnit) return curriculumUnit;
     const resolvedDomain = domain ?? inferSocialDomain(unit);
     return resolvedDomain ? `${resolvedDomain}：${unit}` : `社会：${unit}`;
 }
@@ -725,8 +788,8 @@ function extractSocialRegionLabel(text: string): string | null {
     return m?.[1] || null;
 }
 
-function toSocialDetailedWeakness(baseTopic: string, coveredTopics: string[], index: number): string {
-    const normalizedTopic = toSocialDomainTopic(baseTopic);
+function toSocialDetailedWeakness(baseTopic: string, coveredTopics: string[], index: number, schoolStage?: SchoolStage | null): string {
+    const normalizedTopic = toSocialDomainTopic(baseTopic, schoolStage);
     if (normalizedTopic) {
         return normalizedTopic;
     }
@@ -746,14 +809,14 @@ function toSocialDetailedWeakness(baseTopic: string, coveredTopics: string[], in
     }
 
     const fallback = coveredTopics[index % Math.max(coveredTopics.length, 1)];
-    if (fallback) return toSocialDomainTopic(fallback) || fallback;
-    const lastResort = toSocialDomainTopic(baseTopic);
+    if (fallback) return toSocialDomainTopic(fallback, schoolStage) || fallback;
+    const lastResort = toSocialDomainTopic(baseTopic, schoolStage);
     if (lastResort) return lastResort;
     return "";
 }
 
-function toSocialSpecificWeakness(topic: string, coveredTopics: string[], index: number): string {
-    return toSocialDetailedWeakness(topic, coveredTopics, index);
+function toSocialSpecificWeakness(topic: string, coveredTopics: string[], index: number, schoolStage?: SchoolStage | null): string {
+    return toSocialDetailedWeakness(topic, coveredTopics, index, schoolStage);
 }
 
 function extractSocialKeywordSeed(text: string): string {
@@ -778,13 +841,13 @@ function isSpecificSocialKeyword(topic: string): boolean {
     return /^[\p{sc=Han}\p{sc=Hiragana}\p{sc=Katakana}A-Za-z0-9・\-]{2,20}$/u.test(t);
 }
 
-function buildSpecificSocialTopics(coveredTopics: string[], weaknesses: WeaknessArea[]): string[] {
+function buildSpecificSocialTopics(coveredTopics: string[], weaknesses: WeaknessArea[], schoolStage?: SchoolStage | null): string[] {
     const pool = [
         ...coveredTopics,
         ...weaknesses.map((w) => String(w?.topic || "")),
     ]
         .map(extractSocialKeywordSeed)
-        .map(toSocialDomainTopic)
+        .map((t) => toSocialDomainTopic(t, schoolStage))
         .filter(Boolean);
 
     const specific = pool.filter(isSpecificSocialKeyword);
@@ -794,10 +857,10 @@ function buildSpecificSocialTopics(coveredTopics: string[], weaknesses: Weakness
     return coveredTopics;
 }
 
-function mergeSocialTopicPool(wrongTopics: string[], coveredTopics: string[]): string[] {
+function mergeSocialTopicPool(wrongTopics: string[], coveredTopics: string[], schoolStage?: SchoolStage | null): string[] {
     const merged = [...wrongTopics, ...coveredTopics]
         .map((t) => normalizeTopicLabel(String(t || "")))
-        .map(toSocialDomainTopic)
+        .map((t) => toSocialDomainTopic(t, schoolStage))
         .filter(Boolean);
     return Array.from(new Map(merged.map((t) => [canonicalTopic(t), t] as const)).values());
 }
@@ -853,6 +916,12 @@ function inferEnglishTopicFromText(text: string): string | null {
     if (/whose/i.test(t)) return "Whose ...?";
     if (/which/i.test(t)) return "Which ... (A or B)?";
     return null;
+}
+
+function inferSocialTopicFromText(text: string, schoolStage?: SchoolStage | null): string | null {
+    const t = normalizeTopicLabel(text);
+    if (!t) return null;
+    return resolveSocialCurriculumUnit(t, schoolStage) || toSocialDomainTopic(t, schoolStage) || null;
 }
 
 function inferJapaneseTopicFromText(text: string, schoolStage?: SchoolStage | null): string | null {
@@ -942,7 +1011,7 @@ function sanitizeWeaknessAreas(
             (Array.isArray(wrongQuestionTopics) ? wrongQuestionTopics : [])
                 .map((t) => normalizeTopicLabel(String(t || "")))
                 .map((t) => {
-                    if (isSocial) return toSocialDomainTopic(t);
+                    if (isSocial) return inferSocialTopicFromText(t, schoolStage) || toSocialDomainTopic(t, schoolStage);
                     if (isEnglish) return inferEnglishTopicFromText(t) || resolveEnglishCurriculumUnit(t) || "";
                     if (isJapanese) return inferJapaneseTopicFromText(t, schoolStage) || resolveJapaneseCurriculumUnit(t, schoolStage) || "";
                     return formatTopicWithDomain(t, subjectCategory, schoolStage);
@@ -962,8 +1031,8 @@ function sanitizeWeaknessAreas(
     const socialSpecificTopics = isSocial
         ? (
             wrongTopics.length > 0
-                ? buildSpecificSocialTopics(mergeSocialTopicPool(wrongTopics, coveredTopics), rawWeaknesses)
-                : buildSpecificSocialTopics(coveredTopics, rawWeaknesses)
+                ? buildSpecificSocialTopics(mergeSocialTopicPool(wrongTopics, coveredTopics, schoolStage), rawWeaknesses, schoolStage)
+                : buildSpecificSocialTopics(coveredTopics, rawWeaknesses, schoolStage)
         )
         : coveredTopics;
     const socialBaseTopics = isSocial && socialSpecificTopics.length > 0
@@ -1008,7 +1077,8 @@ function sanitizeWeaknessAreas(
                         topic = toSocialDetailedWeakness(
                             socialBaseTopics[Math.min(index, socialBaseTopics.length - 1)],
                             socialBaseTopics,
-                            index
+                            index,
+                            schoolStage
                         );
                     } else {
                         return null;
@@ -1016,11 +1086,11 @@ function sanitizeWeaknessAreas(
                 } else {
                 const matchedSocial = findCoveredTopicMatch(rawTopic, socialBaseTopics);
                 if (matchedSocial) {
-                    topic = toSocialDetailedWeakness(matchedSocial, socialBaseTopics, index);
+                    topic = toSocialDetailedWeakness(matchedSocial, socialBaseTopics, index, schoolStage);
                 } else if (isGenericWeaknessTopic(rawTopic)) {
-                    topic = toSocialSpecificWeakness(rawTopic, socialBaseTopics, index);
+                    topic = toSocialSpecificWeakness(rawTopic, socialBaseTopics, index, schoolStage);
                 } else {
-                    topic = toSocialDetailedWeakness(rawTopic, socialBaseTopics, index);
+                    topic = toSocialDetailedWeakness(rawTopic, socialBaseTopics, index, schoolStage);
                 }
                 }
             } else {
@@ -1195,7 +1265,7 @@ function expandWeaknessAreasForLowMastery(
     category: SubjectCategory,
     markCounts?: AnalysisResult["mark_counts"]
 ): { topic: string; level: "Primary" | "Secondary" }[] {
-    if (category !== "english" && category !== "japanese") return weaknessAreas;
+    if (category !== "english" && category !== "japanese" && category !== "social") return weaknessAreas;
 
     const crosses = Number(markCounts?.crosses || 0);
     const slashes = Number(markCounts?.slashes || 0);
@@ -1207,7 +1277,7 @@ function expandWeaknessAreasForLowMastery(
     if (weightedMistakeSignals >= 8) targetCount = 5;
     else if (weightedMistakeSignals >= 6) targetCount = 4;
     else if (weightedMistakeSignals >= 4) targetCount = 3;
-    if (category === "japanese" || category === "english") {
+    if (category === "japanese" || category === "english" || category === "social") {
         targetCount = Math.max(targetCount, 4);
     }
 
