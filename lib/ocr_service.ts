@@ -1207,8 +1207,72 @@ function expandWeaknessAreasForLowMastery(
     if (weightedMistakeSignals >= 8) targetCount = 5;
     else if (weightedMistakeSignals >= 6) targetCount = 4;
     else if (weightedMistakeSignals >= 4) targetCount = 3;
+    if (category === "japanese" || category === "english") {
+        targetCount = Math.max(targetCount, 4);
+    }
 
-    if (weaknessAreas.length >= targetCount) return weaknessAreas;
+    const japaneseClusterPriority = (topic: string) => {
+        if (/^(助詞|助動詞|指示語|接続語|敬語|主語・述語の関係|修飾・被修飾の関係|文の組み立て|言葉の単位)$/.test(topic)) return 0;
+        if (/^(四字熟語|故事成語|慣用句|対義語|類義語|同音異義語|同訓異字|熟字訓|送りがな|音読訓読)$/.test(topic)) return 1;
+        if (/^(漢文の読み方|返り点|再読文字|受身形|使役形|疑問形|反語形|仮定形|論語|枕草子|徒然草|平家物語|竹取物語|古今和歌集|万葉集|新古今和歌集|奥の細道|高瀬舟|故郷|俳句|短歌|詩)$/.test(topic)) return 2;
+        return 3;
+    };
+    const japaneseInClusterPriority = new Map<string, number>([
+        ["助詞", 0],
+        ["助動詞", 1],
+        ["指示語", 2],
+        ["接続語", 3],
+        ["敬語", 4],
+        ["主語・述語の関係", 5],
+        ["修飾・被修飾の関係", 6],
+        ["文の組み立て", 7],
+        ["言葉の単位", 8],
+        ["四字熟語", 20],
+        ["故事成語", 21],
+        ["慣用句", 22],
+        ["対義語", 23],
+        ["類義語", 24],
+        ["同音異義語", 25],
+        ["同訓異字", 26],
+        ["熟字訓", 27],
+        ["送りがな", 28],
+        ["音読訓読", 29],
+        ["漢文の読み方", 40],
+        ["返り点", 41],
+        ["再読文字", 42],
+        ["受身形", 43],
+        ["使役形", 44],
+        ["疑問形", 45],
+        ["反語形", 46],
+        ["仮定形", 47],
+        ["論語", 48],
+        ["枕草子", 49],
+        ["徒然草", 50],
+        ["平家物語", 51],
+        ["竹取物語", 52],
+        ["古今和歌集", 53],
+        ["万葉集", 54],
+        ["新古今和歌集", 55],
+        ["奥の細道", 56],
+        ["高瀬舟", 57],
+        ["故郷", 58],
+        ["俳句", 59],
+        ["短歌", 60],
+        ["詩", 61],
+    ]);
+    const sortTopics = (items: { topic: string; level: "Primary" | "Secondary" }[]) => {
+        if (category !== "japanese") return items;
+        return [...items].sort((a, b) => {
+            if (a.level !== b.level) return a.level === "Primary" ? -1 : 1;
+            const ac = japaneseClusterPriority(a.topic);
+            const bc = japaneseClusterPriority(b.topic);
+            if (ac !== bc) return ac - bc;
+            const ap = japaneseInClusterPriority.get(a.topic) ?? 999;
+            const bp = japaneseInClusterPriority.get(b.topic) ?? 999;
+            if (ap !== bp) return ap - bp;
+            return a.topic.localeCompare(b.topic, "ja");
+        });
+    };
 
     const existing = new Set(weaknessAreas.map((w) => canonicalTopic(w.topic)));
     const additions = coveredTopics
@@ -1218,7 +1282,20 @@ function expandWeaknessAreasForLowMastery(
         .slice(0, Math.max(0, targetCount - weaknessAreas.length))
         .map((topic) => ({ topic, level: "Secondary" as const }));
 
-    return [...weaknessAreas, ...additions];
+    const merged = Array.from(
+        new Map(
+            [...weaknessAreas, ...additions]
+                .map((w) => [canonicalTopic(w.topic), w] as const)
+        ).values()
+    );
+    const sorted = sortTopics(merged);
+    const primary = sorted.find((w) => w.level === "Primary") ?? sorted[0];
+    const secondary = sorted
+        .filter((w) => canonicalTopic(w.topic) !== canonicalTopic(primary.topic))
+        .map((w) => ({ topic: w.topic, level: "Secondary" as const }));
+
+    const guaranteedSecondary = secondary.slice(0, Math.min(4, Math.max(3, targetCount - 1)));
+    return [{ topic: primary.topic, level: "Primary" }, ...guaranteedSecondary];
 }
 
 async function extractEnglishSpecificTopics(
