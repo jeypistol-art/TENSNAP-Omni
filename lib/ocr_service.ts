@@ -975,6 +975,38 @@ function limitWeaknessByMistakeDensity(
     return weaknessAreas;
 }
 
+function expandWeaknessAreasForLowMastery(
+    weaknessAreas: { topic: string; level: "Primary" | "Secondary" }[],
+    coveredTopics: string[],
+    category: SubjectCategory,
+    markCounts?: AnalysisResult["mark_counts"]
+): { topic: string; level: "Primary" | "Secondary" }[] {
+    if (category !== "english") return weaknessAreas;
+
+    const crosses = Number(markCounts?.crosses || 0);
+    const slashes = Number(markCounts?.slashes || 0);
+    const triangles = Number(markCounts?.triangles || 0);
+    const unmarked = Number(markCounts?.unmarked_questions || 0);
+    const weightedMistakeSignals = crosses + slashes + Math.ceil(triangles * 0.5) + unmarked;
+
+    let targetCount = 2;
+    if (weightedMistakeSignals >= 8) targetCount = 5;
+    else if (weightedMistakeSignals >= 6) targetCount = 4;
+    else if (weightedMistakeSignals >= 4) targetCount = 3;
+
+    if (weaknessAreas.length >= targetCount) return weaknessAreas;
+
+    const existing = new Set(weaknessAreas.map((w) => canonicalTopic(w.topic)));
+    const additions = coveredTopics
+        .filter((t) => !!t)
+        .filter((t) => !isLowValueTopic(t, category))
+        .filter((t) => !existing.has(canonicalTopic(t)))
+        .slice(0, Math.max(0, targetCount - weaknessAreas.length))
+        .map((topic) => ({ topic, level: "Secondary" as const }));
+
+    return [...weaknessAreas, ...additions];
+}
+
 async function extractEnglishSpecificTopics(
     answerSheets: { buffer: Buffer; mimeType: string }[],
     problemSheets?: { buffer: Buffer; mimeType: string }[]
@@ -1135,6 +1167,7 @@ export async function analyzeImage(
         }
 
         const finalizeTopicAndWeakness = () => {
+            const subjectCategory = detectSubjectCategory(subject);
             const normalized = sanitizeWeaknessAreas(
                 parsed.weakness_areas as WeaknessArea[] | undefined,
                 parsed.covered_topics,
@@ -1142,7 +1175,12 @@ export async function analyzeImage(
                 parsed.wrong_question_topics
             );
             parsed.covered_topics = normalized.coveredTopics;
-            parsed.weakness_areas = limitWeaknessByMistakeDensity(normalized.weaknessAreas, parsed.mark_counts);
+            parsed.weakness_areas = expandWeaknessAreasForLowMastery(
+                limitWeaknessByMistakeDensity(normalized.weaknessAreas, parsed.mark_counts),
+                normalized.coveredTopics,
+                subjectCategory,
+                parsed.mark_counts
+            );
         };
 
         // Ensure exam_phase is always explicit in responses.
