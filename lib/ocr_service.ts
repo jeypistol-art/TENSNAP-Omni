@@ -457,7 +457,7 @@ function isUsableSocialCurriculumUnit(entry: SocialCurriculumUnitIndexEntry): bo
     if (!unit) return false;
     if (unit.length > 24) return false;
     if (/^(社会|社会科|社会分野|社会 \d年|小学単元リスト|高校単元リスト)$/.test(unit)) return false;
-    if (/(人権尊重の社会形成|世界平和の実現と人類の福祉の増大|人間の尊重と基本|人間の尊重と$|屋台村方式|個人と社会の関わり活|高度経済成長期以降の社会の現|時事問題に興味・関心を持ち、|江戸幕府の政策が、政治の安定にとってどのよ|政策作り、投票等のロールプレ)/.test(unit)) return false;
+    if (/(人権尊重の社会形成|世界平和の実現と人類の福祉の増大|人間の尊重と基本|人間の尊重と$|屋台村方式|個人と社会の関わり活|個人と社会におけるルールのあ$|高度経済成長期以降の社会の現|時事問題に興味・関心を持ち、|江戸幕府の政策が、政治の安定にとってどのよ|政策作り、投票等のロールプレ|世界の自然の特色をつかみ、日本の気|世界の自然の特色をつかむ中で、日本|世界中で自分が知っている国名を発|織田信長など代表的な戦国大名の人物画、合戦|人々の生活に根ざした文化|源頼朝が武士をどのようにまとめ、勢力を拡大|産業革命による欧米諸国の経済や社会生活の変)/.test(unit)) return false;
     if (/[。]/.test(unit)) return false;
     if (/[、,]$/.test(unit)) return false;
     if (/[、,]/.test(unit) && /(発表する|まとめる|設定する|調べる|考える|行う|知る)$/.test(unit)) return false;
@@ -742,6 +742,7 @@ function toJapaneseDomainTopic(topic: string, schoolStage?: SchoolStage | null):
     if (/(同訓異字)/.test(u)) return "同訓異字";
     if (/(送り仮名)/.test(u)) return "送りがな";
     if (/(音読訓読)/.test(u)) return "音読訓読";
+    if (/(音読み|訓読み)/.test(u)) return "音読みと訓読み";
     if (/(返り点|レ点|一二点|上下点)/.test(u)) return "返り点";
     if (/(再読文字)/.test(u)) return "再読文字";
     if (/(受身形)/.test(u)) return "受身形";
@@ -749,7 +750,7 @@ function toJapaneseDomainTopic(topic: string, schoolStage?: SchoolStage | null):
     if (/(疑問形)/.test(u)) return "疑問形";
     if (/(反語形)/.test(u)) return "反語形";
     if (/(仮定形)/.test(u)) return "仮定形";
-    if (/(漢文の読み方|訓読)/.test(u)) return "漢文の読み方";
+    if (/(漢文の読み方)/.test(u)) return "漢文の読み方";
     if (/(漢詩)/.test(u)) return "漢詩";
     if (/(竹取物語)/.test(u)) return "竹取物語";
     if (/(枕草子)/.test(u)) return "枕草子";
@@ -801,6 +802,7 @@ function isLowValueUnit(unit: string, category: SubjectCategory): boolean {
     }
     if (category === "social") {
         if (/^(社会|社会分野|社会科|地理|歴史|公民|知識|理解|基礎|復習|内容理解|地理的知識|歴史的出来事|歴史の出来事|国際関係|日本の歴史)$/.test(u)) return true;
+        if (/(つかみ|つかむ中で|まとめ|発表|レポート|ポスター|追究|模擬旅行|旅行計画|人物画|合戦の様子|どのように|どのよ)$/.test(u)) return true;
     }
     return false;
 }
@@ -1134,6 +1136,38 @@ function inferJapaneseTopicFromText(text: string, schoolStage?: SchoolStage | nu
     return toJapaneseDomainTopic(t, schoolStage) || null;
 }
 
+function hasKanbunEvidence(text: string): boolean {
+    const t = normalizeTopicLabel(text);
+    if (!t) return false;
+    return /(漢文|返り点|レ点|一二点|上下点|再読文字|書き下し|白文|句法|訓点|置き字|漢詩)/.test(t);
+}
+
+function hasKobunEvidence(text: string): boolean {
+    const t = normalizeTopicLabel(text);
+    if (!t) return false;
+    return /(古文|古典|宇治拾遺物語|枕草子|徒然草|平家物語|竹取物語|古今和歌集|万葉集|新古今和歌集|奥の細道|歴史的仮名遣い)/.test(t);
+}
+
+function filterJapaneseTopicsByEvidence(topics: string[], evidenceTexts: string[]): string[] {
+    const hasKanbun = evidenceTexts.some(hasKanbunEvidence);
+    const hasKobun = evidenceTexts.some(hasKobunEvidence);
+
+    return topics.filter((topic) => {
+        const normalized = normalizeTopicLabel(topic);
+        if (!normalized) return false;
+        if (/^(漢文の読み方|返り点|再読文字|受身形|使役形|疑問形|反語形|仮定形)$/.test(normalized)) {
+            return hasKanbun;
+        }
+        if (/^(論語|漢詩)$/.test(normalized)) {
+            return hasKanbun;
+        }
+        if (/^(枕草子|徒然草|平家物語|竹取物語|古今和歌集|万葉集|新古今和歌集|奥の細道|高瀬舟|故郷)$/.test(normalized)) {
+            return hasKobun || hasKanbun;
+        }
+        return true;
+    });
+}
+
 function buildSpecificEnglishTopics(
     wrongTopics: string[],
     coveredTopics: string[],
@@ -1174,7 +1208,8 @@ function buildSpecificJapaneseTopics(
         .filter(Boolean)
         .filter(isSpecificJapaneseTopic);
 
-    return Array.from(new Map(specific.map((t) => [canonicalTopic(t), t] as const)).values()).slice(0, 6);
+    const filtered = filterJapaneseTopicsByEvidence(specific, pool);
+    return Array.from(new Map(filtered.map((t) => [canonicalTopic(t), t] as const)).values()).slice(0, 6);
 }
 
 function sanitizeWeaknessAreas(
