@@ -1139,7 +1139,7 @@ function inferJapaneseTopicFromText(text: string, schoolStage?: SchoolStage | nu
 function hasKanbunEvidence(text: string): boolean {
     const t = normalizeTopicLabel(text);
     if (!t) return false;
-    return /(返り点|レ点|一二点|上下点|再読文字|書き下し|白文|句法|訓点|置き字|漢詩|論語)/.test(t);
+    return /(返り点|レ点|一二点|上下点|再読文字|書き下し|白文|句法|訓点|置き字)/.test(t);
 }
 
 function hasKobunEvidence(text: string): boolean {
@@ -1158,7 +1158,7 @@ function filterJapaneseTopicsByEvidence(topics: string[], evidenceTexts: string[
         if (/^(漢文の読み方|返り点|再読文字|受身形|使役形|疑問形|反語形|仮定形)$/.test(normalized)) {
             return hasKanbun;
         }
-        if (/^(論語|漢詩)$/.test(normalized)) {
+        if (/^(論語|漢詩|漢詩の基礎知識と表現)$/.test(normalized)) {
             return hasKanbun;
         }
         if (/^(枕草子|徒然草|平家物語|竹取物語|古今和歌集|万葉集|新古今和歌集|奥の細道|高瀬舟|故郷)$/.test(normalized)) {
