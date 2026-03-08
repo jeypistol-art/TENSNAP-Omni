@@ -1139,6 +1139,15 @@ function sanitizeWeaknessAreas(
             weaknessAreas: formattedWeaknesses
         };
     }
+    if (subjectCategory === "japanese" && formattedWeaknesses.length === 0 && finalCoveredTopics.length > 0) {
+        return {
+            coveredTopics: finalCoveredTopics,
+            weaknessAreas: [
+                { topic: finalCoveredTopics[0], level: "Primary" },
+                ...(finalCoveredTopics[1] ? [{ topic: finalCoveredTopics[1], level: "Secondary" as const }] : [])
+            ]
+        };
+    }
 
     if (isSocial && preferCivics) {
         const civicsWeaknesses = formattedWeaknesses.filter((w) => isCivicsKeyword(w.topic) || w.topic.startsWith("公民："));
@@ -1509,7 +1518,7 @@ export async function analyzeImage(
             score = Math.floor(((circles + triangles * triangleWeight) / total) * 100);
         }
 
-        const questionAccuracy = Math.max(0, Math.min(100, score));
+        let questionAccuracy = Math.max(0, Math.min(100, score));
         const parseScore = (raw: unknown) => {
             if (typeof raw === "number") return { score: raw, max: parsed.max_score ?? 100 };
             if (typeof raw !== "string") return { score: NaN, max: parsed.max_score ?? 100 };
@@ -1546,6 +1555,9 @@ export async function analyzeImage(
         const scoreAccuracy = hasRawScore
             ? clamp(Math.floor((parsedScore.score / parsedScore.max) * 100), 0, 100)
             : NaN;
+        if (total <= 0 && Number.isFinite(scoreAccuracy)) {
+            questionAccuracy = scoreAccuracy;
+        }
 
         parsed.provisional = !hasRawScore;
 
