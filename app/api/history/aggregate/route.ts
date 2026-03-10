@@ -149,6 +149,18 @@ function normalizeMistakeWeight(result?: string, lostPoints?: number | null): nu
     return base + Math.min(loss, 5);
 }
 
+function hasTopicSupport(topic: string, candidates: string[]): boolean {
+    const normalizedTopic = normalizeTopic(topic).toLowerCase();
+    if (!normalizedTopic) return false;
+    return candidates.some((candidate) => {
+        const normalizedCandidate = normalizeTopic(candidate).toLowerCase();
+        return !!normalizedCandidate
+            && (normalizedCandidate === normalizedTopic
+                || normalizedCandidate.includes(normalizedTopic)
+                || normalizedTopic.includes(normalizedCandidate));
+    });
+}
+
 function safeParseJson<T>(value: unknown, fallback: T): T {
     if (value == null) return fallback;
     if (typeof value === "string") {
@@ -322,8 +334,19 @@ export async function GET(request: Request) {
                     }))
                     .filter((entry) => !!entry.topic)
                 : [];
+            const japaneseQuestionMistakeSupportTopics = isJapaneseOnly
+                ? [
+                    ...(Array.isArray(r.details?.wrong_question_topics) ? r.details.wrong_question_topics : []),
+                    ...(Array.isArray(r.details?.covered_topics) ? r.details.covered_topics : []),
+                    ...weaknesses.map((w) => normalizeTopic(w?.topic)).filter(Boolean),
+                    unitName,
+                ].map((topic) => normalizeTopic(topic)).filter(Boolean)
+                : [];
             const prioritizedQuestionMistakes = isJapaneseOnly
-                ? questionMistakes.filter((entry) => isJapanesePeriodTheme(entry.topic))
+                ? questionMistakes.filter((entry) =>
+                    isJapanesePeriodTheme(entry.topic)
+                    && hasTopicSupport(entry.topic, japaneseQuestionMistakeSupportTopics)
+                )
                 : isEnglishOnly
                     ? questionMistakes.filter((entry) => isEnglishPeriodTheme(entry.topic))
                     : isSocialOnly
