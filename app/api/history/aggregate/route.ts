@@ -443,22 +443,26 @@ export async function GET(request: Request) {
         // Sort by frequency
         const sortedWeaknesses = Object.entries(weaknessCounts)
             .sort(([topicA, a], [topicB, b]) => {
-                if (a.score !== b.score) return b.score - a.score;
                 if (isJapaneseOnly) {
+                    if (a.count !== b.count) return b.count - a.count;
+                    if (a.score !== b.score) return b.score - a.score;
                     const pa = japaneseWeaknessPriority(topicA);
                     const pb = japaneseWeaknessPriority(topicB);
                     if (pa !== pb) return pa - pb;
                 }
                 if (isEnglishOnly) {
+                    if (a.score !== b.score) return b.score - a.score;
                     const pa = englishWeaknessPriority(topicA);
                     const pb = englishWeaknessPriority(topicB);
                     if (pa !== pb) return pa - pb;
                 }
                 if (isSocialOnly) {
+                    if (a.score !== b.score) return b.score - a.score;
                     const pa = socialWeaknessPriority(topicA);
                     const pb = socialWeaknessPriority(topicB);
                     if (pa !== pb) return pa - pb;
                 }
+                if (a.score !== b.score) return b.score - a.score;
                 if (a.count !== b.count) return b.count - a.count;
                 return topicA.localeCompare(topicB, "ja");
             })
