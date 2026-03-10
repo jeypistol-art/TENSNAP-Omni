@@ -220,7 +220,7 @@ export async function GET(request: Request) {
                     weaknessCounts[unitName].count += 1;
                     weaknessCounts[unitName].units.add(unitName);
                 }
-            });
+            }
         });
 
         // Sort by frequency
