@@ -39,7 +39,7 @@ function isGenericJapaneseWeakness(topic: string): boolean {
 }
 
 function isBroadJapanesePeriodTheme(topic: string): boolean {
-    return /^(古典|誤答設問の内容|部分点が付いた設問の内容|誤答問題の内容)$/.test(topic);
+    return /^(古典|文・文節・単語|誤答設問の内容|部分点が付いた設問の内容|誤答問題の内容)$/.test(topic);
 }
 
 function isJapanesePeriodTheme(topic: string): boolean {
@@ -290,12 +290,18 @@ export async function GET(request: Request) {
                 units: Array.from(data.units).slice(0, 4) // Convert Set to Array, limit to 4 units
             }));
 
-        const finalWeaknesses = isJapaneseOnly
+        const finalWeaknesses = (isJapaneseOnly
             ? (() => {
                 const eligible = sortedWeaknesses.filter((item) => isJapanesePeriodTheme(item.topic));
                 return eligible.length > 0 ? eligible : [];
             })()
-            : sortedWeaknesses;
+            : sortedWeaknesses)
+            .map((item) => ({
+                ...item,
+                units: isJapaneseOnly
+                    ? item.units.filter((unit) => !isBroadJapanesePeriodTheme(unit) && normalizeTopic(unit) !== normalizeTopic(item.topic))
+                    : item.units,
+            }));
 
         // --- AI Summary Generation ---
         const prompt = `
