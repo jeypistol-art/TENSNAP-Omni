@@ -21,9 +21,13 @@ Font.register({
 const styles = StyleSheet.create({
     page: {
         padding: 40,
+        paddingBottom: 72,
         fontFamily: 'Noto Sans JP',
         fontSize: 12,
         color: '#333',
+    },
+    content: {
+        paddingBottom: 56,
     },
     header: {
         marginBottom: 20,
@@ -112,6 +116,9 @@ const styles = StyleSheet.create({
     },
 });
 
+const SECTION_KEEP_AHEAD = 110;
+const WEAKNESS_SECTION_KEEP_AHEAD = 140;
+
 type AnalysisPDFProps = {
     data: {
         studentName: string;
@@ -130,62 +137,62 @@ export default function AnalysisPDF({ data }: AnalysisPDFProps) {
     return (
         <Document>
             <Page size="A4" style={styles.page}>
+                <View style={styles.content}>
+                    {/* Header */}
+                    <View style={styles.header} wrap={false}>
+                        <View>
+                            <Text style={styles.title}>Score Snap Omni</Text>
+                            <Text style={styles.subTitle}>AI採点・学習分析レポート</Text>
+                        </View>
+                        <View>
+                            <Text style={styles.subTitle}>実施日: {data.testDate}</Text>
+                        </View>
+                    </View>
 
-                {/* Header */}
-                <View style={styles.header}>
-                    <View>
-                        <Text style={styles.title}>Score Snap Omni</Text>
-                        <Text style={styles.subTitle}>AI採点・学習分析レポート</Text>
+                    {/* Student Info */}
+                    <View style={styles.studentSection} wrap={false}>
+                        <Text style={styles.studentName}>{data.studentName} 様</Text>
+                        <Text style={styles.text}>教科: {normalizeSubjectLabel(data.subject)} | 単元: {data.unitName}</Text>
                     </View>
-                    <View>
-                        <Text style={styles.subTitle}>実施日: {data.testDate}</Text>
+
+                    {/* Score Cards */}
+                    <View style={styles.scoreSection} wrap={false}>
+                        <View style={styles.scoreCard}>
+                            <Text style={styles.scoreLabel}>得点</Text>
+                            <Text style={styles.scoreValue}>{data.score} / {data.maxScore}</Text>
+                        </View>
+                        <View style={styles.scoreCard}>
+                            <Text style={styles.scoreLabel}>学習理解度</Text>
+                            <Text style={styles.scoreValue}>{data.comprehension}%</Text>
+                        </View>
                     </View>
+
+                    {/* AI Insight */}
+                    <View minPresenceAhead={SECTION_KEEP_AHEAD}>
+                        <Text style={styles.sectionTitle}>AI分析・学習アドバイス</Text>
+                        <Text style={styles.text}>{data.summary}</Text>
+                    </View>
+
+                    {/* Weakness Areas */}
+                    {data.weaknesses.length > 0 && (
+                        <View minPresenceAhead={WEAKNESS_SECTION_KEEP_AHEAD}>
+                            <Text style={styles.sectionTitle}>重点復習ポイント</Text>
+                            {data.weaknesses.map((w, i) => (
+                                <View key={i} style={styles.weaknessItem} wrap={false}>
+                                    <Text style={styles.bullet}>•</Text>
+                                    <Text style={styles.text}>
+                                        {w.topic} {w.level === 'Primary' ? '(最優先)' : ''}
+                                    </Text>
+                                </View>
+                            ))}
+                        </View>
+                    )}
                 </View>
-
-                {/* Student Info */}
-                <View style={styles.studentSection}>
-                    <Text style={styles.studentName}>{data.studentName} 様</Text>
-                    <Text style={styles.text}>教科: {normalizeSubjectLabel(data.subject)} | 単元: {data.unitName}</Text>
-                </View>
-
-                {/* Score Cards */}
-                <View style={styles.scoreSection}>
-                    <View style={styles.scoreCard}>
-                        <Text style={styles.scoreLabel}>得点</Text>
-                        <Text style={styles.scoreValue}>{data.score} / {data.maxScore}</Text>
-                    </View>
-                    <View style={styles.scoreCard}>
-                        <Text style={styles.scoreLabel}>学習理解度</Text>
-                        <Text style={styles.scoreValue}>{data.comprehension}%</Text>
-                    </View>
-                </View>
-
-                {/* AI Insight */}
-                <View>
-                    <Text style={styles.sectionTitle}>AI分析・学習アドバイス</Text>
-                    <Text style={styles.text}>{data.summary}</Text>
-                </View>
-
-                {/* Weakness Areas */}
-                {data.weaknesses.length > 0 && (
-                    <View>
-                        <Text style={styles.sectionTitle}>重点復習ポイント</Text>
-                        {data.weaknesses.map((w, i) => (
-                            <View key={i} style={styles.weaknessItem}>
-                                <Text style={styles.bullet}>•</Text>
-                                <Text style={styles.text}>
-                                    {w.topic} {w.level === 'Primary' ? '(最優先)' : ''}
-                                </Text>
-                            </View>
-                        ))}
-                    </View>
-                )}
 
                 {/* Footer */}
-                <View style={styles.footer}>
+                <View style={styles.footer} fixed>
                     <Text>Generated by Score Snap Omni - The Next Gen Grading Scanner</Text>
                 </View>
-
             </Page>
         </Document>
     );
