@@ -1092,6 +1092,12 @@ function isSpecificJapaneseTopic(topic: string): boolean {
     return !/^(国語|読解|内容理解|論理性|表現力|国語:論理性|国語:表現力|古文・漢文:表現力|古文・漢文:読解|語彙・漢字|文法|古文・漢文)$/.test(t);
 }
 
+function isBroadJapaneseWrongQuestionTopic(topic: string): boolean {
+    const t = normalizeTopicLabel(topic);
+    if (!t) return true;
+    return /^(古典|文・文節・単語|言葉の単位|文の組み立て|主語・述語の関係|修飾・被修飾の関係)$/.test(t);
+}
+
 function inferEnglishTopicFromText(text: string): string | null {
     const t = normalizeTopicLabel(text);
     if (!t) return null;
@@ -1251,21 +1257,30 @@ function buildSpecificJapaneseTopics(
     weaknesses: WeaknessArea[],
     schoolStage?: SchoolStage | null
 ): string[] {
-    const pool = [
-        ...wrongTopics,
-        ...coveredTopics,
-        ...weaknesses.map((w) => String(w?.topic || "")),
-    ]
+    const normalizeJapaneseTopicPool = (topics: string[]): string[] => topics
         .map((t) => normalizeTopicLabel(String(t || "")))
         .filter(Boolean);
+    const extractJapaneseTopics = (pool: string[]): string[] => {
+        const specific = pool
+            .map((t) => inferJapaneseTopicFromText(t, schoolStage) || toJapaneseDomainTopic(t, schoolStage))
+            .filter(Boolean)
+            .filter(isSpecificJapaneseTopic);
 
-    const specific = pool
-        .map((t) => inferJapaneseTopicFromText(t, schoolStage) || toJapaneseDomainTopic(t, schoolStage))
-        .filter(Boolean)
-        .filter(isSpecificJapaneseTopic);
+        const filtered = filterJapaneseTopicsByEvidence(specific, pool)
+            .filter((topic) => !isBroadJapaneseWrongQuestionTopic(topic));
+        return Array.from(new Map(filtered.map((topic) => [canonicalTopic(topic), topic] as const)).values());
+    };
 
-    const filtered = filterJapaneseTopicsByEvidence(specific, pool);
-    return Array.from(new Map(filtered.map((t) => [canonicalTopic(t), t] as const)).values()).slice(0, 6);
+    const wrongPool = normalizeJapaneseTopicPool(wrongTopics);
+    const coveredPool = normalizeJapaneseTopicPool(coveredTopics);
+    const weaknessPool = normalizeJapaneseTopicPool(weaknesses.map((w) => String(w?.topic || "")));
+    const prioritized = extractJapaneseTopics(wrongPool);
+    if (prioritized.length > 0) {
+        return prioritized.slice(0, 6);
+    }
+
+    const fallback = extractJapaneseTopics([...wrongPool, ...coveredPool, ...weaknessPool]);
+    return fallback.slice(0, 6);
 }
 
 function isWrongQuestionTopicPlaceholder(topic: string): boolean {
