@@ -92,6 +92,10 @@ function isSpecificJapaneseUnit(unit: string): boolean {
         && !/^(国語|読解|文法|語彙・漢字|古文・漢文|内容理解|表現力|論理性)$/.test(unit);
 }
 
+function isLowSignalJapaneseUnitTag(unit: string): boolean {
+    return isGenericJapaneseWeakness(unit) || /^(要旨)$/.test(unit);
+}
+
 function isSpecificEnglishUnit(unit: string): boolean {
     return !!unit
         && !isGenericEnglishWeakness(unit)
@@ -486,7 +490,7 @@ export async function GET(request: Request) {
             .map((item) => ({
                 ...item,
                 units: isJapaneseOnly
-                    ? item.units.filter((unit) => !isGenericJapaneseWeakness(unit) && normalizeTopic(unit) !== normalizeTopic(item.topic))
+                    ? item.units.filter((unit) => !isLowSignalJapaneseUnitTag(unit) && normalizeTopic(unit) !== normalizeTopic(item.topic))
                     : isEnglishOnly
                         ? item.units.filter((unit) => !isBroadEnglishPeriodTheme(unit) && normalizeTopic(unit) !== normalizeTopic(item.topic))
                         : isSocialOnly
