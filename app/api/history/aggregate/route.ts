@@ -482,7 +482,7 @@ export async function GET(request: Request) {
             .map((item) => ({
                 ...item,
                 units: isJapaneseOnly
-                    ? item.units.filter((unit) => !isBroadJapanesePeriodTheme(unit) && normalizeTopic(unit) !== normalizeTopic(item.topic))
+                    ? item.units.filter((unit) => !isGenericJapaneseWeakness(unit) && normalizeTopic(unit) !== normalizeTopic(item.topic))
                     : isEnglishOnly
                         ? item.units.filter((unit) => !isBroadEnglishPeriodTheme(unit) && normalizeTopic(unit) !== normalizeTopic(item.topic))
                         : isSocialOnly
