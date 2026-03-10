@@ -35,7 +35,7 @@ function normalizeTopic(value: unknown): string {
 }
 
 function isGenericJapaneseWeakness(topic: string): boolean {
-    return /^(古典|指示語|接続語|助詞|助動詞|敬語|文・文節・単語|言葉の単位|文の組み立て|主語・述語の関係|修飾・被修飾の関係)$/.test(topic);
+    return /^(古典|指示語|接続語|助詞|助動詞|敬語|文・文節・単語|言葉の単位|文の組み立て|主語・述語の関係|修飾・被修飾の関係|誤答設問の内容|部分点が付いた設問の内容|誤答問題の内容)$/.test(topic);
 }
 
 function isSpecificJapaneseUnit(unit: string): boolean {
@@ -52,7 +52,9 @@ function japaneseWeaknessPriority(topic: string): number {
 function isPlaceholderJapaneseTopic(topic: string): boolean {
     return /^(設問|問)\s*\d+((の)?内容)?$/i.test(topic)
         || /^設問\d+の内容$/i.test(topic)
-        || /^設問\d+の誤答$/i.test(topic);
+        || /^設問\d+の誤答$/i.test(topic)
+        || /^(誤答設問|誤答問題|部分点が付いた設問)(の内容)?$/i.test(topic)
+        || /^(誤答設問の内容|部分点が付いた設問の内容|誤答問題の内容)$/i.test(topic);
 }
 
 function safeParseJson<T>(value: unknown, fallback: T): T {
@@ -277,7 +279,7 @@ export async function GET(request: Request) {
         const finalWeaknesses = isJapaneseOnly
             ? (() => {
                 const specific = sortedWeaknesses.filter((item) => isSpecificJapaneseUnit(item.topic));
-                return specific.length > 0 ? specific : sortedWeaknesses;
+                return specific.length > 0 ? specific : [];
             })()
             : sortedWeaknesses;
 
