@@ -227,6 +227,9 @@ export async function GET(request: Request) {
 
             if (isJapaneseOnly) {
                 specificWrongTopics.forEach((topic) => addTopic(topic, r.unit_name, 4));
+                if (hasSpecificWrongTopics) {
+                    return;
+                }
             }
 
             weaknesses.forEach((w) => {
@@ -279,7 +282,7 @@ export async function GET(request: Request) {
         const finalWeaknesses = isJapaneseOnly
             ? (() => {
                 const specific = sortedWeaknesses.filter((item) => isSpecificJapaneseUnit(item.topic));
-                return specific.length > 0 ? specific : [];
+                return specific.length >= 2 ? specific : [];
             })()
             : sortedWeaknesses;
 

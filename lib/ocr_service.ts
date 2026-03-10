@@ -1268,6 +1268,52 @@ function buildSpecificJapaneseTopics(
     return Array.from(new Map(filtered.map((t) => [canonicalTopic(t), t] as const)).values()).slice(0, 6);
 }
 
+function isWrongQuestionTopicPlaceholder(topic: string): boolean {
+    const t = normalizeTopicLabel(topic);
+    if (!t) return true;
+    return isPlaceholderUnit(t)
+        || /^(設問|問)\s*\d+((の)?内容|の誤答)?$/i.test(t)
+        || /^設問\d+の内容$/i.test(t)
+        || /^設問\d+の誤答$/i.test(t)
+        || /^(誤答設問|誤答問題|部分点が付いた設問)(の内容)?$/i.test(t)
+        || /^(誤答設問の内容|部分点が付いた設問の内容|誤答問題の内容)$/i.test(t);
+}
+
+function sanitizeWrongQuestionTopics(
+    inputWrongQuestionTopics: string[] | undefined,
+    inputCoveredTopics: string[] | undefined,
+    inputWeaknesses: WeaknessArea[] | undefined,
+    subject: string,
+    schoolStage?: SchoolStage | null
+): string[] {
+    const subjectCategory = detectSubjectCategory(subject);
+    const rawWrongTopics = Array.from(
+        new Map(
+            (Array.isArray(inputWrongQuestionTopics) ? inputWrongQuestionTopics : [])
+                .map((topic) => normalizeTopicLabel(String(topic || "")))
+                .filter((topic) => !!topic && !isWrongQuestionTopicPlaceholder(topic))
+                .map((topic) => [canonicalTopic(topic), topic] as const)
+        ).values()
+    );
+    const coveredTopics = Array.isArray(inputCoveredTopics) ? inputCoveredTopics : [];
+    const weaknesses = Array.isArray(inputWeaknesses) ? inputWeaknesses : [];
+
+    if (subjectCategory === "english") {
+        return buildSpecificEnglishTopics(rawWrongTopics, coveredTopics, weaknesses);
+    }
+    if (subjectCategory === "japanese") {
+        return buildSpecificJapaneseTopics(rawWrongTopics, coveredTopics, weaknesses, schoolStage);
+    }
+    if (subjectCategory === "social") {
+        const seedTopics = rawWrongTopics.length > 0
+            ? mergeSocialTopicPool(rawWrongTopics, coveredTopics, schoolStage)
+            : coveredTopics;
+        return buildSpecificSocialTopics(seedTopics, weaknesses, schoolStage);
+    }
+
+    return rawWrongTopics.slice(0, 6);
+}
+
 function sanitizeWeaknessAreas(
     inputWeaknesses: WeaknessArea[] | undefined,
     inputCoveredTopics: string[] | undefined,
@@ -1986,14 +2032,12 @@ export async function analyzeImage(
             const extractedEnglishTopics = await extractEnglishSpecificTopics(answerSheets, context?.problemSheets);
             if (extractedEnglishTopics.length > 0) {
                 parsed.covered_topics = Array.from(new Set([...(parsed.covered_topics || []), ...extractedEnglishTopics]));
-                parsed.wrong_question_topics = Array.from(new Set([...(parsed.wrong_question_topics || []), ...extractedEnglishTopics]));
             }
         }
         if (isJapanese) {
             const extractedJapaneseTopics = await extractJapaneseSpecificTopics(answerSheets, context?.problemSheets, schoolStage);
             if (extractedJapaneseTopics.length > 0) {
                 parsed.covered_topics = Array.from(new Set([...(parsed.covered_topics || []), ...extractedJapaneseTopics]));
-                parsed.wrong_question_topics = Array.from(new Set([...(parsed.wrong_question_topics || []), ...extractedJapaneseTopics]));
             }
         }
         if (isSocial) {
@@ -2005,14 +2049,16 @@ export async function analyzeImage(
                             .map((topic) => [canonicalTopic(topic), topic] as const)
                     ).values()
                 );
-                parsed.wrong_question_topics = Array.from(
-                    new Map(
-                        [...extractedSocialTopics, ...(parsed.wrong_question_topics || [])]
-                            .map((topic) => [canonicalTopic(topic), topic] as const)
-                    ).values()
-                );
             }
         }
+
+        parsed.wrong_question_topics = sanitizeWrongQuestionTopics(
+            parsed.wrong_question_topics,
+            parsed.covered_topics,
+            parsed.weakness_areas as WeaknessArea[] | undefined,
+            subject,
+            schoolStage
+        );
 
         const finalizeTopicAndWeakness = () => {
             const normalized = sanitizeWeaknessAreas(
