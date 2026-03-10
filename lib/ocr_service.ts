@@ -683,8 +683,6 @@ function resolveJapaneseCurriculumUnit(topic: string, schoolStage?: SchoolStage 
         "カタカナ",
         "小さい文字",
         "のばす音",
-        "漢字の読み",
-        "漢字の書き取り",
     ]);
 
     const exact = JAPANESE_CURRICULUM_UNITS.find((entry) =>
@@ -732,6 +730,9 @@ function toJapaneseDomainTopic(topic: string, schoolStage?: SchoolStage | null):
     if (/(助詞)/.test(u)) return "助詞";
     if (/(助動詞)/.test(u)) return "助動詞";
     if (/(敬語)/.test(u)) return "敬語";
+    if (/(漢字の読み書き|読み書き)/.test(u)) return "漢字の読み書き";
+    if (/(漢字の読み|音読み|訓読み|読みがな)/.test(u)) return "漢字の読み";
+    if (/(漢字の書き取り|書き取り|漢字を書(け|く)|書ける漢字)/.test(u)) return "漢字の書き取り";
     if (/(対義語)/.test(u)) return "対義語";
     if (/(類義語)/.test(u)) return "類義語";
     if (/(慣用句)/.test(u)) return "慣用句";
@@ -752,6 +753,10 @@ function toJapaneseDomainTopic(topic: string, schoolStage?: SchoolStage | null):
     if (/(仮定形)/.test(u)) return "仮定形";
     if (/(漢文の読み方)/.test(u)) return "漢文の読み方";
     if (/(漢詩)/.test(u)) return "漢詩";
+    if (!/(枕草子|徒然草|平家物語|竹取物語|古今和歌集|万葉集|新古今和歌集|奥の細道|高瀬舟|故郷|論語)/.test(u)
+        && /(古文|古典|漢文|歴史的仮名遣い|仮名遣い|係り結び|古語|現代語訳|書き下し文)/.test(u)) {
+        return "古典";
+    }
     if (/(竹取物語)/.test(u)) return "竹取物語";
     if (/(枕草子)/.test(u)) return "枕草子";
     if (/(徒然草)/.test(u)) return "徒然草";
@@ -1152,6 +1157,10 @@ function requiresExplicitJapaneseTopicEvidence(topic: string): boolean {
     return /^(指示語|接続語|助詞|助動詞|敬語|主語・述語の関係|修飾・被修飾の関係|文の組み立て|言葉の単位)$/.test(topic);
 }
 
+function isJapaneseClassicalWorkTopic(topic: string): boolean {
+    return /^(枕草子|徒然草|平家物語|竹取物語|古今和歌集|万葉集|新古今和歌集|奥の細道|高瀬舟|故郷|論語)$/.test(topic);
+}
+
 function hasExplicitJapaneseTopicEvidence(topic: string, evidenceTexts: string[]): boolean {
     const joined = evidenceTexts.map((t) => normalizeTopicLabel(t)).filter(Boolean).join("\n");
     if (!joined) return false;
@@ -1187,8 +1196,16 @@ function filterJapaneseTopicsByEvidence(topics: string[], evidenceTexts: string[
     return topics.filter((topic) => {
         const normalized = normalizeTopicLabel(topic);
         if (!normalized) return false;
+        if (normalized === "古典") {
+            return hasKobun || hasKanbun;
+        }
         if (requiresExplicitJapaneseTopicEvidence(normalized)) {
             return hasExplicitJapaneseTopicEvidence(normalized, evidenceTexts);
+        }
+        if (isJapaneseClassicalWorkTopic(normalized)) {
+            return evidenceTexts
+                .map((text) => normalizeTopicLabel(text))
+                .some((text) => text.includes(normalized));
         }
         if (/^(漢文の読み方|返り点|再読文字|受身形|使役形|疑問形|反語形|仮定形)$/.test(normalized)) {
             return hasKanbun;
@@ -1741,6 +1758,7 @@ async function extractJapaneseSpecificTopics(
         "答案用紙と問題用紙を見て、誤答または部分点に関係する具体的な単元名を3〜6件だけ JSON で返してください。",
         "抽象語は禁止です。『論理性』『表現力』『読解』だけで終わる出力は禁止。",
         "設問や出題意図に明示されていない限り、『指示語』を安易に出力してはいけません。",
+        "作品名が本文や設問に明示されていない古典問題は、作品名ではなく『古典』と出力してください。",
         "単元名の例: 『接続語』『助詞』『助動詞』『敬語』『四字熟語』『枕草子』『徒然草』『論語』『返り点』『漢文の読み方』。",
         "作品本文が問われている場合は、作品名や古典分野名を優先してください。",
         "出力形式: {\"topics\":[\"単元1\",\"単元2\"]}",
