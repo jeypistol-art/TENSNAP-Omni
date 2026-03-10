@@ -42,6 +42,13 @@ function isBroadJapanesePeriodTheme(topic: string): boolean {
     return /^(古典|誤答設問の内容|部分点が付いた設問の内容|誤答問題の内容)$/.test(topic);
 }
 
+function isJapanesePeriodTheme(topic: string): boolean {
+    const normalized = normalizeTopic(topic);
+    if (!normalized) return false;
+    if (isPlaceholderJapaneseTopic(normalized)) return false;
+    return !isBroadJapanesePeriodTheme(normalized);
+}
+
 function isSpecificJapaneseUnit(unit: string): boolean {
     return !!unit
         && !isGenericJapaneseWeakness(unit)
@@ -226,12 +233,12 @@ export async function GET(request: Request) {
                     .map((topic) => normalizeTopic(topic))
                     .filter((topic) => !!topic && !isPlaceholderJapaneseTopic(topic))
                 : [];
-            const specificWrongTopics = wrongQuestionTopics.filter((topic) => isSpecificJapaneseUnit(topic));
-            const hasSpecificWrongTopics = specificWrongTopics.length > 0;
+            const prioritizedWrongTopics = wrongQuestionTopics.filter((topic) => isJapanesePeriodTheme(topic));
+            const hasPrioritizedWrongTopics = prioritizedWrongTopics.length > 0;
 
             if (isJapaneseOnly) {
-                specificWrongTopics.forEach((topic) => addTopic(topic, r.unit_name, 4));
-                if (hasSpecificWrongTopics) {
+                prioritizedWrongTopics.forEach((topic) => addTopic(topic, r.unit_name, 4));
+                if (hasPrioritizedWrongTopics) {
                     return;
                 }
             }
@@ -239,7 +246,7 @@ export async function GET(request: Request) {
             weaknesses.forEach((w) => {
                 const topic = normalizeTopic(w?.topic);
                 if (!topic) return;
-                if (isJapaneseOnly && hasSpecificWrongTopics && isGenericJapaneseWeakness(topic)) return;
+                if (isJapaneseOnly && hasPrioritizedWrongTopics && isGenericJapaneseWeakness(topic)) return;
                 addTopic(topic, r.unit_name, w?.level === "Primary" ? 3 : 2);
             });
 
@@ -285,7 +292,7 @@ export async function GET(request: Request) {
 
         const finalWeaknesses = isJapaneseOnly
             ? (() => {
-                const eligible = sortedWeaknesses.filter((item) => !isBroadJapanesePeriodTheme(item.topic));
+                const eligible = sortedWeaknesses.filter((item) => isJapanesePeriodTheme(item.topic));
                 return eligible.length > 0 ? eligible : [];
             })()
             : sortedWeaknesses;
