@@ -19,6 +19,7 @@ type Details = {
     comprehension_score?: number;
     weakness_areas?: Weakness[];
     covered_topics?: string[];
+    wrong_question_topics?: string[];
     test_date?: string;
     unit_name?: string;
     insight_conclusion?: string;
@@ -46,6 +47,12 @@ function isSpecificJapaneseUnit(unit: string): boolean {
 function japaneseWeaknessPriority(topic: string): number {
     if (isGenericJapaneseWeakness(topic)) return 1;
     return 0;
+}
+
+function isPlaceholderJapaneseTopic(topic: string): boolean {
+    return /^(設問|問)\s*\d+((の)?内容)?$/i.test(topic)
+        || /^設問\d+の内容$/i.test(topic)
+        || /^設問\d+の誤答$/i.test(topic);
 }
 
 function safeParseJson<T>(value: unknown, fallback: T): T {
@@ -190,27 +197,41 @@ export async function GET(request: Request) {
         const isJapaneseOnly = records.length > 0
             && records.every((r) => isSubjectMatch(r.subject ?? undefined, "国語"));
 
-        const weaknessCounts: Record<string, { count: number; units: Set<string> }> = {};
+        const weaknessCounts: Record<string, { count: number; score: number; units: Set<string> }> = {};
         records.forEach((r) => {
             const weaknesses = Array.isArray(r.details?.weakness_areas) ? r.details.weakness_areas : [];
             const unitName = normalizeTopic(r.unit_name);
             const seenTopicsInRecord = new Set<string>();
-            const addTopic = (topic: string, unitForTag?: string | null) => {
+            const addTopic = (topic: string, unitForTag: string | null | undefined, scoreIncrement: number) => {
                 if (!topic) return;
                 if (!weaknessCounts[topic]) {
-                    weaknessCounts[topic] = { count: 0, units: new Set() };
+                    weaknessCounts[topic] = { count: 0, score: 0, units: new Set() };
                 }
                 weaknessCounts[topic].count += 1;
+                weaknessCounts[topic].score += scoreIncrement;
                 if (unitForTag) {
                     weaknessCounts[topic].units.add(unitForTag);
                 }
                 seenTopicsInRecord.add(topic);
             };
 
+            const wrongQuestionTopics = isJapaneseOnly && Array.isArray(r.details?.wrong_question_topics)
+                ? r.details.wrong_question_topics
+                    .map((topic) => normalizeTopic(topic))
+                    .filter((topic) => !!topic && !isPlaceholderJapaneseTopic(topic))
+                : [];
+            const specificWrongTopics = wrongQuestionTopics.filter((topic) => isSpecificJapaneseUnit(topic));
+            const hasSpecificWrongTopics = specificWrongTopics.length > 0;
+
+            if (isJapaneseOnly) {
+                specificWrongTopics.forEach((topic) => addTopic(topic, r.unit_name, 4));
+            }
+
             weaknesses.forEach((w) => {
                 const topic = normalizeTopic(w?.topic);
                 if (!topic) return;
-                addTopic(topic, r.unit_name);
+                if (isJapaneseOnly && hasSpecificWrongTopics && isGenericJapaneseWeakness(topic)) return;
+                addTopic(topic, r.unit_name, w?.level === "Primary" ? 3 : 2);
             });
 
             if (isJapaneseOnly) {
@@ -221,7 +242,7 @@ export async function GET(request: Request) {
                 coveredTopics
                     .filter((topic) => !seenTopicsInRecord.has(topic))
                     .filter((topic) => isSpecificJapaneseUnit(topic))
-                    .forEach((topic) => addTopic(topic, r.unit_name));
+                    .forEach((topic) => addTopic(topic, r.unit_name, 1));
             }
 
             if (isJapaneseOnly && isSpecificJapaneseUnit(unitName)) {
@@ -229,11 +250,7 @@ export async function GET(request: Request) {
                     && weaknesses.every((w) => isGenericJapaneseWeakness(normalizeTopic(w?.topic)));
 
                 if (hasOnlyGenericWeaknesses && !seenTopicsInRecord.has(unitName)) {
-                    if (!weaknessCounts[unitName]) {
-                        weaknessCounts[unitName] = { count: 0, units: new Set() };
-                    }
-                    weaknessCounts[unitName].count += 1;
-                    weaknessCounts[unitName].units.add(unitName);
+                    addTopic(unitName, unitName, 1);
                 }
             }
         });
@@ -241,6 +258,7 @@ export async function GET(request: Request) {
         // Sort by frequency
         const sortedWeaknesses = Object.entries(weaknessCounts)
             .sort(([topicA, a], [topicB, b]) => {
+                if (a.score !== b.score) return b.score - a.score;
                 if (isJapaneseOnly) {
                     const pa = japaneseWeaknessPriority(topicA);
                     const pb = japaneseWeaknessPriority(topicB);
@@ -255,6 +273,13 @@ export async function GET(request: Request) {
                 count: data.count,
                 units: Array.from(data.units).slice(0, 4) // Convert Set to Array, limit to 4 units
             }));
+
+        const finalWeaknesses = isJapaneseOnly
+            ? (() => {
+                const specific = sortedWeaknesses.filter((item) => isSpecificJapaneseUnit(item.topic));
+                return specific.length > 0 ? specific : sortedWeaknesses;
+            })()
+            : sortedWeaknesses;
 
         // --- AI Summary Generation ---
         const prompt = `
@@ -277,7 +302,7 @@ ${records.map((r, i: number) => {
   - 思考プロセス: ${startStats.process} -> ${currentStats.process}
   - 安定感: ${startStats.consistency} -> ${currentStats.consistency}
 
-- 頻出弱点: ${sortedWeaknesses.map(w => w.topic).join(", ")}
+- 頻出弱点: ${finalWeaknesses.map(w => w.topic).join(", ")}
 
 Output Requirement:
 - 「〜が素晴らしい成長を見せました。次は〜を強化しましょう」といった形式で、ポジティブかつ具体的、そしてプロフェッショナルなトーンで。
@@ -298,7 +323,7 @@ Output Requirement:
             aiSummary = completion.choices[0].message.content?.trim() || "";
         } catch (error) {
             console.error("Aggregation Summary OpenAI Error:", serializeOpenAIError(error));
-            aiSummary = `期間内に${total}回の分析を実施し、得点理解度${startStats.accuracy}%→${currentStats.accuracy}%へ推移。次は「${sortedWeaknesses[0]?.topic || "基礎の定着"}」を重点強化しましょう。`;
+            aiSummary = `期間内に${total}回の分析を実施し、得点理解度${startStats.accuracy}%→${currentStats.accuracy}%へ推移。次は「${finalWeaknesses[0]?.topic || "基礎の定着"}」を重点強化しましょう。`;
         }
 
         return NextResponse.json({
@@ -307,7 +332,7 @@ Output Requirement:
                 averages,
                 startStats,
                 currentStats, // Last record stats for Radar
-                weaknesses: sortedWeaknesses,
+                weaknesses: finalWeaknesses,
                 aiSummary
             }
         });

@@ -6,51 +6,21 @@
   "startStats": {
     "accuracy": 45,
     "process": 40,
-    "consistency": 28,
-    "score": 30
+    "consistency": 25
   },
   "currentStats": {
     "accuracy": 78,
     "process": 73,
-    "consistency": 73,
-    "score": 75
+    "consistency": 75
   },
   "weaknesses": [
     {
       "topic": "漢字の読み",
-      "count": 2,
-      "units": [
-        "古典"
-      ]
-    },
-    {
-      "topic": "古典",
-      "count": 2,
-      "units": [
-        "古典"
-      ]
-    },
-    {
-      "topic": "接続語",
-      "count": 2,
-      "units": [
-        "古典"
-      ]
-    },
-    {
-      "topic": "敬語",
-      "count": 1,
-      "units": [
-        "古典"
-      ]
-    },
-    {
-      "topic": "助詞",
       "count": 1,
       "units": [
         "古典"
       ]
     }
   ],
-  "aiSummary": "国語の理解度は着実に伸びています。次は「漢字の読み」を軸に、周辺単元までつないで定着を進めましょう。"
+  "aiSummary": "国語の理解度は着実に伸びています。次は「漢字の読み」を軸に、実際の誤答が出た単元から定着を進めましょう。"
 }
