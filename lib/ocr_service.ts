@@ -34,6 +34,13 @@ export type AnalysisResult = {
         level: "Primary" | "Secondary";
     }[];
     wrong_question_topics?: string[]; // Topics extracted from wrong/partial questions
+    question_mistakes?: {
+        question_label?: string;
+        topic?: string;
+        result?: "wrong" | "partial";
+        lost_points?: number | null;
+        score_points?: number | null;
+    }[];
     disclaimer: string;
     mark_counts?: {
         circles: number; // ◯
@@ -104,6 +111,10 @@ Instructions:
 
 4.2 **全教科共通の誤答トピック抽出 (Wrong-Question Priority)**:
    - 全教科で wrong_question_topics を出力せよ。
+   - 可能なら question_mistakes も出力し、各要素に question_label, topic, result, lost_points, score_points を入れよ。
+   - question_mistakes は、誤答（wrong）または部分点（partial）の設問だけを対象にすること。
+   - result は "wrong" または "partial" のみを使うこと。
+   - lost_points は「その設問で落とした点数」、score_points は「その設問の配点」。不明なら null でよい。
    - wrong_question_topics には、誤答（×/斜線）または部分点（△）の設問から抽出した語句のみを入れること。
    - 「誤答設問1」「誤答問題2」「設問3」などのプレースホルダ表現は出力禁止。必ず内容語（用語・地名・制度名など）で出力すること。
    - covered_topics や weakness_areas より、wrong_question_topics の語句を優先して選ぶこと。
@@ -141,6 +152,9 @@ Output Format (JSON):
   "weakness_areas": [
     { "topic": "単元名", "level": "Primary" },
     { "topic": "単元名", "level": "Secondary" }
+  ],
+  "question_mistakes": [
+    { "question_label": "2-1", "topic": "接続語", "result": "wrong", "lost_points": 3, "score_points": 3 }
   ],
   "wrong_question_topics": ["誤答設問から抽出した語句1", "誤答設問から抽出した語句2"],
   "disclaimer": "本分析は複数の設問傾向から推定した学習状態です。",
@@ -1294,6 +1308,86 @@ function isWrongQuestionTopicPlaceholder(topic: string): boolean {
         || /^(誤答設問の内容|部分点が付いた設問の内容|誤答問題の内容)$/i.test(t);
 }
 
+function normalizeQuestionMistakeResult(value: unknown): "wrong" | "partial" | null {
+    if (typeof value !== "string") return null;
+    const normalized = value.trim().toLowerCase();
+    if (["wrong", "miss", "incorrect", "x", "cross", "slash", "bad"].includes(normalized)) return "wrong";
+    if (["partial", "triangle", "delta", "△"].includes(normalized)) return "partial";
+    return null;
+}
+
+function normalizeNonNegativeNumber(value: unknown): number | null {
+    if (typeof value === "number" && Number.isFinite(value) && value >= 0) return value;
+    if (typeof value === "string") {
+        const match = value.match(/-?\d+(\.\d+)?/);
+        if (!match) return null;
+        const parsed = Number(match[0]);
+        if (Number.isFinite(parsed) && parsed >= 0) return parsed;
+    }
+    return null;
+}
+
+function sanitizeQuestionMistakes(
+    inputQuestionMistakes: AnalysisResult["question_mistakes"] | undefined,
+    subject: string,
+    schoolStage?: SchoolStage | null
+): NonNullable<AnalysisResult["question_mistakes"]> {
+    const subjectCategory = detectSubjectCategory(subject);
+    const normalizeTopicBySubject = (topic: string): string => {
+        const normalized = normalizeTopicLabel(topic);
+        if (!normalized || isWrongQuestionTopicPlaceholder(normalized)) return "";
+        if (subjectCategory === "english") {
+            const resolved = inferEnglishTopicFromText(normalized) || resolveEnglishCurriculumUnit(normalized) || toEnglishDomainTopic(normalized);
+            return resolved && isSpecificEnglishTopic(resolved) ? resolved : "";
+        }
+        if (subjectCategory === "japanese") {
+            const resolved = inferJapaneseTopicFromText(normalized, schoolStage)
+                || resolveJapaneseCurriculumUnit(normalized, schoolStage)
+                || toJapaneseDomainTopic(normalized, schoolStage);
+            if (!resolved || isBroadJapaneseWrongQuestionTopic(resolved)) return "";
+            return resolved;
+        }
+        if (subjectCategory === "social") {
+            return inferSocialTopicFromText(normalized, schoolStage)
+                || resolveSocialCurriculumUnit(normalized, schoolStage)
+                || toSocialDomainTopic(normalized, schoolStage);
+        }
+        return normalized;
+    };
+
+    return Array.from(
+        new Map(
+            (Array.isArray(inputQuestionMistakes) ? inputQuestionMistakes : [])
+                .map((entry) => {
+                    const topic = normalizeTopicBySubject(String(entry?.topic || ""));
+                    const result = normalizeQuestionMistakeResult(entry?.result);
+                    if (!topic || !result) return null;
+                    const questionLabel = normalizeTopicLabel(String(entry?.question_label || ""));
+                    const lostPoints = normalizeNonNegativeNumber(entry?.lost_points);
+                    const scorePoints = normalizeNonNegativeNumber(entry?.score_points);
+                    return {
+                        question_label: questionLabel || undefined,
+                        topic,
+                        result,
+                        lost_points: lostPoints,
+                        score_points: scorePoints,
+                    };
+                })
+                .filter((entry): entry is NonNullable<typeof entry> => !!entry)
+                .map((entry) => {
+                    const key = [
+                        canonicalTopic(entry.question_label || ""),
+                        canonicalTopic(entry.topic || ""),
+                        entry.result,
+                        entry.lost_points ?? "",
+                        entry.score_points ?? "",
+                    ].join("|");
+                    return [key, entry] as const;
+                })
+        ).values()
+    ).slice(0, 12);
+}
+
 function sanitizeWrongQuestionTopics(
     inputWrongQuestionTopics: string[] | undefined,
     inputCoveredTopics: string[] | undefined,
@@ -2067,8 +2161,17 @@ export async function analyzeImage(
             }
         }
 
+        parsed.question_mistakes = sanitizeQuestionMistakes(
+            parsed.question_mistakes,
+            subject,
+            schoolStage
+        );
+
         parsed.wrong_question_topics = sanitizeWrongQuestionTopics(
-            parsed.wrong_question_topics,
+            [
+                ...(parsed.question_mistakes || []).map((entry) => String(entry?.topic || "")),
+                ...(parsed.wrong_question_topics || [])
+            ],
             parsed.covered_topics,
             parsed.weakness_areas as WeaknessArea[] | undefined,
             subject,

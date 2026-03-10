@@ -20,6 +20,13 @@ type Details = {
     weakness_areas?: Weakness[];
     covered_topics?: string[];
     wrong_question_topics?: string[];
+    question_mistakes?: {
+        question_label?: string;
+        topic?: string;
+        result?: "wrong" | "partial";
+        lost_points?: number | null;
+        score_points?: number | null;
+    }[];
     test_date?: string;
     unit_name?: string;
     insight_conclusion?: string;
@@ -38,8 +45,24 @@ function isGenericJapaneseWeakness(topic: string): boolean {
     return /^(古典|指示語|接続語|助詞|助動詞|敬語|文・文節・単語|言葉の単位|文の組み立て|主語・述語の関係|修飾・被修飾の関係|誤答設問の内容|部分点が付いた設問の内容|誤答問題の内容)$/.test(topic);
 }
 
+function isGenericEnglishWeakness(topic: string): boolean {
+    return /^(英語|英文|語彙|文法（基本）|文法（語順）|英作文|リスニング|文章読解（内容理解）|会話文読解（内容理解）|誤答設問の内容|部分点が付いた設問の内容|誤答問題の内容)$/.test(topic);
+}
+
+function isGenericSocialWeakness(topic: string): boolean {
+    return /^(社会|社会分野|社会科|地理|歴史|公民|知識|理解|基礎|復習|内容理解|地理的知識|歴史的出来事|歴史の出来事|国際関係|日本の歴史|誤答設問の内容|部分点が付いた設問の内容|誤答問題の内容)$/.test(topic);
+}
+
 function isBroadJapanesePeriodTheme(topic: string): boolean {
     return /^(古典|文・文節・単語|誤答設問の内容|部分点が付いた設問の内容|誤答問題の内容)$/.test(topic);
+}
+
+function isBroadEnglishPeriodTheme(topic: string): boolean {
+    return /^(語彙|文法（基本）|英作文|リスニング|文章読解（内容理解）|会話文読解（内容理解）|誤答設問の内容|部分点が付いた設問の内容|誤答問題の内容)$/.test(topic);
+}
+
+function isBroadSocialPeriodTheme(topic: string): boolean {
+    return /^(社会|社会分野|社会科|地理|歴史|公民|知識|理解|基礎|復習|内容理解|地理的知識|歴史的出来事|歴史の出来事|国際関係|日本の歴史|誤答設問の内容|部分点が付いた設問の内容|誤答問題の内容)$/.test(topic);
 }
 
 function isJapanesePeriodTheme(topic: string): boolean {
@@ -49,14 +72,50 @@ function isJapanesePeriodTheme(topic: string): boolean {
     return !isBroadJapanesePeriodTheme(normalized);
 }
 
+function isEnglishPeriodTheme(topic: string): boolean {
+    const normalized = normalizeTopic(topic);
+    if (!normalized) return false;
+    if (isPlaceholderEnglishTopic(normalized)) return false;
+    return !isBroadEnglishPeriodTheme(normalized);
+}
+
+function isSocialPeriodTheme(topic: string): boolean {
+    const normalized = normalizeTopic(topic);
+    if (!normalized) return false;
+    if (isPlaceholderSocialTopic(normalized)) return false;
+    return !isBroadSocialPeriodTheme(normalized);
+}
+
 function isSpecificJapaneseUnit(unit: string): boolean {
     return !!unit
         && !isGenericJapaneseWeakness(unit)
         && !/^(国語|読解|文法|語彙・漢字|古文・漢文|内容理解|表現力|論理性)$/.test(unit);
 }
 
+function isSpecificEnglishUnit(unit: string): boolean {
+    return !!unit
+        && !isGenericEnglishWeakness(unit)
+        && !/^(英語|英文|読解|文法|語彙|内容理解|表現)$/.test(unit);
+}
+
+function isSpecificSocialUnit(unit: string): boolean {
+    return !!unit
+        && !isGenericSocialWeakness(unit)
+        && !/^(社会|社会分野|社会科|地理|歴史|公民|知識|理解|基礎|復習|内容理解)$/.test(unit);
+}
+
 function japaneseWeaknessPriority(topic: string): number {
     if (isGenericJapaneseWeakness(topic)) return 1;
+    return 0;
+}
+
+function englishWeaknessPriority(topic: string): number {
+    if (isGenericEnglishWeakness(topic)) return 1;
+    return 0;
+}
+
+function socialWeaknessPriority(topic: string): number {
+    if (isGenericSocialWeakness(topic)) return 1;
     return 0;
 }
 
@@ -66,6 +125,28 @@ function isPlaceholderJapaneseTopic(topic: string): boolean {
         || /^設問\d+の誤答$/i.test(topic)
         || /^(誤答設問|誤答問題|部分点が付いた設問)(の内容)?$/i.test(topic)
         || /^(誤答設問の内容|部分点が付いた設問の内容|誤答問題の内容)$/i.test(topic);
+}
+
+function isPlaceholderEnglishTopic(topic: string): boolean {
+    return /^(設問|問)\s*\d+((の)?内容)?$/i.test(topic)
+        || /^設問\d+の内容$/i.test(topic)
+        || /^設問\d+の誤答$/i.test(topic)
+        || /^(誤答設問|誤答問題|部分点が付いた設問)(の内容)?$/i.test(topic)
+        || /^(誤答設問の内容|部分点が付いた設問の内容|誤答問題の内容)$/i.test(topic);
+}
+
+function isPlaceholderSocialTopic(topic: string): boolean {
+    return /^(設問|問)\s*\d+((の)?内容)?$/i.test(topic)
+        || /^設問\d+の内容$/i.test(topic)
+        || /^設問\d+の誤答$/i.test(topic)
+        || /^(誤答設問|誤答問題|部分点が付いた設問)(の内容)?$/i.test(topic)
+        || /^(誤答設問の内容|部分点が付いた設問の内容|誤答問題の内容)$/i.test(topic);
+}
+
+function normalizeMistakeWeight(result?: string, lostPoints?: number | null): number {
+    const loss = typeof lostPoints === "number" && Number.isFinite(lostPoints) ? Math.max(0, lostPoints) : 0;
+    const base = result === "partial" ? 3 : 4;
+    return base + Math.min(loss, 5);
 }
 
 function safeParseJson<T>(value: unknown, fallback: T): T {
@@ -209,6 +290,10 @@ export async function GET(request: Request) {
         // 3. Aggregate Weaknesses
         const isJapaneseOnly = records.length > 0
             && records.every((r) => isSubjectMatch(r.subject ?? undefined, "国語"));
+        const isEnglishOnly = records.length > 0
+            && records.every((r) => isSubjectMatch(r.subject ?? undefined, "英語"));
+        const isSocialOnly = records.length > 0
+            && records.every((r) => isSubjectMatch(r.subject ?? undefined, "社会"));
 
         const weaknessCounts: Record<string, { count: number; score: number; units: Set<string> }> = {};
         records.forEach((r) => {
@@ -228,15 +313,52 @@ export async function GET(request: Request) {
                 seenTopicsInRecord.add(topic);
             };
 
-            const wrongQuestionTopics = isJapaneseOnly && Array.isArray(r.details?.wrong_question_topics)
+            const questionMistakes = Array.isArray(r.details?.question_mistakes)
+                ? r.details.question_mistakes
+                    .map((entry) => ({
+                        topic: normalizeTopic(entry?.topic),
+                        result: entry?.result === "partial" ? "partial" : "wrong",
+                        lostPoints: typeof entry?.lost_points === "number" ? entry.lost_points : null,
+                    }))
+                    .filter((entry) => !!entry.topic)
+                : [];
+            const prioritizedQuestionMistakes = isJapaneseOnly
+                ? questionMistakes.filter((entry) => isJapanesePeriodTheme(entry.topic))
+                : isEnglishOnly
+                    ? questionMistakes.filter((entry) => isEnglishPeriodTheme(entry.topic))
+                    : isSocialOnly
+                        ? questionMistakes.filter((entry) => isSocialPeriodTheme(entry.topic))
+                    : questionMistakes;
+            const hasPrioritizedQuestionMistakes = prioritizedQuestionMistakes.length > 0;
+
+            if (hasPrioritizedQuestionMistakes) {
+                prioritizedQuestionMistakes.forEach((entry) => {
+                    addTopic(entry.topic, r.unit_name, normalizeMistakeWeight(entry.result, entry.lostPoints));
+                });
+                return;
+            }
+
+            const wrongQuestionTopics = (isJapaneseOnly || isEnglishOnly || isSocialOnly) && Array.isArray(r.details?.wrong_question_topics)
                 ? r.details.wrong_question_topics
                     .map((topic) => normalizeTopic(topic))
-                    .filter((topic) => !!topic && !isPlaceholderJapaneseTopic(topic))
+                    .filter((topic) => !!topic && !(
+                        isJapaneseOnly
+                            ? isPlaceholderJapaneseTopic(topic)
+                            : isEnglishOnly
+                                ? isPlaceholderEnglishTopic(topic)
+                                : isPlaceholderSocialTopic(topic)
+                    ))
                 : [];
-            const prioritizedWrongTopics = wrongQuestionTopics.filter((topic) => isJapanesePeriodTheme(topic));
+            const prioritizedWrongTopics = isJapaneseOnly
+                ? wrongQuestionTopics.filter((topic) => isJapanesePeriodTheme(topic))
+                : isEnglishOnly
+                    ? wrongQuestionTopics.filter((topic) => isEnglishPeriodTheme(topic))
+                    : isSocialOnly
+                        ? wrongQuestionTopics.filter((topic) => isSocialPeriodTheme(topic))
+                    : [];
             const hasPrioritizedWrongTopics = prioritizedWrongTopics.length > 0;
 
-            if (isJapaneseOnly) {
+            if (isJapaneseOnly || isEnglishOnly || isSocialOnly) {
                 prioritizedWrongTopics.forEach((topic) => addTopic(topic, r.unit_name, 4));
                 if (hasPrioritizedWrongTopics) {
                     return;
@@ -247,23 +369,47 @@ export async function GET(request: Request) {
                 const topic = normalizeTopic(w?.topic);
                 if (!topic) return;
                 if (isJapaneseOnly && hasPrioritizedWrongTopics && isGenericJapaneseWeakness(topic)) return;
+                if (isEnglishOnly && hasPrioritizedWrongTopics && isGenericEnglishWeakness(topic)) return;
+                if (isSocialOnly && hasPrioritizedWrongTopics && isGenericSocialWeakness(topic)) return;
                 addTopic(topic, r.unit_name, w?.level === "Primary" ? 3 : 2);
             });
 
-            if (isJapaneseOnly) {
+            if (isJapaneseOnly || isEnglishOnly || isSocialOnly) {
                 const coveredTopics = Array.isArray(r.details?.covered_topics)
                     ? r.details.covered_topics.map((topic) => normalizeTopic(topic)).filter(Boolean)
                     : [];
 
                 coveredTopics
                     .filter((topic) => !seenTopicsInRecord.has(topic))
-                    .filter((topic) => isSpecificJapaneseUnit(topic))
+                    .filter((topic) => isJapaneseOnly
+                        ? isSpecificJapaneseUnit(topic)
+                        : isEnglishOnly
+                            ? isSpecificEnglishUnit(topic)
+                            : isSpecificSocialUnit(topic))
                     .forEach((topic) => addTopic(topic, r.unit_name, 1));
             }
 
             if (isJapaneseOnly && isSpecificJapaneseUnit(unitName)) {
                 const hasOnlyGenericWeaknesses = weaknesses.length > 0
                     && weaknesses.every((w) => isGenericJapaneseWeakness(normalizeTopic(w?.topic)));
+
+                if (hasOnlyGenericWeaknesses && !seenTopicsInRecord.has(unitName)) {
+                    addTopic(unitName, unitName, 1);
+                }
+            }
+
+            if (isEnglishOnly && isSpecificEnglishUnit(unitName)) {
+                const hasOnlyGenericWeaknesses = weaknesses.length > 0
+                    && weaknesses.every((w) => isGenericEnglishWeakness(normalizeTopic(w?.topic)));
+
+                if (hasOnlyGenericWeaknesses && !seenTopicsInRecord.has(unitName)) {
+                    addTopic(unitName, unitName, 1);
+                }
+            }
+
+            if (isSocialOnly && isSpecificSocialUnit(unitName)) {
+                const hasOnlyGenericWeaknesses = weaknesses.length > 0
+                    && weaknesses.every((w) => isGenericSocialWeakness(normalizeTopic(w?.topic)));
 
                 if (hasOnlyGenericWeaknesses && !seenTopicsInRecord.has(unitName)) {
                     addTopic(unitName, unitName, 1);
@@ -280,6 +426,16 @@ export async function GET(request: Request) {
                     const pb = japaneseWeaknessPriority(topicB);
                     if (pa !== pb) return pa - pb;
                 }
+                if (isEnglishOnly) {
+                    const pa = englishWeaknessPriority(topicA);
+                    const pb = englishWeaknessPriority(topicB);
+                    if (pa !== pb) return pa - pb;
+                }
+                if (isSocialOnly) {
+                    const pa = socialWeaknessPriority(topicA);
+                    const pb = socialWeaknessPriority(topicB);
+                    if (pa !== pb) return pa - pb;
+                }
                 if (a.count !== b.count) return b.count - a.count;
                 return topicA.localeCompare(topicB, "ja");
             })
@@ -290,9 +446,13 @@ export async function GET(request: Request) {
                 units: Array.from(data.units).slice(0, 4) // Convert Set to Array, limit to 4 units
             }));
 
-        const finalWeaknesses = (isJapaneseOnly
+        const finalWeaknesses = ((isJapaneseOnly || isEnglishOnly || isSocialOnly)
             ? (() => {
-                const eligible = sortedWeaknesses.filter((item) => isJapanesePeriodTheme(item.topic));
+                const eligible = sortedWeaknesses.filter((item) => isJapaneseOnly
+                    ? isJapanesePeriodTheme(item.topic)
+                    : isEnglishOnly
+                        ? isEnglishPeriodTheme(item.topic)
+                        : isSocialPeriodTheme(item.topic));
                 return eligible.length > 0 ? eligible : [];
             })()
             : sortedWeaknesses)
@@ -300,6 +460,10 @@ export async function GET(request: Request) {
                 ...item,
                 units: isJapaneseOnly
                     ? item.units.filter((unit) => !isBroadJapanesePeriodTheme(unit) && normalizeTopic(unit) !== normalizeTopic(item.topic))
+                    : isEnglishOnly
+                        ? item.units.filter((unit) => !isBroadEnglishPeriodTheme(unit) && normalizeTopic(unit) !== normalizeTopic(item.topic))
+                        : isSocialOnly
+                            ? item.units.filter((unit) => !isBroadSocialPeriodTheme(unit) && normalizeTopic(unit) !== normalizeTopic(item.topic))
                     : item.units,
             }));
 
