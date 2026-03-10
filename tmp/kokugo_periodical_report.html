@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang='ja'>
+<head>
+  <meta charset='utf-8'>
+  <title>kokugo_result</title>
+  <style>
+    @page { size: A4; margin: 10mm; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Yu Gothic', 'Meiryo', sans-serif; color: #1f2937; background: #fff; }
+    .page { width: 190mm; min-height: 277mm; margin: 0 auto; }
+    .header { display:flex; justify-content:space-between; align-items:flex-end; border-bottom:2px solid #e5e7eb; padding-bottom:8px; margin-bottom:12px; }
+    .brand { font-size:24px; font-weight:800; letter-spacing:.03em; color:#1d4ed8; }
+    .sub { font-size:12px; font-weight:700; color:#6b7280; margin-top:4px; }
+    .period { text-align:right; }
+    .period .label { font-size:11px; color:#6b7280; font-weight:700; }
+    .period .value { font-size:16px; font-weight:800; color:#1e3a8a; margin-top:2px; }
+    .period .subject { font-size:11px; color:#4b5563; margin-top:4px; font-weight:700; }
+    .hero { background: linear-gradient(90deg, #eff6ff, #ffffff); border-left:4px solid #2563eb; border-radius:10px; padding:14px 16px; margin-bottom:12px; }
+    .hero h1 { margin:0; font-size:22px; }
+    .hero .school { margin-top:6px; font-size:13px; font-weight:700; }
+    .hero .eyebrow { margin-top:8px; color:#2563eb; font-size:13px; font-weight:800; }
+    .grid { display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:12px; }
+    .panel { border:1px solid #dbeafe; border-radius:12px; padding:12px; background:#fff; }
+    .panel h2 { margin:0 0 8px; font-size:16px; color:#1e40af; }
+    .metric { border:1px solid #e5e7eb; border-radius:10px; padding:10px 12px; margin-bottom:8px; }
+    .metric:last-child { margin-bottom:0; }
+    .metric .m-label { font-size:11px; font-weight:800; color:#6b7280; }
+    .metric .m-value { margin-top:4px; font-size:24px; font-weight:900; }
+    .summary { border:2px solid #e0e7ff; border-radius:12px; padding:12px 14px; margin-bottom:12px; position:relative; }
+    .summary:before { content:''; position:absolute; left:0; top:0; bottom:0; width:5px; background:#6366f1; border-radius:12px 0 0 12px; }
+    .summary h2 { margin:0 0 8px 0; font-size:16px; color:#111827; }
+    .summary p { margin:0; padding-left:8px; font-size:17px; line-height:1.55; font-weight:700; }
+    .weakness h2 { margin:0 0 8px 0; font-size:16px; color:#b91c1c; }
+    .weakness-card { background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:9px 12px; margin-bottom:7px; }
+    .weakness-head { display:flex; justify-content:space-between; gap:8px; align-items:center; }
+    .weakness-left { display:flex; align-items:center; gap:8px; min-width:0; }
+    .rank { width:22px; height:22px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; background:#fecaca; color:#991b1b; font-size:11px; font-weight:800; flex:0 0 auto; }
+    .topic { font-size:14px; font-weight:800; }
+    .count { font-size:11px; color:#ef4444; font-weight:800; white-space:nowrap; }
+    .tags { margin-left:30px; margin-top:6px; }
+    .tag { display:inline-block; padding:1px 7px; margin:0 5px 5px 0; border:1px solid #d1d5db; border-radius:999px; font-size:11px; font-weight:700; background:#fff; }
+    .footer { border-top:1px solid #e5e7eb; margin-top:12px; padding-top:8px; text-align:center; font-size:9px; color:#9ca3af; }
+  </style>
+</head>
+<body>
+  <main class='page'>
+    <section class='header'>
+      <div>
+        <div class='brand'>TENsNAP Omni</div>
+        <div class='sub'>期間成長・必勝レポート</div>
+      </div>
+      <div class='period'>
+        <div class='label'>対象期間</div>
+        <div class='value'>2025/8/10 〜 2026/3/10</div>
+        <div class='subject'>対象教科: 国語</div>
+      </div>
+    </section>
+    <section class='hero'>
+      <h1>埼玉テス太郎 様</h1>
+      <div class='school'>志望校：埼玉試験総合高校</div>
+      <div class='eyebrow'>特別成長分析レポート</div>
+    </section>
+    <section class='grid'>
+      <div class='panel'>
+        <h2>成長の軌跡</h2>
+        <div class='metric'><div class='m-label'>得点理解度の変化</div><div class='m-value'>45% → 78%</div></div>
+        <div class='metric'><div class='m-label'>思考プロセスの深化</div><div class='m-value'>40% → 73%</div></div>
+      </div>
+      <div class='panel'>
+        <h2>学習の安定感</h2>
+        <div class='metric'><div class='m-label'>期間開始時</div><div class='m-value'>37%</div></div>
+        <div class='metric'><div class='m-label'>現在</div><div class='m-value'>75%</div></div>
+      </div>
+    </section>
+    <section class='summary'>
+      <h2>総評 & 次の一手</h2>
+      <p>国語の理解度が着実に伸びています。次は「四字熟語」を軸に、関連単元までつないで定着を進めましょう。</p>
+    </section>
+    <section class='weakness'>
+      <h2>期間内の重点克服テーマ</h2>
+        <div class='weakness-card'>
+    <div class='weakness-head'>
+      <div class='weakness-left'>
+        <span class='rank'>1</span>
+        <span class='topic'>四字熟語</span>
+      </div>
+      <span class='count'>1回 出現</span>
+    </div>
+    <div class='tags'><span class='tag'>指示語</span></div>
+  </div>
+  <div class='weakness-card'>
+    <div class='weakness-head'>
+      <div class='weakness-left'>
+        <span class='rank'>2</span>
+        <span class='topic'>枕草子</span>
+      </div>
+      <span class='count'>1回 出現</span>
+    </div>
+    <div class='tags'><span class='tag'>枕草子</span></div>
+  </div>
+  <div class='weakness-card'>
+    <div class='weakness-head'>
+      <div class='weakness-left'>
+        <span class='rank'>3</span>
+        <span class='topic'>敬語</span>
+      </div>
+      <span class='count'>2回 出現</span>
+    </div>
+    <div class='tags'><span class='tag'>指示語</span><span class='tag'>枕草子</span></div>
+  </div>
+  <div class='weakness-card'>
+    <div class='weakness-head'>
+      <div class='weakness-left'>
+        <span class='rank'>4</span>
+        <span class='topic'>指示語</span>
+      </div>
+      <span class='count'>2回 出現</span>
+    </div>
+    <div class='tags'><span class='tag'>指示語</span><span class='tag'>枕草子</span></div>
+  </div>
+  <div class='weakness-card'>
+    <div class='weakness-head'>
+      <div class='weakness-left'>
+        <span class='rank'>5</span>
+        <span class='topic'>接続語</span>
+      </div>
+      <span class='count'>2回 出現</span>
+    </div>
+    <div class='tags'><span class='tag'>指示語</span><span class='tag'>枕草子</span></div>
+  </div>
+    </section>
+  </main>
+</body>
+</html>
+

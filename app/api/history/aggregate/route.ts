@@ -28,6 +28,25 @@ type AnalysisRecord = {
     details: Details | string | null;
 };
 
+function normalizeTopic(value: unknown): string {
+    return typeof value === "string" ? value.trim().replace(/\s+/g, " ") : "";
+}
+
+function isGenericJapaneseWeakness(topic: string): boolean {
+    return /^(指示語|接続語|助詞|助動詞|敬語|文・文節・単語|言葉の単位|文の組み立て|主語・述語の関係|修飾・被修飾の関係)$/.test(topic);
+}
+
+function isSpecificJapaneseUnit(unit: string): boolean {
+    return !!unit
+        && !isGenericJapaneseWeakness(unit)
+        && !/^(国語|読解|文法|語彙・漢字|古文・漢文|内容理解|表現力|論理性)$/.test(unit);
+}
+
+function japaneseWeaknessPriority(topic: string): number {
+    if (isGenericJapaneseWeakness(topic)) return 1;
+    return 0;
+}
+
 function safeParseJson<T>(value: unknown, fallback: T): T {
     if (value == null) return fallback;
     if (typeof value === "string") {
@@ -167,11 +186,17 @@ export async function GET(request: Request) {
         const currentStats = getStats(lastRecord);
 
         // 3. Aggregate Weaknesses
+        const isJapaneseOnly = records.length > 0
+            && records.every((r) => isSubjectMatch(r.subject ?? undefined, "国語"));
+
         const weaknessCounts: Record<string, { count: number; units: Set<string> }> = {};
         records.forEach((r) => {
             const weaknesses = Array.isArray(r.details?.weakness_areas) ? r.details.weakness_areas : [];
+            const unitName = normalizeTopic(r.unit_name);
+            const seenTopicsInRecord = new Set<string>();
+
             weaknesses.forEach((w) => {
-                const topic = typeof w?.topic === "string" ? w.topic : "";
+                const topic = normalizeTopic(w?.topic);
                 if (!topic) return;
                 if (!weaknessCounts[topic]) {
                     weaknessCounts[topic] = { count: 0, units: new Set() };
@@ -181,12 +206,34 @@ export async function GET(request: Request) {
                 if (r.unit_name) {
                     weaknessCounts[topic].units.add(r.unit_name);
                 }
+                seenTopicsInRecord.add(topic);
+            });
+
+            if (isJapaneseOnly && isSpecificJapaneseUnit(unitName)) {
+                const hasOnlyGenericWeaknesses = weaknesses.length > 0
+                    && weaknesses.every((w) => isGenericJapaneseWeakness(normalizeTopic(w?.topic)));
+
+                if (hasOnlyGenericWeaknesses && !seenTopicsInRecord.has(unitName)) {
+                    if (!weaknessCounts[unitName]) {
+                        weaknessCounts[unitName] = { count: 0, units: new Set() };
+                    }
+                    weaknessCounts[unitName].count += 1;
+                    weaknessCounts[unitName].units.add(unitName);
+                }
             });
         });
 
         // Sort by frequency
         const sortedWeaknesses = Object.entries(weaknessCounts)
-            .sort(([, a], [, b]) => b.count - a.count)
+            .sort(([topicA, a], [topicB, b]) => {
+                if (isJapaneseOnly) {
+                    const pa = japaneseWeaknessPriority(topicA);
+                    const pb = japaneseWeaknessPriority(topicB);
+                    if (pa !== pb) return pa - pb;
+                }
+                if (a.count !== b.count) return b.count - a.count;
+                return topicA.localeCompare(topicB, "ja");
+            })
             .slice(0, 5) // Top 5
             .map(([topic, data]) => ({
                 topic,

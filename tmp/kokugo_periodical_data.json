@@ -1,0 +1,59 @@
+{
+  "studentName": "埼玉テス太郎",
+  "targetSchool": "埼玉試験総合高校",
+  "periodStr": "2025/8/10 〜 2026/3/10",
+  "subjectLabel": "国語",
+  "startStats": {
+    "accuracy": 45,
+    "process": 40,
+    "consistency": 37,
+    "score": 34
+  },
+  "currentStats": {
+    "accuracy": 78,
+    "process": 73,
+    "consistency": 75,
+    "score": 70
+  },
+  "weaknesses": [
+    {
+      "topic": "四字熟語",
+      "count": 1,
+      "units": [
+        "指示語"
+      ]
+    },
+    {
+      "topic": "枕草子",
+      "count": 1,
+      "units": [
+        "枕草子"
+      ]
+    },
+    {
+      "topic": "敬語",
+      "count": 2,
+      "units": [
+        "指示語",
+        "枕草子"
+      ]
+    },
+    {
+      "topic": "指示語",
+      "count": 2,
+      "units": [
+        "指示語",
+        "枕草子"
+      ]
+    },
+    {
+      "topic": "接続語",
+      "count": 2,
+      "units": [
+        "指示語",
+        "枕草子"
+      ]
+    }
+  ],
+  "aiSummary": "国語の理解度が着実に伸びています。次は「四字熟語」を軸に、関連単元までつないで定着を進めましょう。"
+}

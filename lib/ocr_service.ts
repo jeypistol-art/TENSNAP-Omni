@@ -1148,6 +1148,38 @@ function hasKobunEvidence(text: string): boolean {
     return /(古文|古典|宇治拾遺物語|枕草子|徒然草|平家物語|竹取物語|古今和歌集|万葉集|新古今和歌集|奥の細道|歴史的仮名遣い)/.test(t);
 }
 
+function requiresExplicitJapaneseTopicEvidence(topic: string): boolean {
+    return /^(指示語|接続語|助詞|助動詞|敬語|主語・述語の関係|修飾・被修飾の関係|文の組み立て|言葉の単位)$/.test(topic);
+}
+
+function hasExplicitJapaneseTopicEvidence(topic: string, evidenceTexts: string[]): boolean {
+    const joined = evidenceTexts.map((t) => normalizeTopicLabel(t)).filter(Boolean).join("\n");
+    if (!joined) return false;
+
+    switch (topic) {
+        case "指示語":
+            return /(指示語|こそあど|指し示す|指す内容|何を指す|何をさす|内容を表す言葉)/.test(joined);
+        case "接続語":
+            return /(接続語|接続詞|つなぐ言葉|文と文をつなぐ|文のつながり)/.test(joined);
+        case "助詞":
+            return /(助詞|格助詞|係助詞|接続助詞|副助詞|終助詞|てにをは)/.test(joined);
+        case "助動詞":
+            return /(助動詞|活用|打消|推量|意志|勧誘|受身|可能|使役|尊敬|伝聞|様態)/.test(joined);
+        case "敬語":
+            return /(敬語|尊敬語|謙譲語|丁寧語)/.test(joined);
+        case "主語・述語の関係":
+            return /(主語|述語)/.test(joined);
+        case "修飾・被修飾の関係":
+            return /(修飾語|被修飾|くわしくする言葉|修飾している)/.test(joined);
+        case "文の組み立て":
+            return /(文の組み立て|文の成分|単文|重文|複文)/.test(joined);
+        case "言葉の単位":
+            return /(言葉の単位|文節|単語|自立語|付属語)/.test(joined);
+        default:
+            return true;
+    }
+}
+
 function filterJapaneseTopicsByEvidence(topics: string[], evidenceTexts: string[]): string[] {
     const hasKanbun = evidenceTexts.some(hasKanbunEvidence);
     const hasKobun = evidenceTexts.some(hasKobunEvidence);
@@ -1155,6 +1187,9 @@ function filterJapaneseTopicsByEvidence(topics: string[], evidenceTexts: string[
     return topics.filter((topic) => {
         const normalized = normalizeTopicLabel(topic);
         if (!normalized) return false;
+        if (requiresExplicitJapaneseTopicEvidence(normalized)) {
+            return hasExplicitJapaneseTopicEvidence(normalized, evidenceTexts);
+        }
         if (/^(漢文の読み方|返り点|再読文字|受身形|使役形|疑問形|反語形|仮定形)$/.test(normalized)) {
             return hasKanbun;
         }
@@ -1705,7 +1740,8 @@ async function extractJapaneseSpecificTopics(
         "あなたは国語の単元抽出器です。",
         "答案用紙と問題用紙を見て、誤答または部分点に関係する具体的な単元名を3〜6件だけ JSON で返してください。",
         "抽象語は禁止です。『論理性』『表現力』『読解』だけで終わる出力は禁止。",
-        "単元名の例: 『指示語』『接続語』『助詞』『助動詞』『敬語』『四字熟語』『枕草子』『徒然草』『論語』『返り点』『漢文の読み方』。",
+        "設問や出題意図に明示されていない限り、『指示語』を安易に出力してはいけません。",
+        "単元名の例: 『接続語』『助詞』『助動詞』『敬語』『四字熟語』『枕草子』『徒然草』『論語』『返り点』『漢文の読み方』。",
         "作品本文が問われている場合は、作品名や古典分野名を優先してください。",
         "出力形式: {\"topics\":[\"単元1\",\"単元2\"]}",
     ].join("\n");
