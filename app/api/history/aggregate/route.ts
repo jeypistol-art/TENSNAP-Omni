@@ -18,6 +18,7 @@ type Details = {
     };
     comprehension_score?: number;
     weakness_areas?: Weakness[];
+    covered_topics?: string[];
     test_date?: string;
     unit_name?: string;
     insight_conclusion?: string;
@@ -33,7 +34,7 @@ function normalizeTopic(value: unknown): string {
 }
 
 function isGenericJapaneseWeakness(topic: string): boolean {
-    return /^(指示語|接続語|助詞|助動詞|敬語|文・文節・単語|言葉の単位|文の組み立て|主語・述語の関係|修飾・被修飾の関係)$/.test(topic);
+    return /^(古典|指示語|接続語|助詞|助動詞|敬語|文・文節・単語|言葉の単位|文の組み立て|主語・述語の関係|修飾・被修飾の関係)$/.test(topic);
 }
 
 function isSpecificJapaneseUnit(unit: string): boolean {
@@ -194,20 +195,34 @@ export async function GET(request: Request) {
             const weaknesses = Array.isArray(r.details?.weakness_areas) ? r.details.weakness_areas : [];
             const unitName = normalizeTopic(r.unit_name);
             const seenTopicsInRecord = new Set<string>();
-
-            weaknesses.forEach((w) => {
-                const topic = normalizeTopic(w?.topic);
+            const addTopic = (topic: string, unitForTag?: string | null) => {
                 if (!topic) return;
                 if (!weaknessCounts[topic]) {
                     weaknessCounts[topic] = { count: 0, units: new Set() };
                 }
                 weaknessCounts[topic].count += 1;
-                // Add unit_name if available
-                if (r.unit_name) {
-                    weaknessCounts[topic].units.add(r.unit_name);
+                if (unitForTag) {
+                    weaknessCounts[topic].units.add(unitForTag);
                 }
                 seenTopicsInRecord.add(topic);
+            };
+
+            weaknesses.forEach((w) => {
+                const topic = normalizeTopic(w?.topic);
+                if (!topic) return;
+                addTopic(topic, r.unit_name);
             });
+
+            if (isJapaneseOnly) {
+                const coveredTopics = Array.isArray(r.details?.covered_topics)
+                    ? r.details.covered_topics.map((topic) => normalizeTopic(topic)).filter(Boolean)
+                    : [];
+
+                coveredTopics
+                    .filter((topic) => !seenTopicsInRecord.has(topic))
+                    .filter((topic) => isSpecificJapaneseUnit(topic))
+                    .forEach((topic) => addTopic(topic, r.unit_name));
+            }
 
             if (isJapaneseOnly && isSpecificJapaneseUnit(unitName)) {
                 const hasOnlyGenericWeaknesses = weaknesses.length > 0

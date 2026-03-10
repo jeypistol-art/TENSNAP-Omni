@@ -1,59 +1,56 @@
 {
   "studentName": "埼玉テス太郎",
   "targetSchool": "埼玉試験総合高校",
-  "periodStr": "2025/8/10 〜 2026/3/10",
+  "periodStr": "2025/10/2 〜 2026/3/10",
   "subjectLabel": "国語",
   "startStats": {
     "accuracy": 45,
     "process": 40,
-    "consistency": 37,
-    "score": 34
+    "consistency": 28,
+    "score": 30
   },
   "currentStats": {
     "accuracy": 78,
     "process": 73,
-    "consistency": 75,
-    "score": 70
+    "consistency": 73,
+    "score": 75
   },
   "weaknesses": [
     {
-      "topic": "四字熟語",
-      "count": 1,
-      "units": [
-        "指示語"
-      ]
-    },
-    {
-      "topic": "枕草子",
-      "count": 1,
-      "units": [
-        "枕草子"
-      ]
-    },
-    {
-      "topic": "敬語",
+      "topic": "漢字の読み",
       "count": 2,
       "units": [
-        "指示語",
-        "枕草子"
+        "古典"
       ]
     },
     {
-      "topic": "指示語",
+      "topic": "古典",
       "count": 2,
       "units": [
-        "指示語",
-        "枕草子"
+        "古典"
       ]
     },
     {
       "topic": "接続語",
       "count": 2,
       "units": [
-        "指示語",
-        "枕草子"
+        "古典"
+      ]
+    },
+    {
+      "topic": "敬語",
+      "count": 1,
+      "units": [
+        "古典"
+      ]
+    },
+    {
+      "topic": "助詞",
+      "count": 1,
+      "units": [
+        "古典"
       ]
     }
   ],
-  "aiSummary": "国語の理解度が着実に伸びています。次は「四字熟語」を軸に、関連単元までつないで定着を進めましょう。"
+  "aiSummary": "国語の理解度は着実に伸びています。次は「漢字の読み」を軸に、周辺単元までつないで定着を進めましょう。"
 }
