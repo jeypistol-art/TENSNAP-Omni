@@ -362,7 +362,9 @@ export async function GET(request: Request) {
                 prioritizedQuestionMistakes.forEach((entry) => {
                     addTopic(entry.topic, r.unit_name, normalizeMistakeWeight(entry.result, entry.lostPoints));
                 });
-                return;
+                if (!isEnglishOnly && !isSocialOnly) {
+                    return;
+                }
             }
 
             const wrongQuestionTopics = (isJapaneseOnly || isEnglishOnly || isSocialOnly) && Array.isArray(r.details?.wrong_question_topics)
@@ -386,7 +388,9 @@ export async function GET(request: Request) {
             const hasPrioritizedWrongTopics = prioritizedWrongTopics.length > 0;
 
             if (isJapaneseOnly || isEnglishOnly || isSocialOnly) {
-                prioritizedWrongTopics.forEach((topic) => addTopic(topic, r.unit_name, 4));
+                prioritizedWrongTopics
+                    .filter((topic) => !seenTopicsInRecord.has(topic))
+                    .forEach((topic) => addTopic(topic, r.unit_name, hasPrioritizedQuestionMistakes ? 2 : 4));
                 if (hasPrioritizedWrongTopics) {
                     return;
                 }
