@@ -4,6 +4,13 @@ export const R2_ASSETS_BUCKET_NAME = "tensnap-omni-assets";
 export const R2_ASSETS_BINDING = "TENSNAP_OMNI_ASSETS";
 
 type MinimalR2Bucket = {
+    get?: (
+        key: string
+    ) => Promise<{
+        arrayBuffer: () => Promise<ArrayBuffer>;
+        httpMetadata?: { contentType?: string };
+        customMetadata?: Record<string, string>;
+    } | null>;
     put: (
         key: string,
         value: ArrayBuffer | ArrayBufferView,
