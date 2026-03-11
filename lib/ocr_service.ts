@@ -1252,6 +1252,16 @@ function isSpecificMathTopic(topic: string): boolean {
     return !/^(数学|算数|数|数学：数学|数学：内容理解|数学：基礎|数学：復習|数学：選択肢の選択|数学：文法|数学：語彙|数と計算|代数|図形|確率・統計)$/.test(t);
 }
 
+function isElementaryLikeMathTopic(topic: string): boolean {
+    const t = normalizeTopicLabel(topic);
+    return /^(数と計算：1000までの数|図形：三角形と四角形|図形：図形の性質)$/.test(t);
+}
+
+function isMiddleSchoolMathSignature(topic: string): boolean {
+    const t = normalizeTopicLabel(topic);
+    return /^(数と計算：一次方程式|数と計算：正の数・負の数|数と計算：文字式|数と計算：式の計算|数と計算：平方根|代数：連立方程式|代数：二次方程式|代数：一次関数|代数：関数|確率・統計：確率|確率・統計：場合の数|図形：作図|図形：相似|図形：合同|図形：空間図形|図形：直線と円|図形：角|データ活用：いろいろなグラフ|データ活用：箱ひげ図)$/.test(t);
+}
+
 function isSpecificScienceTopic(topic: string): boolean {
     const t = normalizeTopicLabel(topic);
     if (!t) return false;
@@ -1725,6 +1735,15 @@ function sanitizeWeaknessAreas(
     const englishBaseTopics = isEnglish && englishSpecificTopics.length > 0
         ? englishSpecificTopics
         : nonSocialBaseTopics;
+    const mathSpecificTopics = subjectCategory === "math"
+        ? buildSpecificMathTopics(wrongTopics, coveredTopics, rawWeaknesses)
+        : [];
+    const mathBaseTopics = subjectCategory === "math" && mathSpecificTopics.length > 0
+        ? mathSpecificTopics
+        : nonSocialBaseTopics;
+    const prefersMiddleSchoolMath = subjectCategory === "math"
+        && [...wrongTopics, ...coveredTopics, ...rawWeaknesses.map((w) => normalizeTopicLabel(String(w?.topic || "")))]
+            .some((topic) => isMiddleSchoolMathSignature(topic));
     const japaneseSpecificTopics = isJapanese
         ? buildSpecificJapaneseTopics(wrongTopics, coveredTopics, rawWeaknesses, schoolStage)
         : [];
@@ -1786,12 +1805,23 @@ function sanitizeWeaknessAreas(
             } else {
                 const currentBaseTopics = isEnglish
                     ? englishBaseTopics
+                    : subjectCategory === "math"
+                        ? mathBaseTopics
                     : isJapanese
                         ? japaneseBaseTopics
                         : nonSocialBaseTopics;
                 const matchedNonSocial = findCoveredTopicMatch(rawTopic, currentBaseTopics);
                 if (matchedNonSocial) {
                     topic = matchedNonSocial;
+                } else if (subjectCategory === "math") {
+                    const inferred = inferMathTopicFromText(rawTopic);
+                    if (inferred) {
+                        topic = inferred;
+                    } else if ((isGenericWeaknessTopic(rawTopic) || !isSpecificMathTopic(rawTopic)) && currentBaseTopics.length > 0) {
+                        topic = currentBaseTopics[Math.min(index, currentBaseTopics.length - 1)];
+                    } else if (matchedCovered) {
+                        topic = formatTopicWithDomain(matchedCovered, subjectCategory, schoolStage);
+                    }
                 } else if (isEnglish) {
                     const inferred = inferEnglishTopicFromText(rawTopic);
                     if (inferred) {
@@ -1865,6 +1895,8 @@ function sanitizeWeaknessAreas(
             (
                 isSocial
                     ? socialBaseTopics
+                    : subjectCategory === "math"
+                        ? (mathBaseTopics.length > 0 ? mathBaseTopics : coveredDomainTopics)
                     : isEnglish
                         ? (englishBaseTopics.length > 0 ? englishBaseTopics : coveredDomainTopics)
                         : isJapanese
@@ -1877,7 +1909,7 @@ function sanitizeWeaknessAreas(
                 .map((t) => [canonicalTopic(t), t] as const)
         ).values()
     );
-    const formattedWeaknesses = Array.from(
+    const rawFormattedWeaknesses = Array.from(
         new Map(
             deduped
                 .map((w) => ({
@@ -1888,12 +1920,18 @@ function sanitizeWeaknessAreas(
                 .map((w) => [`${canonicalTopic(w.topic)}::${w.level}`, w] as const)
         ).values()
     );
+    const formattedWeaknesses = subjectCategory === "math" && prefersMiddleSchoolMath
+        ? rawFormattedWeaknesses.filter((w) => !isElementaryLikeMathTopic(w.topic))
+        : rawFormattedWeaknesses;
     const socialSpecificWeaknesses = isSocial
         ? buildPrioritizedSocialWeaknesses(wrongTopics, socialBaseTopics, schoolStage)
         : [];
 
-    const finalCoveredTopics = formattedCoveredTopics.length > 0
-        ? formattedCoveredTopics
+    const finalCoveredTopicsSource = subjectCategory === "math" && prefersMiddleSchoolMath
+        ? formattedCoveredTopics.filter((topic) => !isElementaryLikeMathTopic(topic))
+        : formattedCoveredTopics;
+    const finalCoveredTopics = finalCoveredTopicsSource.length > 0
+        ? finalCoveredTopicsSource
         : Array.from(
             new Map(
                 formattedWeaknesses
