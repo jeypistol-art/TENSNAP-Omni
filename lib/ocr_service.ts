@@ -689,6 +689,26 @@ function toMathDomainTopic(topic: string): string {
     if (isPlaceholderUnit(u)) return "";
     if (/^(数学|算数|数|内容理解|基礎|復習|選択肢の選択|文法|語彙|読解|表現)$/.test(u)) return "";
 
+    if (/(正・負の数|正負の数)/.test(u)) return "数と計算：正の数・負の数";
+    if (/(文字式)/.test(u)) return "数と計算：文字式";
+    if (/(式の計算|多項式)/.test(u)) return "数と計算：式の計算";
+    if (/(平方根)/.test(u)) return "数と計算：平方根";
+    if (/(一次方程式)/.test(u)) return "数と計算：一次方程式";
+    if (/(連立方程式)/.test(u)) return "代数：連立方程式";
+    if (/(二次方程式)/.test(u)) return "代数：二次方程式";
+    if (/(一次関数)/.test(u)) return "代数：一次関数";
+    if (/^(関数)$/.test(u)) return "代数：関数";
+    if (/(確率)/.test(u)) return "確率・統計：確率";
+    if (/(場合の数)/.test(u)) return "確率・統計：場合の数";
+    if (/(箱ひげ図)/.test(u)) return "データ活用：箱ひげ図";
+    if (/(作図)/.test(u)) return "図形：作図";
+    if (/(合同)/.test(u)) return "図形：合同";
+    if (/(相似)/.test(u)) return "図形：相似";
+    if (/(空間図形)/.test(u)) return "図形：空間図形";
+    if (/(円の面積)/.test(u)) return "図形：円の面積";
+    if (/(三角形の面積)/.test(u)) return "図形：三角形の面積";
+    if (/^(角)$/.test(u)) return "図形：角";
+
     const curriculumUnit = resolveMathCurriculumUnit(u);
     if (curriculumUnit) return curriculumUnit;
 
@@ -1287,7 +1307,7 @@ function inferEnglishTopicFromText(text: string): string | null {
 function inferMathTopicFromText(text: string): string | null {
     const t = normalizeTopicLabel(text);
     if (!t) return null;
-    return resolveMathCurriculumUnit(t) || toMathDomainTopic(t) || null;
+    return toMathDomainTopic(t) || resolveMathCurriculumUnit(t) || null;
 }
 
 function inferSocialTopicFromText(text: string, schoolStage?: SchoolStage | null): string | null {
