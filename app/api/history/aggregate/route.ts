@@ -27,6 +27,13 @@ type Details = {
         lost_points?: number | null;
         score_points?: number | null;
     }[];
+    mark_counts?: {
+        circles?: number;
+        triangles?: number;
+        crosses?: number;
+        slashes?: number;
+        unmarked_questions?: number;
+    };
     test_date?: string;
     unit_name?: string;
     insight_conclusion?: string;
@@ -425,6 +432,17 @@ export async function GET(request: Request) {
                 );
             })()
             : new Set<string>();
+        const totalWeightedMistakeSignals = records.reduce((sum, record) => {
+            const counts = record.details?.mark_counts;
+            const crosses = Number(counts?.crosses || 0);
+            const slashes = Number(counts?.slashes || 0);
+            const triangles = Number(counts?.triangles || 0);
+            const unmarked = Number(counts?.unmarked_questions || 0);
+            return sum + crosses + slashes + Math.ceil(triangles * 0.5) + unmarked;
+        }, 0);
+        const weaknessDisplayLimit = isMathOnly
+            ? (totalWeightedMistakeSignals >= 10 ? 6 : totalWeightedMistakeSignals >= 6 ? 5 : 4)
+            : 5;
         records.forEach((r) => {
             const weaknesses = Array.isArray(r.details?.weakness_areas) ? r.details.weakness_areas : [];
             const unitName = normalizeTopic(r.unit_name);
@@ -641,7 +659,7 @@ export async function GET(request: Request) {
                 if (a.count !== b.count) return b.count - a.count;
                 return topicA.localeCompare(topicB, "ja");
             })
-            .slice(0, 5) // Top 5
+            .slice(0, weaknessDisplayLimit)
             .map(([topic, data]) => ({
                 topic,
                 count: data.count,
