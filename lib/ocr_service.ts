@@ -688,6 +688,7 @@ function toMathDomainTopic(topic: string): string {
     if (!u) return "";
     if (isPlaceholderUnit(u)) return "";
     if (/^(数学|算数|数|内容理解|基礎|復習|選択肢の選択|文法|語彙|読解|表現)$/.test(u)) return "";
+    if (/^(プログラミングの基礎|面積の単位|除法の場面を式に表す)$/.test(u)) return "";
 
     if (/(正・負の数|正負の数)/.test(u)) return "数と計算：正の数・負の数";
     if (/(文字式)/.test(u)) return "数と計算：文字式";
@@ -1249,7 +1250,7 @@ function isSpecificEnglishTopic(topic: string): boolean {
 function isSpecificMathTopic(topic: string): boolean {
     const t = normalizeTopicLabel(topic);
     if (!t) return false;
-    return !/^(数学|算数|数|数学：数学|数学：内容理解|数学：基礎|数学：復習|数学：選択肢の選択|数学：文法|数学：語彙|数と計算|代数|図形|確率・統計)$/.test(t);
+    return !/^(数学|算数|数|数学：数学|数学：内容理解|数学：基礎|数学：復習|数学：選択肢の選択|数学：文法|数学：語彙|数と計算|代数|図形|確率・統計|変化と関係：プログラミングの基礎|測定：面積の単位|数量関係：除法の場面を式に表す)$/.test(t);
 }
 
 function isElementaryLikeMathTopic(topic: string): boolean {
@@ -2177,6 +2178,66 @@ async function extractEnglishSpecificTopics(
     }
 }
 
+async function extractMathSpecificTopics(
+    answerSheets: { buffer: Buffer; mimeType: string }[],
+    problemSheets?: { buffer: Buffer; mimeType: string }[]
+): Promise<string[]> {
+    const prompt = [
+        "あなたは中学数学の単元抽出器です。",
+        "答案用紙と問題用紙を見て、誤答または部分点に関係する具体的な単元名を4〜8件だけ JSON で返してください。",
+        "抽象語は禁止です。『数学』『算数』『図形』『代数』『数と計算』だけで終わる出力は禁止。",
+        "『選択肢の選択』『文法』『語彙』のような教科外ノイズは出力してはいけません。",
+        "中学数学らしい単元名を優先してください。例: 『一次方程式』『連立方程式』『二次方程式』『一次関数』『関数』『平方根』『確率』『場合の数』『作図』『相似』『合同』『直線と円』『空間図形』『箱ひげ図』。",
+        "小学校寄りの単元しか明示されていない場合を除き、『1000までの数』『三角形と四角形』のような小学校単元は優先しないでください。",
+        "出力形式: {\"topics\":[\"単元1\",\"単元2\"]}",
+    ].join("\n");
+
+    const userContent: OpenAI.Chat.ChatCompletionContentPart[] = [{ type: "text", text: prompt }];
+    for (const sheet of answerSheets) {
+        userContent.push({
+            type: "image_url",
+            image_url: { url: `data:${sheet.mimeType};base64,${sheet.buffer.toString("base64")}` }
+        });
+    }
+    for (const sheet of problemSheets || []) {
+        userContent.push({
+            type: "image_url",
+            image_url: { url: `data:${sheet.mimeType};base64,${sheet.buffer.toString("base64")}` }
+        });
+    }
+
+    try {
+        const response = await runOpenAIWithRetry(() =>
+            openai.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages: [
+                    { role: "system", content: "中学数学の具体単元のみを抽出する。JSON以外は返さない。" },
+                    { role: "user", content: userContent }
+                ],
+                response_format: { type: "json_object" },
+                temperature: 0.1,
+                top_p: 0.1,
+            }, {
+                timeout: 120000,
+            })
+        );
+        const content = response.choices[0].message.content;
+        if (!content) return [];
+        const parsed = JSON.parse(content) as { topics?: string[] };
+        return Array.from(
+            new Map(
+                (Array.isArray(parsed.topics) ? parsed.topics : [])
+                    .map((t) => inferMathTopicFromText(String(t || "")) || resolveMathCurriculumUnit(String(t || "")) || toMathDomainTopic(String(t || "")))
+                    .filter(Boolean)
+                    .filter(isSpecificMathTopic)
+                    .map((t) => [canonicalTopic(t), t] as const)
+            ).values()
+        ).slice(0, 8);
+    } catch {
+        return [];
+    }
+}
+
 async function extractJapaneseSpecificTopics(
     answerSheets: { buffer: Buffer; mimeType: string }[],
     problemSheets?: { buffer: Buffer; mimeType: string }[],
@@ -2415,6 +2476,17 @@ export async function analyzeImage(
             const extractedEnglishTopics = await extractEnglishSpecificTopics(answerSheets, context?.problemSheets);
             if (extractedEnglishTopics.length > 0) {
                 parsed.covered_topics = Array.from(new Set([...(parsed.covered_topics || []), ...extractedEnglishTopics]));
+            }
+        }
+        if (isMath) {
+            const extractedMathTopics = await extractMathSpecificTopics(answerSheets, context?.problemSheets);
+            if (extractedMathTopics.length > 0) {
+                parsed.covered_topics = Array.from(
+                    new Map(
+                        [...(parsed.covered_topics || []), ...extractedMathTopics]
+                            .map((topic) => [canonicalTopic(String(topic || "")), String(topic || "")] as const)
+                    ).values()
+                );
             }
         }
         if (isJapanese) {
