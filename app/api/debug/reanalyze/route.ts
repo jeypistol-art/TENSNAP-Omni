@@ -5,7 +5,7 @@ import { query } from "@/lib/db";
 import { analyzeImage } from "@/lib/ocr_service";
 import { getTenantId } from "@/lib/tenant";
 import { getR2AssetsBucket, R2_ASSETS_BUCKET_NAME } from "@/lib/r2_assets";
-import { normalizeSubjectLabel } from "@/lib/subjects";
+import { isSubjectMatch, normalizeSubjectLabel } from "@/lib/subjects";
 
 type ReanalyzeRequest = {
     analysisIds?: string[];
@@ -109,10 +109,6 @@ export async function POST(request: Request) {
             params.push(body.studentId);
             clauses.push(`a.student_id = $${params.length}`);
         }
-        if (body.subject && body.subject !== "all") {
-            params.push(body.subject);
-            clauses.push(`a.subject = $${params.length}`);
-        }
         if (body.startDate) {
             params.push(body.startDate);
             clauses.push(`COALESCE(a.test_date, a.created_at::date) >= $${params.length}`);
@@ -145,7 +141,11 @@ export async function POST(request: Request) {
             params
         );
 
-        if (result.rows.length === 0) {
+        const rows = body.subject && body.subject !== "all"
+            ? result.rows.filter((row) => isSubjectMatch(row.subject ?? undefined, body.subject))
+            : result.rows;
+
+        if (rows.length === 0) {
             return NextResponse.json({ success: true, processed: 0, updated: 0, results: [] });
         }
 
@@ -157,7 +157,7 @@ export async function POST(request: Request) {
         const outputs: Array<Record<string, unknown>> = [];
         let updated = 0;
 
-        for (const row of result.rows) {
+        for (const row of rows) {
             const details = safeParseDetails(row.details);
             const answerKeys = Array.isArray(details.r2_assets?.answer_sheet_keys) ? details.r2_assets?.answer_sheet_keys : [];
             const problemKeys = Array.isArray(details.r2_assets?.problem_sheet_keys) ? details.r2_assets?.problem_sheet_keys : [];
@@ -250,7 +250,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json({
             success: true,
-            processed: result.rows.length,
+            processed: rows.length,
             updated,
             committed: commit,
             results: outputs,
