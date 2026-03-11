@@ -229,6 +229,7 @@ function isPlaceholderUnit(unit: string): boolean {
 type DomainHint = { domain: string; keywords: string[] };
 type MathCurriculumEntry = { domain?: string; unit?: string; keywords?: string[]; aliases?: string[] };
 type MathCurriculumDictionary = { grades?: Record<string, MathCurriculumEntry[]> };
+type MathCurriculumUnitIndexEntry = { unit: string; domain: string; tokens: string[] };
 type EnglishCurriculumUnitIndexEntry = { unit: string; domain: string; tokens: string[] };
 type JapaneseCurriculumUnitIndexEntry = { unit: string; domain: string; grade: string; stage: SchoolStage | null; tokens: string[] };
 type ScienceCurriculumUnitIndexEntry = { unit: string; domain: string; grade: string; stage: SchoolStage | null; tokens: string[] };
@@ -318,6 +319,24 @@ const MATH_CURRICULUM_HINTS = [
     ...buildMathHintsFromCurriculumDictionary(mathCurriculumElem as MathCurriculumDictionary),
     ...buildMathHintsFromCurriculumDictionary(mathCurriculumK12 as MathCurriculumDictionary),
 ];
+const MATH_CURRICULUM_UNITS: MathCurriculumUnitIndexEntry[] = [
+    ...(Object.values((mathCurriculumElem as MathCurriculumDictionary)?.grades || {}).flatMap((entries) => Array.isArray(entries) ? entries : [])),
+    ...(Object.values((mathCurriculumK12 as MathCurriculumDictionary)?.grades || {}).flatMap((entries) => Array.isArray(entries) ? entries : [])),
+]
+    .map((entry) => {
+        const unit = normalizeTopicLabel(String(entry?.unit || ""));
+        const domain = normalizeTopicLabel(String(entry?.domain || ""));
+        const tokens = Array.from(
+            new Set(
+                [unit]
+                    .concat(Array.isArray(entry?.aliases) ? entry.aliases.map((v) => normalizeTopicLabel(String(v || ""))) : [])
+                    .concat(Array.isArray(entry?.keywords) ? entry.keywords.map((v) => normalizeTopicLabel(String(v || ""))) : [])
+                    .filter(Boolean)
+            )
+        );
+        return { unit, domain, tokens };
+    })
+    .filter((entry) => entry.unit);
 const MATH_ALL_HINTS: DomainHint[] = [...MATH_CURRICULUM_HINTS, ...MATH_DOMAIN_HINTS];
 
 const ENGLISH_CURRICULUM_HINTS = buildMathHintsFromCurriculumDictionary(
@@ -640,6 +659,43 @@ function canonicalEnglishTopicLabel(topic: string): string {
     return t;
 }
 
+function resolveMathCurriculumUnit(topic: string): string | null {
+    const normalized = normalizeTopicLabel(topic);
+    if (!normalized) return null;
+
+    const { unit } = splitDomainTopic(normalized);
+    const candidate = normalizeTopicLabel(unit || normalized);
+    if (!candidate) return null;
+
+    const exact = MATH_CURRICULUM_UNITS.find((entry) =>
+        entry.tokens.some((token) => canonicalTopic(token) === canonicalTopic(candidate))
+    );
+    if (exact) return `${exact.domain}：${exact.unit}`;
+
+    const partial = MATH_CURRICULUM_UNITS.find((entry) =>
+        entry.tokens.some((token) => {
+            const left = canonicalTopic(token);
+            const right = canonicalTopic(candidate);
+            return !!left && !!right && (left.includes(right) || right.includes(left));
+        })
+    );
+    return partial ? `${partial.domain}：${partial.unit}` : null;
+}
+
+function toMathDomainTopic(topic: string): string {
+    const { domain, unit } = splitDomainTopic(topic);
+    const u = normalizeTopicLabel(unit || topic);
+    if (!u) return "";
+    if (isPlaceholderUnit(u)) return "";
+    if (/^(数学|算数|数|内容理解|基礎|復習|選択肢の選択|文法|語彙|読解|表現)$/.test(u)) return "";
+
+    const curriculumUnit = resolveMathCurriculumUnit(u);
+    if (curriculumUnit) return curriculumUnit;
+
+    const resolvedDomain = normalizeTopicLabel(domain || inferDomainByCategory(u, "math") || "数学");
+    return resolvedDomain ? `${resolvedDomain}：${u}` : u;
+}
+
 function resolveEnglishCurriculumUnit(topic: string): string | null {
     const normalized = normalizeTopicLabel(topic);
     if (!normalized) return null;
@@ -854,6 +910,9 @@ function formatTopicWithDomain(topic: string, category: SubjectCategory, schoolS
     if (category === "social") {
         return toSocialDomainTopic(topic, schoolStage);
     }
+    if (category === "math") {
+        return toMathDomainTopic(topic);
+    }
     if (category === "english") {
         return toEnglishDomainTopic(topic);
     }
@@ -879,6 +938,9 @@ function isLowValueUnit(unit: string, category: SubjectCategory): boolean {
     }
     if (category === "english") {
         if (/^(英語|英文|文法|語彙|読解|内容理解|表現)$/.test(u)) return true;
+    }
+    if (category === "math") {
+        if (/^(数学|算数|数|内容理解|基礎|復習|選択肢の選択|文法|語彙|読解|表現|数と計算|代数|図形|確率・統計)$/.test(u)) return true;
     }
     if (category === "science") {
         if (/^(理科|科学|理数|理科分野|内容理解|基礎|復習|観察|実験|物理|化学|生物|地学)$/.test(u)) return true;
@@ -1164,6 +1226,12 @@ function isSpecificEnglishTopic(topic: string): boolean {
     return !/^(英語|英文|語彙|文法|文法（基本）|文法（語順）|英作文|英語:表現力|英語:英語|読解|内容理解|文章読解（内容理解）|会話文読解（内容理解）)$/.test(t);
 }
 
+function isSpecificMathTopic(topic: string): boolean {
+    const t = normalizeTopicLabel(topic);
+    if (!t) return false;
+    return !/^(数学|算数|数|数学：数学|数学：内容理解|数学：基礎|数学：復習|数学：選択肢の選択|数学：文法|数学：語彙|数と計算|代数|図形|確率・統計)$/.test(t);
+}
+
 function isSpecificScienceTopic(topic: string): boolean {
     const t = normalizeTopicLabel(topic);
     if (!t) return false;
@@ -1214,6 +1282,12 @@ function inferEnglishTopicFromText(text: string): string | null {
     if (/whose/i.test(t)) return "Whose ...?";
     if (/which/i.test(t)) return "Which ... (A or B)?";
     return null;
+}
+
+function inferMathTopicFromText(text: string): string | null {
+    const t = normalizeTopicLabel(text);
+    if (!t) return null;
+    return resolveMathCurriculumUnit(t) || toMathDomainTopic(t) || null;
 }
 
 function inferSocialTopicFromText(text: string, schoolStage?: SchoolStage | null): string | null {
@@ -1341,6 +1415,27 @@ function buildSpecificEnglishTopics(
     return Array.from(new Map(specific.map((t) => [canonicalTopic(t), t] as const)).values()).slice(0, 6);
 }
 
+function buildSpecificMathTopics(
+    wrongTopics: string[],
+    coveredTopics: string[],
+    weaknesses: WeaknessArea[]
+): string[] {
+    const pool = [
+        ...wrongTopics,
+        ...coveredTopics,
+        ...weaknesses.map((w) => String(w?.topic || "")),
+    ]
+        .map((t) => normalizeTopicLabel(String(t || "")))
+        .filter(Boolean);
+
+    const specific = pool
+        .map((t) => inferMathTopicFromText(t) || toMathDomainTopic(t))
+        .filter(Boolean)
+        .filter(isSpecificMathTopic);
+
+    return Array.from(new Map(specific.map((t) => [canonicalTopic(t), t] as const)).values()).slice(0, 6);
+}
+
 function buildSpecificScienceTopics(
     wrongTopics: string[],
     coveredTopics: string[],
@@ -1438,6 +1533,10 @@ function sanitizeQuestionMistakes(
             const resolved = inferEnglishTopicFromText(normalized) || resolveEnglishCurriculumUnit(normalized) || toEnglishDomainTopic(normalized);
             return resolved && isSpecificEnglishTopic(resolved) ? resolved : "";
         }
+        if (subjectCategory === "math") {
+            const resolved = inferMathTopicFromText(normalized) || resolveMathCurriculumUnit(normalized) || toMathDomainTopic(normalized);
+            return resolved && isSpecificMathTopic(resolved) ? resolved : "";
+        }
         if (subjectCategory === "japanese") {
             const resolved = inferJapaneseTopicFromText(normalized, schoolStage)
                 || resolveJapaneseCurriculumUnit(normalized, schoolStage)
@@ -1514,6 +1613,9 @@ function sanitizeWrongQuestionTopics(
     if (subjectCategory === "english") {
         return buildSpecificEnglishTopics(rawWrongTopics, coveredTopics, weaknesses);
     }
+    if (subjectCategory === "math") {
+        return buildSpecificMathTopics(rawWrongTopics, coveredTopics, weaknesses);
+    }
     if (subjectCategory === "japanese") {
         return buildSpecificJapaneseTopics(rawWrongTopics, coveredTopics, weaknesses, schoolStage);
     }
@@ -1567,6 +1669,7 @@ function sanitizeWeaknessAreas(
                 .map((t) => {
                     if (isSocial) return inferSocialTopicFromText(t, schoolStage) || toSocialDomainTopic(t, schoolStage);
                     if (isScience) return inferScienceTopicFromText(t, schoolStage) || toScienceDomainTopic(t, schoolStage);
+                    if (subjectCategory === "math") return inferMathTopicFromText(t) || toMathDomainTopic(t);
                     if (isEnglish) return inferEnglishTopicFromText(t) || resolveEnglishCurriculumUnit(t) || "";
                     if (isJapanese) return inferJapaneseTopicFromText(t, schoolStage) || resolveJapaneseCurriculumUnit(t, schoolStage) || "";
                     return formatTopicWithDomain(t, subjectCategory, schoolStage);
