@@ -53,6 +53,10 @@ function isGenericSocialWeakness(topic: string): boolean {
     return /^(社会|社会分野|社会科|地理|歴史|公民|知識|理解|基礎|復習|内容理解|地理的知識|歴史的出来事|歴史の出来事|国際関係|日本の歴史|誤答設問の内容|部分点が付いた設問の内容|誤答問題の内容)$/.test(topic);
 }
 
+function isGenericScienceWeakness(topic: string): boolean {
+    return /^(理科|科学|理数|理科分野|内容理解|基礎|復習|観察|実験|物理|化学|生物|地学|誤答設問の内容|部分点が付いた設問の内容|誤答問題の内容)$/.test(topic);
+}
+
 function isBroadJapanesePeriodTheme(topic: string): boolean {
     return /^(古典|文・文節・単語|誤答設問の内容|部分点が付いた設問の内容|誤答問題の内容)$/.test(topic);
 }
@@ -63,6 +67,10 @@ function isBroadEnglishPeriodTheme(topic: string): boolean {
 
 function isBroadSocialPeriodTheme(topic: string): boolean {
     return /^(社会|社会分野|社会科|地理|歴史|公民|知識|理解|基礎|復習|内容理解|地理的知識|歴史的出来事|歴史の出来事|国際関係|日本の歴史|誤答設問の内容|部分点が付いた設問の内容|誤答問題の内容)$/.test(topic);
+}
+
+function isBroadSciencePeriodTheme(topic: string): boolean {
+    return /^(理科|科学|理数|理科分野|内容理解|基礎|復習|観察|実験|物理|化学|生物|地学|誤答設問の内容|部分点が付いた設問の内容|誤答問題の内容)$/.test(topic);
 }
 
 function isJapanesePeriodTheme(topic: string): boolean {
@@ -84,6 +92,13 @@ function isSocialPeriodTheme(topic: string): boolean {
     if (!normalized) return false;
     if (isPlaceholderSocialTopic(normalized)) return false;
     return !isBroadSocialPeriodTheme(normalized);
+}
+
+function isSciencePeriodTheme(topic: string): boolean {
+    const normalized = normalizeTopic(topic);
+    if (!normalized) return false;
+    if (isPlaceholderScienceTopic(normalized)) return false;
+    return !isBroadSciencePeriodTheme(normalized);
 }
 
 function isSpecificJapaneseUnit(unit: string): boolean {
@@ -108,6 +123,12 @@ function isSpecificSocialUnit(unit: string): boolean {
         && !/^(社会|社会分野|社会科|地理|歴史|公民|知識|理解|基礎|復習|内容理解)$/.test(unit);
 }
 
+function isSpecificScienceUnit(unit: string): boolean {
+    return !!unit
+        && !isGenericScienceWeakness(unit)
+        && !/^(理科|科学|理数|理科分野|内容理解|基礎|復習|観察|実験|物理|化学|生物|地学)$/.test(unit);
+}
+
 function japaneseWeaknessPriority(topic: string): number {
     if (isGenericJapaneseWeakness(topic)) return 1;
     return 0;
@@ -120,6 +141,11 @@ function englishWeaknessPriority(topic: string): number {
 
 function socialWeaknessPriority(topic: string): number {
     if (isGenericSocialWeakness(topic)) return 1;
+    return 0;
+}
+
+function scienceWeaknessPriority(topic: string): number {
+    if (isGenericScienceWeakness(topic)) return 1;
     return 0;
 }
 
@@ -140,6 +166,14 @@ function isPlaceholderEnglishTopic(topic: string): boolean {
 }
 
 function isPlaceholderSocialTopic(topic: string): boolean {
+    return /^(設問|問)\s*\d+((の)?内容)?$/i.test(topic)
+        || /^設問\d+の内容$/i.test(topic)
+        || /^設問\d+の誤答$/i.test(topic)
+        || /^(誤答設問|誤答問題|部分点が付いた設問)(の内容)?$/i.test(topic)
+        || /^(誤答設問の内容|部分点が付いた設問の内容|誤答問題の内容)$/i.test(topic);
+}
+
+function isPlaceholderScienceTopic(topic: string): boolean {
     return /^(設問|問)\s*\d+((の)?内容)?$/i.test(topic)
         || /^設問\d+の内容$/i.test(topic)
         || /^設問\d+の誤答$/i.test(topic)
@@ -308,6 +342,8 @@ export async function GET(request: Request) {
             && records.every((r) => isSubjectMatch(r.subject ?? undefined, "国語"));
         const isEnglishOnly = records.length > 0
             && records.every((r) => isSubjectMatch(r.subject ?? undefined, "英語"));
+        const isScienceOnly = records.length > 0
+            && records.every((r) => isSubjectMatch(r.subject ?? undefined, "理科"));
         const isSocialOnly = records.length > 0
             && records.every((r) => isSubjectMatch(r.subject ?? undefined, "社会"));
 
@@ -353,6 +389,8 @@ export async function GET(request: Request) {
                 )
                 : isEnglishOnly
                     ? questionMistakes.filter((entry) => isEnglishPeriodTheme(entry.topic))
+                    : isScienceOnly
+                        ? questionMistakes.filter((entry) => isSciencePeriodTheme(entry.topic))
                     : isSocialOnly
                         ? questionMistakes.filter((entry) => isSocialPeriodTheme(entry.topic))
                     : questionMistakes;
@@ -362,12 +400,12 @@ export async function GET(request: Request) {
                 prioritizedQuestionMistakes.forEach((entry) => {
                     addTopic(entry.topic, r.unit_name, normalizeMistakeWeight(entry.result, entry.lostPoints));
                 });
-                if (!isEnglishOnly && !isSocialOnly) {
+                if (!isEnglishOnly && !isScienceOnly && !isSocialOnly) {
                     return;
                 }
             }
 
-            const wrongQuestionTopics = (isJapaneseOnly || isEnglishOnly || isSocialOnly) && Array.isArray(r.details?.wrong_question_topics)
+            const wrongQuestionTopics = (isJapaneseOnly || isEnglishOnly || isScienceOnly || isSocialOnly) && Array.isArray(r.details?.wrong_question_topics)
                 ? r.details.wrong_question_topics
                     .map((topic) => normalizeTopic(topic))
                     .filter((topic) => !!topic && !(
@@ -375,6 +413,8 @@ export async function GET(request: Request) {
                             ? isPlaceholderJapaneseTopic(topic)
                             : isEnglishOnly
                                 ? isPlaceholderEnglishTopic(topic)
+                                : isScienceOnly
+                                    ? isPlaceholderScienceTopic(topic)
                                 : isPlaceholderSocialTopic(topic)
                     ))
                 : [];
@@ -382,12 +422,14 @@ export async function GET(request: Request) {
                 ? wrongQuestionTopics.filter((topic) => isJapanesePeriodTheme(topic))
                 : isEnglishOnly
                     ? wrongQuestionTopics.filter((topic) => isEnglishPeriodTheme(topic))
+                    : isScienceOnly
+                        ? wrongQuestionTopics.filter((topic) => isSciencePeriodTheme(topic))
                     : isSocialOnly
                         ? wrongQuestionTopics.filter((topic) => isSocialPeriodTheme(topic))
                     : [];
             const hasPrioritizedWrongTopics = prioritizedWrongTopics.length > 0;
 
-            if (isJapaneseOnly || isEnglishOnly || isSocialOnly) {
+            if (isJapaneseOnly || isEnglishOnly || isScienceOnly || isSocialOnly) {
                 prioritizedWrongTopics
                     .filter((topic) => !seenTopicsInRecord.has(topic))
                     .forEach((topic) => addTopic(topic, r.unit_name, hasPrioritizedQuestionMistakes ? 2 : 4));
@@ -401,11 +443,12 @@ export async function GET(request: Request) {
                 if (!topic) return;
                 if (isJapaneseOnly && hasPrioritizedWrongTopics && isGenericJapaneseWeakness(topic)) return;
                 if (isEnglishOnly && hasPrioritizedWrongTopics && isGenericEnglishWeakness(topic)) return;
+                if (isScienceOnly && hasPrioritizedWrongTopics && isGenericScienceWeakness(topic)) return;
                 if (isSocialOnly && hasPrioritizedWrongTopics && isGenericSocialWeakness(topic)) return;
                 addTopic(topic, r.unit_name, w?.level === "Primary" ? 3 : 2);
             });
 
-            if (isJapaneseOnly || isEnglishOnly || isSocialOnly) {
+            if (isJapaneseOnly || isEnglishOnly || isScienceOnly || isSocialOnly) {
                 const coveredTopics = Array.isArray(r.details?.covered_topics)
                     ? r.details.covered_topics.map((topic) => normalizeTopic(topic)).filter(Boolean)
                     : [];
@@ -416,6 +459,8 @@ export async function GET(request: Request) {
                         ? isSpecificJapaneseUnit(topic)
                         : isEnglishOnly
                             ? isSpecificEnglishUnit(topic)
+                            : isScienceOnly
+                                ? isSpecificScienceUnit(topic)
                             : isSpecificSocialUnit(topic))
                     .forEach((topic) => addTopic(topic, r.unit_name, 1));
             }
@@ -432,6 +477,15 @@ export async function GET(request: Request) {
             if (isEnglishOnly && isSpecificEnglishUnit(unitName)) {
                 const hasOnlyGenericWeaknesses = weaknesses.length > 0
                     && weaknesses.every((w) => isGenericEnglishWeakness(normalizeTopic(w?.topic)));
+
+                if (hasOnlyGenericWeaknesses && !seenTopicsInRecord.has(unitName)) {
+                    addTopic(unitName, unitName, 1);
+                }
+            }
+
+            if (isScienceOnly && isSpecificScienceUnit(unitName)) {
+                const hasOnlyGenericWeaknesses = weaknesses.length > 0
+                    && weaknesses.every((w) => isGenericScienceWeakness(normalizeTopic(w?.topic)));
 
                 if (hasOnlyGenericWeaknesses && !seenTopicsInRecord.has(unitName)) {
                     addTopic(unitName, unitName, 1);
@@ -464,6 +518,12 @@ export async function GET(request: Request) {
                     const pb = englishWeaknessPriority(topicB);
                     if (pa !== pb) return pa - pb;
                 }
+                if (isScienceOnly) {
+                    if (a.score !== b.score) return b.score - a.score;
+                    const pa = scienceWeaknessPriority(topicA);
+                    const pb = scienceWeaknessPriority(topicB);
+                    if (pa !== pb) return pa - pb;
+                }
                 if (isSocialOnly) {
                     if (a.score !== b.score) return b.score - a.score;
                     const pa = socialWeaknessPriority(topicA);
@@ -481,12 +541,14 @@ export async function GET(request: Request) {
                 units: Array.from(data.units).slice(0, 4) // Convert Set to Array, limit to 4 units
             }));
 
-        const finalWeaknesses = ((isJapaneseOnly || isEnglishOnly || isSocialOnly)
+        const finalWeaknesses = ((isJapaneseOnly || isEnglishOnly || isScienceOnly || isSocialOnly)
             ? (() => {
                 const eligible = sortedWeaknesses.filter((item) => isJapaneseOnly
                     ? isJapanesePeriodTheme(item.topic)
                     : isEnglishOnly
                         ? isEnglishPeriodTheme(item.topic)
+                        : isScienceOnly
+                            ? isSciencePeriodTheme(item.topic)
                         : isSocialPeriodTheme(item.topic));
                 return eligible.length > 0 ? eligible : [];
             })()
@@ -497,6 +559,8 @@ export async function GET(request: Request) {
                     ? item.units.filter((unit) => !isLowSignalJapaneseUnitTag(unit) && normalizeTopic(unit) !== normalizeTopic(item.topic))
                     : isEnglishOnly
                         ? item.units.filter((unit) => !isBroadEnglishPeriodTheme(unit) && normalizeTopic(unit) !== normalizeTopic(item.topic))
+                        : isScienceOnly
+                            ? item.units.filter((unit) => !isBroadSciencePeriodTheme(unit) && normalizeTopic(unit) !== normalizeTopic(item.topic))
                         : isSocialOnly
                             ? item.units.filter((unit) => !isBroadSocialPeriodTheme(unit) && normalizeTopic(unit) !== normalizeTopic(item.topic))
                     : item.units,

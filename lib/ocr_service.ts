@@ -231,6 +231,7 @@ type MathCurriculumEntry = { domain?: string; unit?: string; keywords?: string[]
 type MathCurriculumDictionary = { grades?: Record<string, MathCurriculumEntry[]> };
 type EnglishCurriculumUnitIndexEntry = { unit: string; domain: string; tokens: string[] };
 type JapaneseCurriculumUnitIndexEntry = { unit: string; domain: string; grade: string; stage: SchoolStage | null; tokens: string[] };
+type ScienceCurriculumUnitIndexEntry = { unit: string; domain: string; grade: string; stage: SchoolStage | null; tokens: string[] };
 type SocialCurriculumUnitIndexEntry = { unit: string; domain: string; grade: string; stage: SchoolStage | null; tokens: string[] };
 
 function inferSchoolStageFromGradeLabel(grade?: string | null): SchoolStage | null {
@@ -425,6 +426,24 @@ const SCIENCE_DOMAIN_HINTS: DomainHint[] = [
 const SCIENCE_CURRICULUM_HINTS = buildMathHintsFromCurriculumDictionary(
     scienceCurriculumK12 as MathCurriculumDictionary
 );
+const SCIENCE_CURRICULUM_UNITS: ScienceCurriculumUnitIndexEntry[] = Object.entries(
+    (scienceCurriculumK12 as MathCurriculumDictionary)?.grades || {}
+)
+    .flatMap(([grade, entries]) => (Array.isArray(entries) ? entries : []).map((entry) => ({ grade, entry })))
+    .map(({ grade, entry }) => {
+        const unit = normalizeTopicLabel(String(entry?.unit || ""));
+        const domain = normalizeTopicLabel(String(entry?.domain || ""));
+        const tokens = Array.from(
+            new Set(
+                [unit]
+                    .concat(Array.isArray(entry?.aliases) ? entry.aliases.map((v) => normalizeTopicLabel(String(v || ""))) : [])
+                    .concat(Array.isArray(entry?.keywords) ? entry.keywords.map((v) => normalizeTopicLabel(String(v || ""))) : [])
+                    .filter(Boolean)
+            )
+        );
+        return { unit, domain, grade, stage: inferSchoolStageFromCurriculumGrade(grade), tokens };
+    })
+    .filter((entry) => entry.unit);
 const SCIENCE_ALL_HINTS: DomainHint[] = [...SCIENCE_CURRICULUM_HINTS, ...SCIENCE_DOMAIN_HINTS];
 
 const SOCIAL_CURRICULUM_HINTS = buildMathHintsFromCurriculumDictionary(
@@ -683,6 +702,45 @@ function toEnglishDomainTopic(topic: string): string {
     return "";
 }
 
+function resolveScienceCurriculumUnit(topic: string, schoolStage?: SchoolStage | null): string | null {
+    const normalized = normalizeTopicLabel(topic);
+    if (!normalized) return null;
+
+    const { unit } = splitDomainTopic(normalized);
+    const candidate = normalizeTopicLabel(unit || normalized);
+    if (!candidate) return null;
+
+    const exact = SCIENCE_CURRICULUM_UNITS.find((entry) =>
+        (!schoolStage || entry.stage === schoolStage) &&
+        entry.tokens.some((token) => canonicalTopic(token) === canonicalTopic(candidate))
+    );
+    if (exact) return `${exact.domain}：${exact.unit}`;
+
+    const partial = SCIENCE_CURRICULUM_UNITS.find((entry) =>
+        (!schoolStage || entry.stage === schoolStage) &&
+        entry.tokens.some((token) => {
+            const left = canonicalTopic(token);
+            const right = canonicalTopic(candidate);
+            return !!left && !!right && (left.includes(right) || right.includes(left));
+        })
+    );
+    return partial ? `${partial.domain}：${partial.unit}` : null;
+}
+
+function toScienceDomainTopic(topic: string, schoolStage?: SchoolStage | null): string {
+    const { domain, unit } = splitDomainTopic(topic);
+    const u = normalizeTopicLabel(unit || topic);
+    if (!u) return "";
+    if (isPlaceholderUnit(u)) return "";
+    if (/^(理科|科学|理数|理科分野|内容理解|基礎|復習|観察|実験)$/.test(u)) return "";
+
+    const curriculumUnit = resolveScienceCurriculumUnit(u, schoolStage);
+    if (curriculumUnit) return curriculumUnit;
+
+    const resolvedDomain = normalizeTopicLabel(domain || inferDomainByCategory(u, "science") || "理科");
+    return resolvedDomain ? `${resolvedDomain}：${u}` : u;
+}
+
 function resolveJapaneseCurriculumUnit(topic: string, schoolStage?: SchoolStage | null): string | null {
     const normalized = normalizeTopicLabel(topic);
     if (!normalized) return null;
@@ -799,6 +857,9 @@ function formatTopicWithDomain(topic: string, category: SubjectCategory, schoolS
     if (category === "english") {
         return toEnglishDomainTopic(topic);
     }
+    if (category === "science") {
+        return toScienceDomainTopic(topic, schoolStage);
+    }
     if (category === "japanese") {
         return toJapaneseDomainTopic(topic, schoolStage);
     }
@@ -818,6 +879,9 @@ function isLowValueUnit(unit: string, category: SubjectCategory): boolean {
     }
     if (category === "english") {
         if (/^(英語|英文|文法|語彙|読解|内容理解|表現)$/.test(u)) return true;
+    }
+    if (category === "science") {
+        if (/^(理科|科学|理数|理科分野|内容理解|基礎|復習|観察|実験|物理|化学|生物|地学)$/.test(u)) return true;
     }
     if (category === "social") {
         if (/^(社会|社会分野|社会科|地理|歴史|公民|知識|理解|基礎|復習|内容理解|地理的知識|歴史的出来事|歴史の出来事|国際関係|日本の歴史)$/.test(u)) return true;
@@ -1100,6 +1164,12 @@ function isSpecificEnglishTopic(topic: string): boolean {
     return !/^(英語|英文|語彙|文法|文法（基本）|文法（語順）|英作文|英語:表現力|英語:英語|読解|内容理解|文章読解（内容理解）|会話文読解（内容理解）)$/.test(t);
 }
 
+function isSpecificScienceTopic(topic: string): boolean {
+    const t = normalizeTopicLabel(topic);
+    if (!t) return false;
+    return !/^(理科|科学|理数|理科：理科|理科：内容理解|理科：基礎|理科：復習|物理|化学|生物|地学|エネルギー|力|光|電気|地球)$/.test(t);
+}
+
 function isSpecificJapaneseTopic(topic: string): boolean {
     const t = normalizeTopicLabel(topic);
     if (!t) return false;
@@ -1150,6 +1220,12 @@ function inferSocialTopicFromText(text: string, schoolStage?: SchoolStage | null
     const t = normalizeTopicLabel(text);
     if (!t) return null;
     return resolveSocialCurriculumUnit(t, schoolStage) || toSocialDomainTopic(t, schoolStage) || null;
+}
+
+function inferScienceTopicFromText(text: string, schoolStage?: SchoolStage | null): string | null {
+    const t = normalizeTopicLabel(text);
+    if (!t) return null;
+    return resolveScienceCurriculumUnit(t, schoolStage) || toScienceDomainTopic(t, schoolStage) || null;
 }
 
 function inferJapaneseTopicFromText(text: string, schoolStage?: SchoolStage | null): string | null {
@@ -1265,6 +1341,28 @@ function buildSpecificEnglishTopics(
     return Array.from(new Map(specific.map((t) => [canonicalTopic(t), t] as const)).values()).slice(0, 6);
 }
 
+function buildSpecificScienceTopics(
+    wrongTopics: string[],
+    coveredTopics: string[],
+    weaknesses: WeaknessArea[],
+    schoolStage?: SchoolStage | null
+): string[] {
+    const pool = [
+        ...wrongTopics,
+        ...coveredTopics,
+        ...weaknesses.map((w) => String(w?.topic || "")),
+    ]
+        .map((t) => normalizeTopicLabel(String(t || "")))
+        .filter(Boolean);
+
+    const specific = pool
+        .map((t) => inferScienceTopicFromText(t, schoolStage) || toScienceDomainTopic(t, schoolStage))
+        .filter(Boolean)
+        .filter(isSpecificScienceTopic);
+
+    return Array.from(new Map(specific.map((t) => [canonicalTopic(t), t] as const)).values()).slice(0, 6);
+}
+
 function buildSpecificJapaneseTopics(
     wrongTopics: string[],
     coveredTopics: string[],
@@ -1352,6 +1450,12 @@ function sanitizeQuestionMistakes(
                 || resolveSocialCurriculumUnit(normalized, schoolStage)
                 || toSocialDomainTopic(normalized, schoolStage);
         }
+        if (subjectCategory === "science") {
+            const resolved = inferScienceTopicFromText(normalized, schoolStage)
+                || resolveScienceCurriculumUnit(normalized, schoolStage)
+                || toScienceDomainTopic(normalized, schoolStage);
+            return resolved && isSpecificScienceTopic(resolved) ? resolved : "";
+        }
         return normalized;
     };
 
@@ -1419,6 +1523,9 @@ function sanitizeWrongQuestionTopics(
             : coveredTopics;
         return buildSpecificSocialTopics(seedTopics, weaknesses, schoolStage);
     }
+    if (subjectCategory === "science") {
+        return buildSpecificScienceTopics(rawWrongTopics, coveredTopics, weaknesses, schoolStage);
+    }
 
     return rawWrongTopics.slice(0, 6);
 }
@@ -1459,6 +1566,7 @@ function sanitizeWeaknessAreas(
                 .map((t) => normalizeTopicLabel(String(t || "")))
                 .map((t) => {
                     if (isSocial) return inferSocialTopicFromText(t, schoolStage) || toSocialDomainTopic(t, schoolStage);
+                    if (isScience) return inferScienceTopicFromText(t, schoolStage) || toScienceDomainTopic(t, schoolStage);
                     if (isEnglish) return inferEnglishTopicFromText(t) || resolveEnglishCurriculumUnit(t) || "";
                     if (isJapanese) return inferJapaneseTopicFromText(t, schoolStage) || resolveJapaneseCurriculumUnit(t, schoolStage) || "";
                     return formatTopicWithDomain(t, subjectCategory, schoolStage);
@@ -1523,6 +1631,8 @@ function sanitizeWeaknessAreas(
                 const matchedScienceBase = findCoveredTopicMatch(rawTopic, nonSocialBaseTopics);
                 if (matchedScienceBase) {
                     topic = matchedScienceBase;
+                } else if (inferScienceTopicFromText(rawTopic, schoolStage)) {
+                    topic = inferScienceTopicFromText(rawTopic, schoolStage) || rawTopic;
                 } else if (nonSocialBaseTopics.length > 0 && isGenericWeaknessTopic(rawTopic)) {
                     topic = nonSocialBaseTopics[Math.min(index, nonSocialBaseTopics.length - 1)];
                 } else {
