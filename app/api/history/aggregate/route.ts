@@ -136,6 +136,11 @@ function isMiddleSchoolMathSignature(topic: string): boolean {
     return /^(数と計算：一次方程式|数と計算：正の数・負の数|数と計算：文字式|数と計算：式の計算|数と計算：平方根|代数：連立方程式|代数：二次方程式|代数：一次関数|代数：関数|確率・統計：確率|確率・統計：場合の数|図形：作図|図形：相似|図形：合同|図形：空間図形|図形：直線と円|図形：角)$/.test(topic);
 }
 
+function isLowSignalMathUnitTag(unit: string, dominantUnits: Set<string>): boolean {
+    const normalized = normalizeTopic(unit);
+    return !normalized || isBroadMathPeriodTheme(normalized) || dominantUnits.has(normalized);
+}
+
 function isLowSignalJapaneseUnitTag(unit: string): boolean {
     return isGenericJapaneseWeakness(unit) || /^(要旨)$/.test(unit);
 }
@@ -405,6 +410,21 @@ export async function GET(request: Request) {
             })
             : [];
         const prefersMiddleSchoolMath = isMathOnly && mathTopicPool.some((topic) => isMiddleSchoolMathSignature(topic));
+        const dominantMathUnits = isMathOnly
+            ? (() => {
+                const counts = new Map<string, number>();
+                records.forEach((record) => {
+                    const unit = normalizeTopic(record.unit_name);
+                    if (!unit) return;
+                    counts.set(unit, (counts.get(unit) || 0) + 1);
+                });
+                return new Set(
+                    Array.from(counts.entries())
+                        .filter(([, count]) => count >= Math.max(2, Math.ceil(records.length / 2)))
+                        .map(([unit]) => unit)
+                );
+            })()
+            : new Set<string>();
         records.forEach((r) => {
             const weaknesses = Array.isArray(r.details?.weakness_areas) ? r.details.weakness_areas : [];
             const unitName = normalizeTopic(r.unit_name);
@@ -647,7 +667,7 @@ export async function GET(request: Request) {
                 units: isJapaneseOnly
                     ? item.units.filter((unit) => !isLowSignalJapaneseUnitTag(unit) && normalizeTopic(unit) !== normalizeTopic(item.topic))
                     : isMathOnly
-                        ? item.units.filter((unit) => !isBroadMathPeriodTheme(unit) && normalizeTopic(unit) !== normalizeTopic(item.topic))
+                        ? item.units.filter((unit) => !isLowSignalMathUnitTag(unit, dominantMathUnits) && normalizeTopic(unit) !== normalizeTopic(item.topic))
                     : isEnglishOnly
                         ? item.units.filter((unit) => !isBroadEnglishPeriodTheme(unit) && normalizeTopic(unit) !== normalizeTopic(item.topic))
                         : isScienceOnly
