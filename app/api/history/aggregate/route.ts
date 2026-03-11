@@ -128,6 +128,14 @@ function isSpecificMathUnit(unit: string): boolean {
         && !/^(数学|算数|数|内容理解|基礎|復習|数と計算|代数|図形|確率・統計)$/.test(unit);
 }
 
+function isElementaryLikeMathTopic(topic: string): boolean {
+    return /^(数と計算：1000までの数|図形：三角形と四角形|図形：図形の性質)$/.test(topic);
+}
+
+function isMiddleSchoolMathSignature(topic: string): boolean {
+    return /^(数と計算：一次方程式|数と計算：正の数・負の数|数と計算：文字式|数と計算：式の計算|数と計算：平方根|代数：連立方程式|代数：二次方程式|代数：一次関数|代数：関数|確率・統計：確率|確率・統計：場合の数|図形：作図|図形：相似|図形：合同|図形：空間図形|図形：直線と円|図形：角)$/.test(topic);
+}
+
 function isLowSignalJapaneseUnitTag(unit: string): boolean {
     return isGenericJapaneseWeakness(unit) || /^(要旨)$/.test(unit);
 }
@@ -384,6 +392,19 @@ export async function GET(request: Request) {
             && records.every((r) => isSubjectMatch(r.subject ?? undefined, "社会"));
 
         const weaknessCounts: Record<string, { count: number; score: number; units: Set<string> }> = {};
+        const mathTopicPool = isMathOnly
+            ? records.flatMap((r) => {
+                const details = r.details && typeof r.details === "object" ? r.details : {};
+                return [
+                    normalizeTopic(r.unit_name),
+                    ...(Array.isArray(details?.wrong_question_topics) ? details.wrong_question_topics.map((topic) => normalizeTopic(topic)) : []),
+                    ...(Array.isArray(details?.covered_topics) ? details.covered_topics.map((topic) => normalizeTopic(topic)) : []),
+                    ...(Array.isArray(details?.weakness_areas) ? details.weakness_areas.map((w) => normalizeTopic(w?.topic)) : []),
+                    ...(Array.isArray(details?.question_mistakes) ? details.question_mistakes.map((entry) => normalizeTopic(entry?.topic)) : []),
+                ].filter(Boolean);
+            })
+            : [];
+        const prefersMiddleSchoolMath = isMathOnly && mathTopicPool.some((topic) => isMiddleSchoolMathSignature(topic));
         records.forEach((r) => {
             const weaknesses = Array.isArray(r.details?.weakness_areas) ? r.details.weakness_areas : [];
             const unitName = normalizeTopic(r.unit_name);
@@ -424,7 +445,10 @@ export async function GET(request: Request) {
                     && hasTopicSupport(entry.topic, japaneseQuestionMistakeSupportTopics)
                 )
                 : isMathOnly
-                    ? questionMistakes.filter((entry) => isMathPeriodTheme(entry.topic))
+                    ? questionMistakes.filter((entry) =>
+                        isMathPeriodTheme(entry.topic)
+                        && (!prefersMiddleSchoolMath || !isElementaryLikeMathTopic(entry.topic))
+                    )
                 : isEnglishOnly
                     ? questionMistakes.filter((entry) => isEnglishPeriodTheme(entry.topic))
                     : isScienceOnly
@@ -461,7 +485,10 @@ export async function GET(request: Request) {
             const prioritizedWrongTopics = isJapaneseOnly
                 ? wrongQuestionTopics.filter((topic) => isJapanesePeriodTheme(topic))
                 : isMathOnly
-                    ? wrongQuestionTopics.filter((topic) => isMathPeriodTheme(topic))
+                    ? wrongQuestionTopics.filter((topic) =>
+                        isMathPeriodTheme(topic)
+                        && (!prefersMiddleSchoolMath || !isElementaryLikeMathTopic(topic))
+                    )
                 : isEnglishOnly
                     ? wrongQuestionTopics.filter((topic) => isEnglishPeriodTheme(topic))
                     : isScienceOnly
@@ -501,8 +528,8 @@ export async function GET(request: Request) {
                     .filter((topic) => isJapaneseOnly
                         ? isSpecificJapaneseUnit(topic)
                         : isMathOnly
-                            ? isSpecificMathUnit(topic)
-                        : isEnglishOnly
+                            ? isSpecificMathUnit(topic) && (!prefersMiddleSchoolMath || !isElementaryLikeMathTopic(topic))
+                            : isEnglishOnly
                             ? isSpecificEnglishUnit(topic)
                             : isScienceOnly
                                 ? isSpecificScienceUnit(topic)
@@ -606,7 +633,7 @@ export async function GET(request: Request) {
                 const eligible = sortedWeaknesses.filter((item) => isJapaneseOnly
                     ? isJapanesePeriodTheme(item.topic)
                     : isMathOnly
-                        ? isMathPeriodTheme(item.topic)
+                        ? isMathPeriodTheme(item.topic) && (!prefersMiddleSchoolMath || !isElementaryLikeMathTopic(item.topic))
                     : isEnglishOnly
                         ? isEnglishPeriodTheme(item.topic)
                         : isScienceOnly
