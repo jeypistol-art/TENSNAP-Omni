@@ -1974,7 +1974,9 @@ function expandWeaknessAreasForLowMastery(
     category: SubjectCategory,
     markCounts?: AnalysisResult["mark_counts"]
 ): { topic: string; level: "Primary" | "Secondary" }[] {
-    if (category !== "english" && category !== "japanese" && category !== "social") return weaknessAreas;
+    if (category !== "english" && category !== "japanese" && category !== "social" && category !== "math" && category !== "science") {
+        return weaknessAreas;
+    }
 
     const crosses = Number(markCounts?.crosses || 0);
     const slashes = Number(markCounts?.slashes || 0);
@@ -1983,10 +1985,11 @@ function expandWeaknessAreasForLowMastery(
     const weightedMistakeSignals = crosses + slashes + Math.ceil(triangles * 0.5) + unmarked;
 
     let targetCount = 2;
-    if (weightedMistakeSignals >= 8) targetCount = 5;
+    if (weightedMistakeSignals >= 12) targetCount = 6;
+    else if (weightedMistakeSignals >= 8) targetCount = 5;
     else if (weightedMistakeSignals >= 6) targetCount = 4;
     else if (weightedMistakeSignals >= 4) targetCount = 3;
-    if (category === "japanese" || category === "english" || category === "social") {
+    if (category === "japanese" || category === "english" || category === "social" || category === "math" || category === "science") {
         targetCount = Math.max(targetCount, 4);
     }
 
@@ -2073,7 +2076,7 @@ function expandWeaknessAreasForLowMastery(
         .filter((w) => canonicalTopic(w.topic) !== canonicalTopic(primary.topic))
         .map((w) => ({ topic: w.topic, level: "Secondary" as const }));
 
-    const guaranteedSecondary = secondary.slice(0, Math.min(4, Math.max(3, targetCount - 1)));
+    const guaranteedSecondary = secondary.slice(0, Math.min(5, Math.max(3, targetCount - 1)));
     return [{ topic: primary.topic, level: "Primary" }, ...guaranteedSecondary];
 }
 
