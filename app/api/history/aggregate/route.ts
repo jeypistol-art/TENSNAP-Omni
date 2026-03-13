@@ -154,6 +154,11 @@ function isLowSignalJapaneseUnitTag(unit: string): boolean {
     return isGenericJapaneseWeakness(unit) || /^(要旨)$/.test(unit);
 }
 
+function isLowSignalEnglishUnitTag(unit: string, dominantUnits: Set<string>): boolean {
+    const normalized = normalizeTopic(unit);
+    return !normalized || isBroadEnglishPeriodTheme(normalized) || dominantUnits.has(normalized);
+}
+
 function isSpecificEnglishUnit(unit: string): boolean {
     return !!unit
         && !isGenericEnglishWeakness(unit)
@@ -434,6 +439,21 @@ export async function GET(request: Request) {
                 );
             })()
             : new Set<string>();
+        const dominantEnglishUnits = isEnglishOnly
+            ? (() => {
+                const counts = new Map<string, number>();
+                records.forEach((record) => {
+                    const unit = normalizeTopic(record.unit_name);
+                    if (!unit) return;
+                    counts.set(unit, (counts.get(unit) || 0) + 1);
+                });
+                return new Set(
+                    Array.from(counts.entries())
+                        .filter(([, count]) => count >= Math.max(2, Math.ceil(records.length / 2)))
+                        .map(([unit]) => unit)
+                );
+            })()
+            : new Set<string>();
         const totalWeightedMistakeSignals = records.reduce((sum, record) => {
             const counts = record.details?.mark_counts;
             const crosses = Number(counts?.crosses || 0);
@@ -689,7 +709,7 @@ export async function GET(request: Request) {
                     : isMathOnly
                         ? item.units.filter((unit) => !isLowSignalMathUnitTag(unit, dominantMathUnits) && normalizeTopic(unit) !== normalizeTopic(item.topic))
                     : isEnglishOnly
-                        ? item.units.filter((unit) => !isBroadEnglishPeriodTheme(unit) && normalizeTopic(unit) !== normalizeTopic(item.topic))
+                        ? item.units.filter((unit) => !isLowSignalEnglishUnitTag(unit, dominantEnglishUnits) && normalizeTopic(unit) !== normalizeTopic(item.topic))
                         : isScienceOnly
                             ? item.units.filter((unit) => !isBroadSciencePeriodTheme(unit) && normalizeTopic(unit) !== normalizeTopic(item.topic))
                         : isSocialOnly
