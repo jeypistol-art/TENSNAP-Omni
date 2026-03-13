@@ -44,6 +44,7 @@ type PeriodicalData = {
     startStats: { accuracy: number; process: number; consistency: number };
     currentStats: { accuracy: number; process: number; consistency: number };
     weaknesses: { topic: string; count: number; units?: string[] }[];
+    reviewFocuses?: string[];
     aiSummary: string;
 };
 
@@ -51,9 +52,10 @@ type StudentHistoryProps = {
     studentId: string;
     studentName: string;
     targetSchool?: string;
+    refreshKey?: number;
 };
 
-export default function StudentHistory({ studentId, studentName, targetSchool }: StudentHistoryProps) {
+export default function StudentHistory({ studentId, studentName, targetSchool, refreshKey = 0 }: StudentHistoryProps) {
     const [history, setHistory] = useState<HistoryItem[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -278,7 +280,7 @@ export default function StudentHistory({ studentId, studentName, targetSchool }:
         };
 
         fetchHistory();
-    }, [studentId]);
+    }, [studentId, refreshKey]);
 
     const handleDelete = async (id: string) => {
         if (!confirm("この分析結果を削除しますか？\n（この操作は取り消せません）")) return;

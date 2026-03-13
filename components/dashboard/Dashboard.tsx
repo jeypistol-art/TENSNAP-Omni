@@ -11,8 +11,10 @@ import { useRouter } from "next/navigation";
 import StudentSelector from "./StudentSelector";
 import AddStudentModal from "./AddStudentModal";
 import TrialExpiredGate from "./TrialExpiredGate";
+import NewsTicker from "./NewsTicker";
 import { useSession } from "next-auth/react";
 import { DEFAULT_SUBJECT, SUBJECT_OPTIONS, normalizeSubjectLabel } from "@/lib/subjects";
+import { getReviewFocusTitle, summarizeReviewFocus } from "@/lib/reviewFocus";
 
 export default function Dashboard() {
     type DeviceItem = {
@@ -21,6 +23,12 @@ export default function Dashboard() {
         last_active_at?: string | null;
     };
     type WeaknessArea = { topic?: string; level?: string };
+    type QuestionMistake = {
+        question_label?: string;
+        topic?: string;
+        result?: "wrong" | "partial";
+        lost_points?: number | null;
+    };
     type AnalysisResult = {
         test_score?: number;
         test_score_raw?: number | string;
@@ -39,6 +47,9 @@ export default function Dashboard() {
         insight_conclusion?: string;
         covered_topics?: string[];
         weakness_areas?: WeaknessArea[];
+        wrong_question_topics?: string[];
+        question_mistakes?: QuestionMistake[];
+        review_focuses?: string[];
         disclaimer?: string;
         [key: string]: unknown;
     };
@@ -106,6 +117,7 @@ export default function Dashboard() {
     const [isEditStudentModalOpen, setIsEditStudentModalOpen] = useState(false);
     const [isFamilyHost, setIsFamilyHost] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
+    const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
     const [editingField, setEditingField] = useState<null | "student" | "subject" | "score" | "testDate">(null);
     const [draftValue, setDraftValue] = useState<string>("");
     const [isSavingField, setIsSavingField] = useState(false);
@@ -459,6 +471,7 @@ export default function Dashboard() {
             });
             setResult(data.analysis);
             setAnalysisId(data.analysisId); // Capture ID
+            setHistoryRefreshKey((prev) => prev + 1);
             setStatus("completed");
         } catch (error: unknown) {
             console.error(error);
@@ -640,6 +653,18 @@ export default function Dashboard() {
     const coveredTopics = Array.isArray(result?.covered_topics)
         ? result.covered_topics.filter((t): t is string => typeof t === "string" && t.trim().length > 0)
         : [];
+    const reviewFocuses = result
+        ? (Array.isArray(result.review_focuses) && result.review_focuses.length > 0
+            ? result.review_focuses
+            : summarizeReviewFocus({
+                subject,
+                unitName,
+                coveredTopics,
+                wrongQuestionTopics: Array.isArray(result.wrong_question_topics) ? result.wrong_question_topics : [],
+                questionMistakes: Array.isArray(result.question_mistakes) ? result.question_mistakes : [],
+                weaknessAreas: Array.isArray(result.weakness_areas) ? result.weakness_areas : [],
+            }))
+        : [];
 
     return (
         <div className="max-w-4xl mx-auto px-4 py-8">
@@ -727,6 +752,7 @@ export default function Dashboard() {
                                 studentId={effectiveStudentId}
                                 studentName={students.find(s => s.id === effectiveStudentId)?.name || students[0]?.name || (isFamilyHost ? "お子さま" : "生徒")}
                                 targetSchool={students.find(s => s.id === effectiveStudentId)?.target_school || students[0]?.target_school || ""}
+                                refreshKey={historyRefreshKey}
                             />
                         </HistoryErrorBoundary>
                     </div>
@@ -1217,6 +1243,19 @@ export default function Dashboard() {
                             </div>
                         )}
 
+                        {reviewFocuses.length > 0 && (
+                            <div className="p-5 bg-amber-50 rounded-lg border border-amber-100">
+                                <span className="block text-amber-700 text-xs font-bold mb-3 tracking-wide">{getReviewFocusTitle(subject)}</span>
+                                <div className="flex flex-wrap gap-2">
+                                    {reviewFocuses.map((topic, i) => (
+                                        <span key={i} className="bg-white border border-amber-200 text-gray-700 text-xs px-3 py-1.5 rounded-full font-semibold shadow-sm">
+                                            {topic}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         {/* Disclaimer */}
                         <div className="text-center mt-6 p-2">
                             <p className="text-[10px] text-gray-400 font-medium">
@@ -1233,7 +1272,7 @@ export default function Dashboard() {
                             トップへ戻る (次の分析)
                         </button>
                         <button
-                            onClick={() => alert("履歴画面は現在開発中ですが、APIは接続済みです！")}
+                            onClick={() => setShowHistory(true)}
                             className="flex-1 bg-white text-blue-600 border-2 border-blue-100 py-4 px-6 rounded-xl font-bold hover:bg-blue-50 transition-all shadow-sm"
                         >
                             生徒の履歴を見る
@@ -1241,6 +1280,8 @@ export default function Dashboard() {
                     </div>
                 </div>
             )}
+
+            <NewsTicker />
         </div>
     );
 }

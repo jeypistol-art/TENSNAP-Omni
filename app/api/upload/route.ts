@@ -7,6 +7,7 @@ import { analyzeImage } from "@/lib/ocr_service";
 import { getR2AssetsBucket, R2_ASSETS_BUCKET_NAME, uploadPreparedFilesToR2 } from "@/lib/r2_assets";
 import { getRequestedPlanFromRequest } from "@/lib/accountPlan";
 import { DEFAULT_SUBJECT, normalizeSubjectLabel } from "@/lib/subjects";
+import { summarizeReviewFocus } from "@/lib/reviewFocus";
 
 function normalizeTopicText(topic: unknown): string {
     if (typeof topic !== "string") return "";
@@ -176,6 +177,14 @@ export async function POST(request: Request) {
             : weaknessTopicFallback.slice(0, 3);
         analysis.covered_topics = topics.slice(0, 5);
         analysis.weakness_areas = weaknessAreas.slice(0, 5);
+        analysis.review_focuses = summarizeReviewFocus({
+            subject,
+            unitName: formUnitName || analysis.covered_topics[0] || "",
+            coveredTopics: analysis.covered_topics,
+            wrongQuestionTopics: Array.isArray(analysis.wrong_question_topics) ? analysis.wrong_question_topics : [],
+            questionMistakes: Array.isArray(analysis.question_mistakes) ? analysis.question_mistakes : [],
+            weaknessAreas: analysis.weakness_areas,
+        });
 
         // Determine Unit Name and Subject
         // Priority: Form Input > AI Detected Topic > Fallback

@@ -2,6 +2,7 @@
 
 import React, { forwardRef } from "react";
 import { normalizeSubjectLabel } from "@/lib/subjects";
+import { getReviewFocusTitle, summarizeReviewFocus } from "@/lib/reviewFocus";
 
 type Weakness = { topic: string; level: string };
 type ComprehensionDetails = {
@@ -11,6 +12,13 @@ type ComprehensionDetails = {
     consistency: number;
 };
 
+type QuestionMistake = {
+    question_label?: string;
+    topic?: string;
+    result?: "wrong" | "partial";
+    lost_points?: number | null;
+};
+
 export type AnalysisDetails = {
     comprehension_score?: number;
     comprehension_details?: ComprehensionDetails;
@@ -18,6 +26,9 @@ export type AnalysisDetails = {
     insight_conclusion?: string;
     covered_topics?: string[];
     weakness_areas?: Weakness[];
+    wrong_question_topics?: string[];
+    question_mistakes?: QuestionMistake[];
+    review_focuses?: string[];
     raw_test_score?: number | string;
     input_test_score?: number | string;
     exam_phase?: boolean;
@@ -56,6 +67,16 @@ const HistoryResultDetail = forwardRef<HTMLDivElement, HistoryResultDetailProps>
             ? [item.unit_name]
             : [];
     const weaknessAreas: Weakness[] = Array.isArray(details?.weakness_areas) ? details.weakness_areas : (item.weaknesses || []);
+    const reviewFocuses = Array.isArray(details?.review_focuses) && details.review_focuses.length > 0
+        ? details.review_focuses
+        : summarizeReviewFocus({
+            subject: item.subject,
+            unitName: item.unit_name,
+            coveredTopics,
+            wrongQuestionTopics: details?.wrong_question_topics,
+            questionMistakes: details?.question_mistakes,
+            weaknessAreas,
+        });
     const sourceDate = item.test_date || item.created_at;
     const parsedDate = sourceDate ? new Date(sourceDate) : null;
     const testDate = parsedDate && !Number.isNaN(parsedDate.getTime())
@@ -201,6 +222,19 @@ const HistoryResultDetail = forwardRef<HTMLDivElement, HistoryResultDetailProps>
                                     </span>
                                     {w.topic}
                                 </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {reviewFocuses.length > 0 && (
+                    <div className="p-4 bg-amber-50 rounded-xl border border-amber-100">
+                        <h3 className="text-xs font-bold text-amber-700 tracking-wide mb-3">{getReviewFocusTitle(item.subject)}</h3>
+                        <div className="flex flex-wrap gap-2">
+                            {reviewFocuses.map((topic, i) => (
+                                <span key={i} className="bg-white border border-amber-200 text-gray-700 text-xs px-3 py-1.5 rounded-full font-semibold shadow-sm">
+                                    {topic}
+                                </span>
                             ))}
                         </div>
                     </div>

@@ -5,6 +5,7 @@ import React, { forwardRef, useEffect, useMemo, useRef } from 'react';
 import Chart from 'chart.js/auto';
 import type { Chart as ChartJS } from 'chart.js';
 import { normalizeSubjectLabel } from "@/lib/subjects";
+import { getReviewFocusTitle } from "@/lib/reviewFocus";
 
 type PeriodicalReportProps = {
     data: {
@@ -15,6 +16,7 @@ type PeriodicalReportProps = {
         startStats: { accuracy: number; process: number; consistency: number };
         currentStats: { accuracy: number; process: number; consistency: number };
         weaknesses: { topic: string; count: number; units?: string[] }[];
+        reviewFocuses?: string[];
         aiSummary: string;
     };
 };
@@ -190,6 +192,21 @@ const PeriodicalReport = forwardRef<HTMLDivElement, PeriodicalReportProps>(({ da
                                     </div>
                                 )}
                             </div>
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {Array.isArray(data.reviewFocuses) && data.reviewFocuses.length > 0 && (
+                <section className="mb-10">
+                    <h3 className="text-lg font-bold text-amber-700 mb-4 flex items-center gap-2">
+                        <span className="text-xl">📚</span> {getReviewFocusTitle(data.subjectLabel)}
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                        {data.reviewFocuses.map((topic, i) => (
+                            <span key={i} className="bg-amber-50 border border-amber-200 text-gray-700 text-sm px-3 py-2 rounded-full font-semibold shadow-sm">
+                                {topic}
+                            </span>
                         ))}
                     </div>
                 </section>

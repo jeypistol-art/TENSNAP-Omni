@@ -6,6 +6,7 @@ import { getOpenAIClient, runOpenAIWithRetry, serializeOpenAIError } from "@/lib
 import { getRequestedPlanFromRequest } from "@/lib/accountPlan";
 import { getTenantId } from "@/lib/tenant";
 import { isSubjectMatch, normalizeSubjectLabel } from "@/lib/subjects";
+import { extractReviewFocus } from "@/lib/reviewFocus";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -27,6 +28,7 @@ type Details = {
         lost_points?: number | null;
         score_points?: number | null;
     }[];
+    review_focuses?: string[];
     mark_counts?: {
         circles?: number;
         triangles?: number;
@@ -695,6 +697,31 @@ export async function GET(request: Request) {
                     : item.units,
             }));
 
+        const reviewFocusCounts = new Map<string, number>();
+        records.forEach((record) => {
+            const details = record.details && typeof record.details === "object" ? record.details : {};
+            const focusItems = extractReviewFocus({
+                subject: record.subject,
+                unitName: record.unit_name,
+                coveredTopics: Array.isArray(details.covered_topics) ? details.covered_topics : [],
+                wrongQuestionTopics: Array.isArray(details.wrong_question_topics) ? details.wrong_question_topics : [],
+                questionMistakes: Array.isArray(details.question_mistakes) ? details.question_mistakes : [],
+                weaknessAreas: Array.isArray(details.weakness_areas) ? details.weakness_areas : [],
+            }, 4);
+
+            focusItems.forEach((item) => {
+                reviewFocusCounts.set(item.label, (reviewFocusCounts.get(item.label) || 0) + item.score);
+            });
+        });
+
+        const reviewFocuses = Array.from(reviewFocusCounts.entries())
+            .sort((a, b) => {
+                if (a[1] !== b[1]) return b[1] - a[1];
+                return a[0].localeCompare(b[0], "ja");
+            })
+            .slice(0, 6)
+            .map(([label]) => label);
+
         // --- AI Summary Generation ---
         const prompt = `
 Role: プロの学習塾講師
@@ -747,6 +774,7 @@ Output Requirement:
                 startStats,
                 currentStats, // Last record stats for Radar
                 weaknesses: finalWeaknesses,
+                reviewFocuses,
                 aiSummary
             }
         });

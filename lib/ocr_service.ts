@@ -41,6 +41,7 @@ export type AnalysisResult = {
         lost_points?: number | null;
         score_points?: number | null;
     }[];
+    review_focuses?: string[];
     disclaimer: string;
     mark_counts?: {
         circles: number; // ◯
