@@ -150,6 +150,20 @@ function isLowSignalMathUnitTag(unit: string, dominantUnits: Set<string>): boole
     return !normalized || isBroadMathPeriodTheme(normalized) || dominantUnits.has(normalized);
 }
 
+function countUnitTagUsage(items: { units?: string[] }[]): Map<string, number> {
+    const counts = new Map<string, number>();
+    items.forEach((item) => {
+        const seen = new Set<string>();
+        (item.units || []).forEach((unit) => {
+            const normalized = normalizeTopic(unit);
+            if (!normalized || seen.has(normalized)) return;
+            seen.add(normalized);
+            counts.set(normalized, (counts.get(normalized) || 0) + 1);
+        });
+    });
+    return counts;
+}
+
 function isLowSignalJapaneseUnitTag(unit: string): boolean {
     return isGenericJapaneseWeakness(unit) || /^(要旨)$/.test(unit);
 }
@@ -688,7 +702,7 @@ export async function GET(request: Request) {
                 units: Array.from(data.units).slice(0, 4) // Convert Set to Array, limit to 4 units
             }));
 
-        const finalWeaknesses = ((isJapaneseOnly || isMathOnly || isEnglishOnly || isScienceOnly || isSocialOnly)
+        const baseWeaknesses = ((isJapaneseOnly || isMathOnly || isEnglishOnly || isScienceOnly || isSocialOnly)
             ? (() => {
                 const eligible = sortedWeaknesses.filter((item) => isJapaneseOnly
                     ? isJapanesePeriodTheme(item.topic)
@@ -701,13 +715,20 @@ export async function GET(request: Request) {
                         : isSocialPeriodTheme(item.topic));
                 return eligible.length > 0 ? eligible : [];
             })()
-            : sortedWeaknesses)
+            : sortedWeaknesses);
+        const unitTagUsageCounts = countUnitTagUsage(baseWeaknesses);
+        const finalWeaknesses = baseWeaknesses
             .map((item) => ({
                 ...item,
                 units: isJapaneseOnly
                     ? item.units.filter((unit) => !isLowSignalJapaneseUnitTag(unit) && normalizeTopic(unit) !== normalizeTopic(item.topic))
                     : isMathOnly
-                        ? item.units.filter((unit) => !isLowSignalMathUnitTag(unit, dominantMathUnits) && normalizeTopic(unit) !== normalizeTopic(item.topic))
+                        ? item.units.filter((unit) => {
+                            const normalizedUnit = normalizeTopic(unit);
+                            return !isLowSignalMathUnitTag(unit, dominantMathUnits)
+                                && normalizeTopic(unit) !== normalizeTopic(item.topic)
+                                && (unitTagUsageCounts.get(normalizedUnit) || 0) < 2;
+                        })
                     : isEnglishOnly
                         ? item.units.filter((unit) => !isLowSignalEnglishUnitTag(unit, dominantEnglishUnits) && normalizeTopic(unit) !== normalizeTopic(item.topic))
                         : isScienceOnly
