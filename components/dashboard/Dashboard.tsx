@@ -659,34 +659,33 @@ export default function Dashboard() {
     return (
         <div className="max-w-4xl mx-auto px-4 py-8">
             <TrialBanner />
-            <header className="mb-10 text-center flex flex-col items-center justify-center relative">
-                {/* Top Right Controls */}
-                <div className="absolute top-0 right-0 p-4 flex gap-3">
+            <header className="mb-10 text-center">
+                <div className="mb-4 flex flex-wrap items-center justify-end gap-2 sm:gap-3">
                     <a
                         href="/legal/manual"
                         target="_blank"
                         rel="noreferrer"
-                        className="text-xs text-gray-500 hover:text-blue-600 font-medium transition-colors flex items-center gap-1"
+                        className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 hover:text-blue-600 font-medium transition-colors"
                     >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
                         マニュアル
                     </a>
                     <a
                         href="/settings"
-                        className="text-xs text-gray-500 hover:text-blue-600 font-medium transition-colors flex items-center gap-1"
+                        className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 hover:text-blue-600 font-medium transition-colors"
                     >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0a1 1 0 00.95.69h.7c.969 0 1.371 1.24.588 1.81a1 1 0 00-.364 1.118l.22.68c.3.921-.755 1.688-1.54 1.118a1 1 0 00-1.175 0l-.56.4a1 1 0 01-1.175 0l-.56-.4a1 1 0 00-1.175 0c-.784.57-1.838-.197-1.539-1.118l.22-.68a1 1 0 00-.364-1.118c-.783-.57-.38-1.81.588-1.81h.7a1 1 0 00.95-.69z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15a3 3 0 100-6 3 3 0 000 6z" /></svg>
                         設定
                     </a>
                     <a
                         href={logoutHref}
-                        className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold px-3 py-1.5 rounded-lg transition-colors"
+                        className="inline-flex items-center rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold px-3 py-1.5 text-xs transition-colors"
                     >
                         ログアウト
                     </a>
                 </div>
 
-                <div className="relative w-64 h-auto mb-2 mt-8">
+                <div className="mx-auto relative w-64 h-auto mb-2 mt-4 sm:mt-8">
                     <img
                         src="/images/logo.png"
                         alt="TENsNAP・Omni"
