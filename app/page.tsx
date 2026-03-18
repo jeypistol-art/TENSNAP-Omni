@@ -728,7 +728,7 @@ function SchoolLanding() {
           </div>
         </section>
 
-        <section id="how-to" className="py-24 bg-background border-b border-border">
+        <section className="py-24 bg-[#0a1b41] border-t border-border">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <div className="inline-flex justify-center items-center mb-8">
               <span className="text-blue-200 text-lg font-bold tracking-widest uppercase bg-blue-900/50 px-6 py-2 rounded-full border border-blue-700/50">
