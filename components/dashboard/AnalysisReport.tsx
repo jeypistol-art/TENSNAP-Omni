@@ -23,7 +23,7 @@ const AnalysisReport = forwardRef<HTMLDivElement, AnalysisReportProps>(({ data }
         // Print Container: Hidden on screen, visible on print
         // But for development we might want to see it or keep it hidden.
         // react-to-print finds it by ref.
-        <div ref={ref} className="w-[210mm] min-h-[297mm] p-[20mm] bg-white text-gray-800 font-sans mx-auto">
+        <div ref={ref} className="print-report-root w-[210mm] min-h-[297mm] p-[20mm] bg-white text-gray-800 font-sans mx-auto">
             {/* Header */}
             <header className="flex justify-between items-end border-b-2 border-gray-200 pb-4 mb-8">
                 <div>
@@ -42,7 +42,7 @@ const AnalysisReport = forwardRef<HTMLDivElement, AnalysisReportProps>(({ data }
             </header>
 
             {/* Student Info */}
-            <section className="bg-gray-50 rounded-lg p-6 mb-8 border border-gray-100">
+            <section className="print-avoid-break bg-gray-50 rounded-lg p-6 mb-8 border border-gray-100">
                 <div className="flex justify-between items-center">
                     <h2 className="text-xl font-bold text-gray-800">{data.studentName} <span className="text-sm font-normal text-gray-500 ml-1">様</span></h2>
                     <div className="text-right">
@@ -53,7 +53,7 @@ const AnalysisReport = forwardRef<HTMLDivElement, AnalysisReportProps>(({ data }
             </section>
 
             {/* Score Overview */}
-            <section className="grid grid-cols-2 gap-6 mb-10">
+            <section className="print-avoid-break grid grid-cols-2 gap-6 mb-10">
                 <div className="border border-gray-200 rounded-xl p-6 text-center">
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">得点</p>
                     <div className="text-4xl font-extrabold text-gray-900">
@@ -70,7 +70,7 @@ const AnalysisReport = forwardRef<HTMLDivElement, AnalysisReportProps>(({ data }
             </section>
 
             {/* AI Insights */}
-            <section className="mb-10">
+            <section className="print-avoid-break mb-10">
                 <h3 className="text-lg font-bold text-blue-800 mb-4 flex items-center gap-2">
                     <span className="text-xl">💡</span> AI分析・学習アドバイス
                 </h3>
@@ -87,9 +87,9 @@ const AnalysisReport = forwardRef<HTMLDivElement, AnalysisReportProps>(({ data }
                     <h3 className="text-lg font-bold text-red-700 mb-4 flex items-center gap-2">
                         <span className="text-xl">🔥</span> 重点復習ポイント
                     </h3>
-                    <div className="space-y-3">
+                    <div className="print-avoid-break-children space-y-3">
                         {data.weaknesses.map((w, i) => (
-                            <div key={i} className="flex items-center gap-3 p-3 bg-red-50 rounded-lg border border-red-100">
+                            <div key={i} className="print-avoid-break flex items-center gap-3 p-3 bg-red-50 rounded-lg border border-red-100">
                                 <span className={`
                                     text-[10px] font-bold px-2 py-1 rounded text-white min-w-[60px] text-center
                                     ${w.level === 'Primary' ? 'bg-red-600' : 'bg-orange-500'}

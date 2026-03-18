@@ -4,7 +4,7 @@
 import React, { forwardRef, useEffect, useMemo, useRef } from 'react';
 import Chart from 'chart.js/auto';
 import type { Chart as ChartJS } from 'chart.js';
-import { normalizeSubjectLabel } from "@/lib/subjects";
+import { detectSubjectCategory, normalizeSubjectLabel } from "@/lib/subjects";
 import { getReviewFocusTitle } from "@/lib/reviewFocus";
 
 type PeriodicalReportProps = {
@@ -24,6 +24,7 @@ type PeriodicalReportProps = {
 const PeriodicalReport = forwardRef<HTMLDivElement, PeriodicalReportProps>(({ data }, ref) => {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const chartRef = useRef<ChartJS<"radar"> | null>(null);
+    const isEnglishReport = detectSubjectCategory(data.subjectLabel) === "english";
 
     const chartData = useMemo(() => ({
         labels: ['得点理解度', '思考プロセス', '学習の安定感'],
@@ -92,7 +93,7 @@ const PeriodicalReport = forwardRef<HTMLDivElement, PeriodicalReportProps>(({ da
     }, [chartData, chartOptions, data]);
 
     return (
-        <div ref={ref} className="w-full max-w-[210mm] print:w-[210mm] min-h-[297mm] p-4 sm:p-[20mm] print:p-[20mm] bg-white text-gray-800 font-sans mx-auto">
+        <div ref={ref} className="print-report-root w-full max-w-[210mm] print:w-[210mm] min-h-[297mm] p-4 sm:p-[20mm] print:p-[20mm] bg-white text-gray-800 font-sans mx-auto">
             {/* Header */}
             <header className="flex justify-between items-end border-b-2 border-gray-200 pb-4 mb-8">
                 <div>
@@ -113,7 +114,7 @@ const PeriodicalReport = forwardRef<HTMLDivElement, PeriodicalReportProps>(({ da
             </header>
 
             {/* Student Info */}
-            <section className="bg-gradient-to-r from-blue-50 to-white rounded-lg p-6 mb-8 border-l-4 border-blue-600 shadow-sm">
+            <section className="print-avoid-break bg-gradient-to-r from-blue-50 to-white rounded-lg p-6 mb-8 border-l-4 border-blue-600 shadow-sm">
                 <h2 className="text-2xl font-bold text-gray-800">{data.studentName} <span className="text-base font-normal text-gray-500 ml-1">様</span></h2>
                 {data.targetSchool && (
                     <p className="text-sm text-gray-700 font-semibold mt-2">志望校：{data.targetSchool}</p>
@@ -122,7 +123,7 @@ const PeriodicalReport = forwardRef<HTMLDivElement, PeriodicalReportProps>(({ da
             </section>
 
             {/* Growth Radar Chart */}
-            <section className="mb-10 flex flex-col sm:flex-row gap-4 sm:gap-8">
+            <section className="print-avoid-break mb-10 flex flex-col sm:flex-row gap-4 sm:gap-8">
                 <div className="flex-1">
                     <h3 className="text-lg font-bold text-blue-800 mb-4 flex items-center gap-2">
                         <span className="text-xl">📈</span> 成長の軌跡 (Growth Triangle)
@@ -151,7 +152,7 @@ const PeriodicalReport = forwardRef<HTMLDivElement, PeriodicalReportProps>(({ da
                 </div>
             </section>
 
-            <section className="mb-10">
+            <section className="print-avoid-break mb-10">
                 <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
                     <span className="text-xl">🎓</span> 総評 & 次の一手
                 </h3>
@@ -169,9 +170,12 @@ const PeriodicalReport = forwardRef<HTMLDivElement, PeriodicalReportProps>(({ da
                     <h3 className="text-lg font-bold text-red-700 mb-4 flex items-center gap-2">
                         <span className="text-xl">🔥</span> 期間内の重点克服テーマ
                     </h3>
-                    <div className="grid grid-cols-1 gap-3">
+                    <div className="print-avoid-break-children grid grid-cols-1 gap-3">
                         {data.weaknesses.map((w, i) => (
-                            <div key={i} className="bg-red-50 rounded-lg border border-red-100 p-3">
+                            <div
+                                key={i}
+                                className={`print-avoid-break bg-red-50 rounded-lg border border-red-100 p-3 ${isEnglishReport && i === 2 ? "print-break-before" : ""}`}
+                            >
                                 <div className="flex items-center justify-between mb-2">
                                     <div className="flex items-center gap-3">
                                         <span className="flex items-center justify-center w-6 h-6 rounded-full bg-red-200 text-red-800 text-xs font-bold">
@@ -198,7 +202,7 @@ const PeriodicalReport = forwardRef<HTMLDivElement, PeriodicalReportProps>(({ da
             )}
 
             {Array.isArray(data.reviewFocuses) && data.reviewFocuses.length > 0 && (
-                <section className="mb-10">
+                <section className="print-avoid-break mb-10">
                     <h3 className="text-lg font-bold text-amber-700 mb-4 flex items-center gap-2">
                         <span className="text-xl">📚</span> {getReviewFocusTitle(data.subjectLabel)}
                     </h3>

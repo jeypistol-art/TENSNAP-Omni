@@ -84,7 +84,7 @@ const HistoryResultDetail = forwardRef<HTMLDivElement, HistoryResultDetailProps>
         : "日付不明";
 
     return (
-        <div ref={ref} className="w-full max-w-4xl bg-white rounded-lg shadow-lg p-6">
+        <div ref={ref} className="print-report-root w-full max-w-4xl bg-white rounded-lg shadow-lg p-6">
             <div className="text-center mb-6">
                 <h2 className="text-xl font-bold text-gray-700 tracking-wider">分析結果</h2>
 
@@ -167,7 +167,7 @@ const HistoryResultDetail = forwardRef<HTMLDivElement, HistoryResultDetailProps>
             </div>
 
             <div className="space-y-6">
-                <div className="bg-blue-50 rounded-lg border border-blue-100 p-6">
+                <div className="print-avoid-break bg-blue-50 rounded-lg border border-blue-100 p-6">
                     <span className="block text-blue-700 text-xs font-bold mb-4 tracking-wide">単元別分析インサイト</span>
                     <p className="text-xs text-gray-500 mb-3">
                         設問単位の正誤ではなく、答案から抽出した単元を表示しています。
@@ -189,7 +189,7 @@ const HistoryResultDetail = forwardRef<HTMLDivElement, HistoryResultDetailProps>
                     )}
                 </div>
 
-                <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                <div className="print-avoid-break mb-6 p-4 bg-gray-50 rounded-xl border border-gray-100">
                     <h3 className="text-xs font-bold text-gray-600 tracking-wide mb-3">リザルト基本情報</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="bg-white border border-gray-200 rounded-lg px-3 py-2">
@@ -212,7 +212,7 @@ const HistoryResultDetail = forwardRef<HTMLDivElement, HistoryResultDetailProps>
                 </div>
 
                 {weaknessAreas.length > 0 && (
-                    <div className="p-4 bg-red-50 rounded-xl border border-red-100">
+                    <div className="print-avoid-break print-avoid-break-children p-4 bg-red-50 rounded-xl border border-red-100">
                         <h3 className="text-xs font-bold text-red-600 tracking-wide mb-3">重点定着分野</h3>
                         <div className="space-y-2">
                             {weaknessAreas.map((w, i) => (
@@ -228,7 +228,7 @@ const HistoryResultDetail = forwardRef<HTMLDivElement, HistoryResultDetailProps>
                 )}
 
                 {reviewFocuses.length > 0 && (
-                    <div className="p-4 bg-amber-50 rounded-xl border border-amber-100">
+                    <div className="print-avoid-break print-avoid-break-children p-4 bg-amber-50 rounded-xl border border-amber-100">
                         <h3 className="text-xs font-bold text-amber-700 tracking-wide mb-3">{getReviewFocusTitle(item.subject)}</h3>
                         <div className="flex flex-wrap gap-2">
                             {reviewFocuses.map((topic, i) => (
