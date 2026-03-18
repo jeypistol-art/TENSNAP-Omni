@@ -208,14 +208,17 @@ export const authOptions: NextAuthOptions = {
 
           if (result.rows.length > 0) {
             const dbSessionId = result.rows[0].current_session_id;
+            if (!dbSessionId) {
+              return { ...session, error: "ForceLogout" };
+            }
             // First access can arrive before token.sessionId is persisted in JWT cookie.
             // In that case, trust DB value once and continue.
-            if (dbSessionId && !token.sessionId) {
+            if (!token.sessionId) {
               token.sessionId = dbSessionId;
               return session;
             }
             // If DB says "Session B" but I am "Session A", I am invalid.
-            if (dbSessionId && dbSessionId !== token.sessionId) {
+            if (dbSessionId !== token.sessionId) {
               if (!strictSessionGuard) {
                 // Compatibility mode: prefer keeping the user signed in.
                 // This avoids first-login bounce caused by callback race timing.
