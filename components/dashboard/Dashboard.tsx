@@ -12,7 +12,7 @@ import StudentSelector from "./StudentSelector";
 import AddStudentModal from "./AddStudentModal";
 import TrialExpiredGate from "./TrialExpiredGate";
 import NewsTicker from "./NewsTicker";
-import { useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { DEFAULT_SUBJECT, SUBJECT_OPTIONS, normalizeSubjectLabel } from "@/lib/subjects";
 import { getReviewFocusTitle, summarizeReviewFocus } from "@/lib/reviewFocus";
 
@@ -584,12 +584,30 @@ export default function Dashboard() {
     }
 
     const handleLogout = async (callbackUrl: string = "/") => {
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(() => controller.abort(), 3000);
+
         try {
-            await fetch("/api/auth/logout", { method: "POST" });
+            await fetch("/api/auth/logout", {
+                method: "POST",
+                keepalive: true,
+                signal: controller.signal,
+            });
         } catch (e) {
             console.error("Logout cleanup failed", e);
         } finally {
-            window.location.assign(callbackUrl);
+            window.clearTimeout(timeoutId);
+        }
+
+        try {
+            const result = await signOut({
+                callbackUrl,
+                redirect: false,
+            });
+            window.location.replace(result?.url || callbackUrl);
+        } catch (e) {
+            console.error("NextAuth signOut failed", e);
+            window.location.replace(callbackUrl);
         }
     };
 
