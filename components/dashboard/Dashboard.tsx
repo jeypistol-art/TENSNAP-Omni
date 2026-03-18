@@ -697,15 +697,6 @@ export default function Dashboard() {
                 </p>
             </header>
 
-            <div className="mb-6 sm:hidden">
-                <a
-                    href={logoutHref}
-                    className="block w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-center text-sm font-bold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
-                >
-                    ログアウトしてトップへ戻る
-                </a>
-            </div>
-
             <StudentSelector
                 selectedStudentId={selectedStudentId}
                 onSelect={setSelectedStudentId}
