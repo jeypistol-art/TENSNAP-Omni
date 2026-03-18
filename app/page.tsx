@@ -22,6 +22,7 @@ import {
   Users,
   Zap,
 } from "lucide-react";
+import { ZoomableImage } from "@/components/landing/ZoomableImage";
 
 const DEFAULT_FAMILY_HOST = "family.10snap.win";
 
@@ -378,12 +379,12 @@ function SchoolLanding() {
             <div className="lg:grid lg:grid-cols-2 lg:gap-16 items-center">
               <div className="order-2 lg:order-1 relative mt-12 lg:mt-0">
                 <div className="rounded-2xl shadow-xl overflow-hidden relative border border-border bg-slate-50 flex items-center justify-center p-4 h-[600px]">
-                  <Image
+                  <ZoomableImage
                     src="/images/namanama.png"
                     alt="見直すべき品詞などの詳細な分析結果を示す画面"
                     width={800}
                     height={1200}
-                    className="w-full h-full object-contain rounded-xl"
+                    className="w-full h-full"
                   />
                 </div>
               </div>
