@@ -3,8 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { query } from "@/lib/db";
 
-export async function POST() {
-    const response = NextResponse.json({ success: true });
+async function clearAuthCookies(response: NextResponse) {
     const useSecureCookie = process.env.NODE_ENV === "production";
     const cookieDomain = process.env.NEXTAUTH_COOKIE_DOMAIN;
 
@@ -68,5 +67,19 @@ export async function POST() {
     } catch (error) {
         console.error("Logout Cleanup Error:", error);
     }
+}
+
+export async function POST() {
+    const response = NextResponse.json({ success: true });
+    await clearAuthCookies(response);
+    return response;
+}
+
+export async function GET(request: Request) {
+    const { searchParams, origin } = new URL(request.url);
+    const callbackUrl = searchParams.get("callbackUrl") || "/";
+    const redirectUrl = new URL(callbackUrl, origin);
+    const response = NextResponse.redirect(redirectUrl);
+    await clearAuthCookies(response);
     return response;
 }
