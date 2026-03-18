@@ -295,14 +295,21 @@ function SchoolLanding() {
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
                 <Link
+                  href="#report-sample"
+                  className="text-mizuho font-bold hover:text-blue-800 transition-colors bg-blue-50 border border-blue-200 px-6 py-4 rounded-full shadow-sm hover:bg-blue-100"
+                >
+                  サンプルPDFを見る
+                </Link>
+                <Link
                   href="#how-to"
-                  className="text-mizuho font-bold underline hover:text-blue-800 transition-colors"
+                  className="text-mizuho font-bold underline hover:text-blue-800 transition-colors px-4 py-4"
                 >
                   使い方を3分で見る
                 </Link>
               </div>
               <p className="mt-6 text-sm text-muted-foreground font-medium">
-                ※まずは面談前の生徒の答案1〜2枚で、使い心地をご確認ください。
+                まずは面談前の生徒1名分、答案1〜2枚でお試しください。<br className="hidden sm:inline" />
+                弱点整理から面談用PDFの確認まで、短時間で使用感をご確認いただけます。
               </p>
             </div>
           </div>
@@ -355,9 +362,9 @@ function SchoolLanding() {
                 <div className="w-14 h-14 inline-flex items-center justify-center rounded-full bg-mizuho text-white font-extrabold text-2xl mb-6 shadow-lg shadow-blue-200">
                   02
                 </div>
-                <h3 className="text-xl font-bold text-foreground mb-4 leading-tight">弱点や単元傾向を<br />AIが深く整理</h3>
+                <h3 className="text-xl font-bold text-foreground mb-4 leading-tight">弱点と単元傾向を<br />面談前に整理</h3>
                 <p className="text-muted-foreground leading-relaxed">
-                  単なる正誤だけでなく、「どの単元の、どんな要素でつまずいているか」を教育要領ベースで深く読み解きます。
+                  単なる正誤ではなく、どの単元のどこでつまずいているかを整理。次回の指導方針を考えやすくします。
                 </p>
               </div>
 
@@ -365,9 +372,9 @@ function SchoolLanding() {
                 <div className="w-14 h-14 inline-flex items-center justify-center rounded-full bg-mizuho text-white font-extrabold text-2xl mb-6 shadow-lg shadow-blue-200">
                   03
                 </div>
-                <h3 className="text-xl font-bold text-foreground mb-4 leading-tight">面談・共有に直結する<br />PDFレポートへ</h3>
+                <h3 className="text-xl font-bold text-foreground mb-4 leading-tight">そのまま説明に使える<br />PDFレポートへ</h3>
                 <p className="text-muted-foreground leading-relaxed">
-                  先生が頭の中で組み立てていた分析を、保護者や生徒に見せやすい美しいレポートとして自動生成します。
+                  先生が頭の中で組み立てていた分析を、保護者面談や生徒への説明に使いやすいPDFとして出力します。
                 </p>
               </div>
             </div>
@@ -393,10 +400,14 @@ function SchoolLanding() {
                   <Lightbulb className="h-4 w-4 mr-2" />
                   新基準の学習分析
                 </div>
-                <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground mb-8 leading-tight">
+                <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground mb-4 leading-tight">
                   見えるのは、<br />
                   点数だけではありません。
                 </h2>
+                <p className="text-xl font-bold text-mizuho mb-8">
+                  TENsNAPは、採点結果を並べるだけでなく、<br className="hidden sm:inline" />
+                  『なぜそのミスが起きたのか』まで面談で説明しやすい形に整理します。
+                </p>
                 <div className="text-lg text-muted-foreground space-y-6 leading-relaxed">
                   <p>
                     例えば英語のテスト。生徒が長文でつまずいたとき、TENsNAPは単なる「長文読解のミス」とは片付けません。
@@ -407,6 +418,9 @@ function SchoolLanding() {
                   <div className="pt-6 border-t border-gray-200 mt-2">
                     <p className="bg-blue-50/50 p-4 rounded-xl text-foreground font-medium border border-blue-100/50">
                       これこそが、TENsNAPが「採点システム」ではなく<span className="font-bold text-mizuho">「分析特化型システム」</span>である理由です。先生の長年のカンを、客観的で説得力のあるデータに変換します。
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-4">
+                      ※TENsNAPは、採点結果を元にAIが分析を行うため、採点機能はございません。
                     </p>
                   </div>
                 </div>
@@ -465,14 +479,22 @@ function SchoolLanding() {
                 ))}
               </div>
 
-              <p className="text-lg text-slate-600 leading-relaxed text-left sm:text-center max-w-3xl mx-auto">
+              <p className="text-lg text-slate-600 leading-relaxed text-left sm:text-center max-w-3xl mx-auto mb-8">
                 TENsNAPは、先生が頭の中で組み立てていたこれらの内容を整理し、<br className="hidden sm:inline" />面談前の重い下準備をもっと<span className="font-bold text-mizuho">進めやすくするための道具</span>です。
               </p>
+              <div className="flex justify-center">
+                <Link
+                  href="#report-sample"
+                  className="inline-flex items-center justify-center text-mizuho font-bold underline hover:text-blue-800 transition-colors"
+                >
+                  → 実際のレポート例を見る
+                </Link>
+              </div>
             </div>
           </div>
         </section>
 
-        <section className="py-24 bg-muted/30 border-b border-border">
+        <section id="report-sample" className="py-24 bg-muted/30 border-b border-border">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
               <h2 className="text-3xl font-extrabold text-foreground sm:text-4xl mb-4">
@@ -505,7 +527,7 @@ function SchoolLanding() {
           </div>
         </section>
 
-        <section className="py-24 bg-background border-b border-border">
+        <section id="how-to" className="py-24 bg-background border-b border-border">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h2 className="text-3xl font-extrabold text-foreground sm:text-4xl mb-12">
               直感的な操作で、即座に分析
@@ -636,7 +658,7 @@ function SchoolLanding() {
                 <div className="bg-white/80 p-6 rounded-2xl mb-8 max-w-2xl mx-auto border border-blue-100">
                   <p className="text-lg text-slate-700 font-medium">
                     アカウント作成後、14日間の無料トライアルをご利用いただけます。<br />
-                    <span className="text-red-500 font-bold mt-2 block">期間終了後に勝手に課金されることは一切ありません。</span>
+                    期間終了後に自動課金されることはありません。必要な方だけ本契約へお進みください。
                   </p>
                 </div>
                 <Link
@@ -706,6 +728,37 @@ function SchoolLanding() {
           </div>
         </section>
 
+        <section id="how-to" className="py-24 bg-background border-b border-border">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div className="inline-flex justify-center items-center mb-8">
+              <span className="text-blue-200 text-lg font-bold tracking-widest uppercase bg-blue-900/50 px-6 py-2 rounded-full border border-blue-700/50">
+                Are you ready?
+              </span>
+            </div>
+            <h2 className="text-3xl sm:text-5xl font-extrabold text-white mb-8 leading-tight">
+              採点後の答案を、<br />次の指導につながる情報へ。
+            </h2>
+            <p className="text-xl text-blue-100/90 mb-12 leading-relaxed max-w-3xl mx-auto">
+              答案は、点数を出して終わりではありません。<br />
+              その中には、次回の指導や面談に活かせる材料が眠っています。<br />
+              TENsNAPは、先生がそれを拾い上げ、整理し、<br className="hidden sm:inline" />伝えやすくするための支援ツールです。
+            </p>
+            <div className="mb-10">
+              <Link
+                href="/login"
+                className="inline-flex items-center justify-center px-10 py-5 text-xl font-bold rounded-full text-[#0a1b41] bg-white hover:bg-blue-50 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1"
+              >
+                14日間無料で試す
+                <ArrowRight className="ml-2 h-6 w-6" />
+              </Link>
+            </div>
+            <div className="text-sm text-blue-200/80 space-y-2 text-left sm:text-center max-w-2xl mx-auto bg-black/20 p-5 rounded-2xl border border-white/5">
+              <p>※採点済み答案をもとに、弱点整理・面談準備を進めやすくします。まずは無料トライアルで使用感をご確認ください。</p>
+              <p>※ご登録後のしつこい営業電話などは一切行いません。</p>
+            </div>
+          </div>
+        </section>
+
         <section className="py-16 bg-[#faf9f6]">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="bg-white rounded-[2rem] border-2 border-orange-100 shadow-xl overflow-hidden relative group">
@@ -742,37 +795,6 @@ function SchoolLanding() {
                 </div>
               </div>
               <div className="absolute bottom-0 right-0 w-64 h-64 bg-gradient-to-tl from-orange-100/50 to-transparent rounded-tl-[100px] -z-10 pointer-events-none"></div>
-            </div>
-          </div>
-        </section>
-
-        <section className="py-24 bg-[#0a1b41] border-t border-border">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <div className="inline-flex justify-center items-center mb-8">
-              <span className="text-blue-200 text-lg font-bold tracking-widest uppercase bg-blue-900/50 px-6 py-2 rounded-full border border-blue-700/50">
-                Are you ready?
-              </span>
-            </div>
-            <h2 className="text-3xl sm:text-5xl font-extrabold text-white mb-8 leading-tight">
-              採点後の答案を、<br />次の指導につながる情報へ。
-            </h2>
-            <p className="text-xl text-blue-100/90 mb-12 leading-relaxed max-w-3xl mx-auto">
-              答案は、点数を出して終わりではありません。<br />
-              その中には、次回の指導や面談に活かせる材料が眠っています。<br />
-              TENsNAPは、先生がそれを拾い上げ、整理し、<br className="hidden sm:inline" />伝えやすくするための支援ツールです。
-            </p>
-            <div className="mb-10">
-              <Link
-                href="/login"
-                className="inline-flex items-center justify-center px-10 py-5 text-xl font-bold rounded-full text-[#0a1b41] bg-white hover:bg-blue-50 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1"
-              >
-                14日間無料で試す
-                <ArrowRight className="ml-2 h-6 w-6" />
-              </Link>
-            </div>
-            <div className="text-sm text-blue-200/80 space-y-2 text-left sm:text-center max-w-2xl mx-auto bg-black/20 p-5 rounded-2xl border border-white/5">
-              <p>※採点済み答案をもとに、弱点整理・面談準備を進めやすくします。まずは無料トライアルで使用感をご確認ください。</p>
-              <p>※ご登録後のしつこい営業電話などは一切行いません。</p>
             </div>
           </div>
         </section>
