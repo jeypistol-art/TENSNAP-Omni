@@ -123,6 +123,7 @@ export default function Dashboard() {
     const [isSavingField, setIsSavingField] = useState(false);
     const [fieldError, setFieldError] = useState("");
     const subjectOptions = SUBJECT_OPTIONS;
+    const logoutHref = "/api/auth/logout?callbackUrl=%2F";
 
     const isDevicePolicyErrorCode = (code?: string | null) =>
         code === "DeviceLimitExceeded" || code === "TrialAbuseDetected";
@@ -570,22 +571,17 @@ export default function Dashboard() {
                         >
                             再読み込み
                         </button>
-                        <button
-                            type="button"
-                            onClick={() => handleLogout("/")}
-                            className="text-sm text-gray-500 hover:text-gray-800 underline transition-colors"
+                        <a
+                            href={logoutHref}
+                            className="text-sm text-gray-500 hover:text-gray-800 underline transition-colors text-center"
                         >
                             ログアウト (トップへ戻る)
-                        </button>
+                        </a>
                     </div>
                 </div>
             </div>
         );
     }
-
-    const handleLogout = async (callbackUrl: string = "/") => {
-        window.location.href = `/api/auth/logout?callbackUrl=${encodeURIComponent(callbackUrl)}`;
-    };
 
     /* Trial Banner */
     const handleSubscribe = async () => {
@@ -682,13 +678,12 @@ export default function Dashboard() {
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0a1 1 0 00.95.69h.7c.969 0 1.371 1.24.588 1.81a1 1 0 00-.364 1.118l.22.68c.3.921-.755 1.688-1.54 1.118a1 1 0 00-1.175 0l-.56.4a1 1 0 01-1.175 0l-.56-.4a1 1 0 00-1.175 0c-.784.57-1.838-.197-1.539-1.118l.22-.68a1 1 0 00-.364-1.118c-.783-.57-.38-1.81.588-1.81h.7a1 1 0 00.95-.69z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15a3 3 0 100-6 3 3 0 000 6z" /></svg>
                         設定
                     </a>
-                    <button
-                        type="button"
-                        onClick={() => handleLogout()}
+                    <a
+                        href={logoutHref}
                         className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold px-3 py-1.5 rounded-lg transition-colors"
                     >
                         ログアウト
-                    </button>
+                    </a>
                 </div>
 
                 <div className="relative w-64 h-auto mb-2 mt-8">
