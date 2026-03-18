@@ -660,7 +660,7 @@ export default function Dashboard() {
         <div className="max-w-4xl mx-auto px-4 py-8">
             <TrialBanner />
             <header className="mb-10 text-center">
-                <div className="mb-4 flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+                <div className="relative z-10 mb-4 flex flex-wrap items-center justify-end gap-2 sm:gap-3">
                     <a
                         href="/legal/manual"
                         target="_blank"
@@ -696,6 +696,15 @@ export default function Dashboard() {
                     学習理解度を可視化・指導を改善する分析支援システム
                 </p>
             </header>
+
+            <div className="mb-6 sm:hidden">
+                <a
+                    href={logoutHref}
+                    className="block w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-center text-sm font-bold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+                >
+                    ログアウトしてトップへ戻る
+                </a>
+            </div>
 
             <StudentSelector
                 selectedStudentId={selectedStudentId}
