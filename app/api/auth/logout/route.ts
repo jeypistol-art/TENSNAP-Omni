@@ -3,11 +3,11 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { query } from "@/lib/db";
 
-async function clearAuthCookies(response: NextResponse) {
+async function clearAuthCookies(request: Request, response: NextResponse) {
     const useSecureCookie = process.env.NODE_ENV === "production";
     const cookieDomain = process.env.NEXTAUTH_COOKIE_DOMAIN;
 
-    const cookieNames = [
+    const cookiePrefixes = [
         "__Secure-next-auth.session-token",
         "next-auth.session-token",
         "__Secure-authjs.session-token",
@@ -33,6 +33,19 @@ async function clearAuthCookies(response: NextResponse) {
         "__Secure-authjs.nonce",
         "authjs.nonce",
     ];
+
+    const requestCookies = request.headers.get("cookie") || "";
+    const requestCookieNames = requestCookies
+        .split(";")
+        .map((part) => part.trim().split("=")[0]?.trim())
+        .filter((name): name is string => !!name);
+
+    const cookieNames = Array.from(new Set([
+        ...cookiePrefixes,
+        ...requestCookieNames.filter((name) =>
+            cookiePrefixes.some((prefix) => name === prefix || name.startsWith(`${prefix}.`))
+        ),
+    ]));
 
     const expireCookie = (name: string, domain?: string) => {
         response.cookies.set({
@@ -69,9 +82,9 @@ async function clearAuthCookies(response: NextResponse) {
     }
 }
 
-export async function POST() {
+export async function POST(request: Request) {
     const response = NextResponse.json({ success: true });
-    await clearAuthCookies(response);
+    await clearAuthCookies(request, response);
     return response;
 }
 
@@ -80,6 +93,6 @@ export async function GET(request: Request) {
     const callbackUrl = searchParams.get("callbackUrl") || "/";
     const redirectUrl = new URL(callbackUrl, origin);
     const response = NextResponse.redirect(redirectUrl);
-    await clearAuthCookies(response);
+    await clearAuthCookies(request, response);
     return response;
 }
