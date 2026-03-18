@@ -302,13 +302,13 @@ function SchoolLanding() {
                 </Link>
                 <Link
                   href="#how-to"
-                  className="text-mizuho font-bold underline hover:text-blue-800 transition-colors px-4 py-4"
+                  className="text-mizuho font-bold underline hover:text-blue-800 transition-colors"
                 >
                   使い方を3分で見る
                 </Link>
               </div>
               <p className="mt-6 text-sm text-muted-foreground font-medium">
-                まずは面談前の生徒1名分、答案1〜2枚でお試しください。<br className="hidden sm:inline" />
+                まずは面談前の生徒1名分、答案1〜2枚でお試しください。<br />
                 弱点整理から面談用PDFの確認まで、短時間で使用感をご確認いただけます。
               </p>
             </div>
