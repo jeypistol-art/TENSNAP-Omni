@@ -3,11 +3,9 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Suspense } from "react";
 import "./globals.css";
 import Providers from "@/components/Providers";
-import Script from "next/script";
 import GoogleAnalyticsPageView from "@/components/analytics/GoogleAnalyticsPageView";
 
 const GA_MEASUREMENT_ID = "G-SPR3EGLY0M";
-const GOOGLE_ADS_ID = "AW-992335696";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -58,25 +56,30 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <script async src="https://www.googletagmanager.com/gtag/js?id=AW-992335696"></script>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'AW-992335696');
+`,
+          }}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `gtag('config', '${GA_MEASUREMENT_ID}', { send_page_view: false });`,
+          }}
+        />
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <Providers>{children}</Providers>
         <Suspense fallback={null}>
           <GoogleAnalyticsPageView measurementId={GA_MEASUREMENT_ID} />
         </Suspense>
-        <Script
-          src={`https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ADS_ID}`}
-          strategy="beforeInteractive"
-        />
-        <Script id="google-analytics" strategy="beforeInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-
-            gtag('config', '${GA_MEASUREMENT_ID}', { send_page_view: false });
-            gtag('config', '${GOOGLE_ADS_ID}');
-          `}
-        </Script>
       </body>
     </html>
   );
