@@ -22,6 +22,7 @@ import {
   Users,
   Zap,
 } from "lucide-react";
+import GoogleAdsConversionLink from "@/components/analytics/GoogleAdsConversionLink";
 import { ZoomableImage } from "@/components/landing/ZoomableImage";
 
 const DEFAULT_FAMILY_HOST = "family.10snap.win";
@@ -899,12 +900,12 @@ function FamilyLanding() {
               >
                 ログイン
               </Link>
-              <Link
+              <GoogleAdsConversionLink
                 href="/login"
                 className="inline-flex items-center justify-center rounded-3xl bg-orange-500 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-orange-600 transition-all hover:scale-105"
               >
                 無料で始める
-              </Link>
+              </GoogleAdsConversionLink>
             </div>
           </div>
         </nav>
@@ -928,13 +929,13 @@ function FamilyLanding() {
                   AIつまずき特定・AI苦手単元診断で「勉強してるのに成績上がらない原因」を優しく見える化します。
                 </p>
                 <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
-                  <Link
+                  <GoogleAdsConversionLink
                     href="/login"
                     className="inline-flex min-h-[3.5rem] items-center justify-center rounded-[2rem] bg-orange-500 px-8 py-4 text-lg font-bold text-white shadow-xl shadow-orange-200/80 transition-all hover:-translate-y-1 hover:bg-orange-600 hover:shadow-2xl"
                   >
                     まずは無料でお試し
                     <ArrowRight className="ml-2 h-5 w-5" />
-                  </Link>
+                  </GoogleAdsConversionLink>
                   <p className="text-sm font-medium text-slate-500 bg-white/60 px-4 py-2 rounded-full inline-block backdrop-blur-sm shadow-sm">2週間フル機能を体験（自動更新なしで安心）</p>
                 </div>
                 <div className="mt-10 flex flex-wrap gap-2">
@@ -1289,12 +1290,12 @@ function FamilyLanding() {
                 家庭用TENsNAPを体験
               </h2>
               <p className="mt-6 text-lg text-slate-600 font-medium">自動更新なし。必要な時に、安心して始められます。</p>
-              <Link
+              <GoogleAdsConversionLink
                 href="/login"
                 className="mt-10 inline-flex min-h-[3.5rem] items-center justify-center rounded-[2rem] bg-orange-500 px-10 py-5 text-lg font-bold text-white shadow-xl shadow-orange-200/80 transition-all hover:scale-105 hover:bg-orange-600"
               >
                 まずは無料でお試し
-              </Link>
+              </GoogleAdsConversionLink>
             </div>
           </section>
         </main>
